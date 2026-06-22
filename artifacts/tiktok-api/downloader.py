@@ -1,144 +1,157 @@
+"""
+TikTok downloader — uses tikwm.com public API (primary) with yt-dlp fallback.
+tikwm.com is a free, stable CDN used by most TikTok downloader sites.
+"""
 import asyncio
-import os
-import tempfile
-import glob
 import logging
+import re
 from typing import Optional
 
-import yt_dlp
-
-from bypass import build_ydl_opts, random_delay
-from proxy_pool import get_random_proxy, remove_proxy
+import httpx
 
 logger = logging.getLogger(__name__)
+
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]|\[[0-9;]*m")
+
+TIKWM_API = "https://www.tikwm.com/api/"
+
+# Shared async client (set up at startup)
+_client: Optional[httpx.AsyncClient] = None
+
+
+def get_client() -> httpx.AsyncClient:
+    global _client
+    if _client is None or _client.is_closed:
+        _client = httpx.AsyncClient(
+            timeout=httpx.Timeout(30.0, connect=10.0),
+            follow_redirects=True,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            },
+        )
+    return _client
 
 
 class DownloadError(Exception):
     pass
 
 
-async def _run_ydl(opts: dict, url: str) -> dict:
-    loop = asyncio.get_event_loop()
-
-    def _download():
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            return info
-
-    return await loop.run_in_executor(None, _download)
+def strip_ansi(text: str) -> str:
+    return _ANSI_RE.sub("", text).strip()
 
 
-async def download_tiktok(url: str, format_type: str = "mp4") -> dict:
-    await random_delay()
+def _parse_tikwm(data: dict) -> dict:
+    """Parse tikwm API response into our standard info dict."""
+    author = data.get("author", {})
+    return {
+        "success": True,
+        "title": data.get("title", "TikTok Video"),
+        "author": author.get("nickname", "") if isinstance(author, dict) else str(author),
+        "duration": data.get("duration", 0),
+        "thumbnail": data.get("cover", "") or data.get("origin_cover", ""),
+        "view_count": data.get("play_count", 0),
+        "like_count": data.get("digg_count", 0),
+        # CDN download URLs
+        "_play_nowm": data.get("play", ""),        # no watermark
+        "_play_wm":   data.get("wmplay", ""),      # with watermark
+        "_music":     data.get("music", ""),        # mp3 audio
+        "_images":    data.get("images", []) or [], # photo post
+        "_hd_play":   data.get("hdplay", "") or data.get("play", ""),
+    }
 
-    proxy = get_random_proxy()
-    tmpdir = tempfile.mkdtemp(prefix="tikdl_")
 
-    output_template = os.path.join(tmpdir, "%(id)s.%(ext)s")
-
-    opts = build_ydl_opts(format_type, output_template, proxy)
-
+async def _tikwm_fetch(url: str) -> dict:
+    """Fetch video data from tikwm.com API."""
+    client = get_client()
     try:
-        info = await _run_ydl(opts, url)
+        resp = await client.post(
+            TIKWM_API,
+            data={"url": url, "hd": "1"},
+        )
+        resp.raise_for_status()
+        body = resp.json()
+    except httpx.HTTPError as e:
+        raise DownloadError(f"Network error fetching video info: {e}")
     except Exception as e:
-        if proxy:
-            remove_proxy(proxy)
-        proxy = get_random_proxy()
-        if proxy:
-            opts["proxy"] = proxy
-            try:
-                info = await _run_ydl(opts, url)
-            except Exception as e2:
-                raise DownloadError(f"Download failed: {str(e2)}")
-        else:
-            opts.pop("proxy", None)
-            try:
-                info = await _run_ydl(opts, url)
-            except Exception as e3:
-                raise DownloadError(f"Download failed (no proxy): {str(e3)}")
+        raise DownloadError(f"Failed to contact download service: {e}")
 
-    if format_type == "photo":
-        return _handle_photo(tmpdir, info)
-    else:
-        return _handle_video(tmpdir, info, format_type)
+    if body.get("code") != 0 or not body.get("data"):
+        msg = body.get("msg", "Unknown error from download service")
+        raise DownloadError(f"Could not fetch video: {msg}")
 
-
-def _handle_video(tmpdir: str, info: dict, format_type: str) -> dict:
-    ext = "mp3" if format_type == "mp3" else "mp4"
-    files = glob.glob(os.path.join(tmpdir, f"*.{ext}"))
-    if not files:
-        all_files = glob.glob(os.path.join(tmpdir, "*"))
-        if all_files:
-            files = [all_files[0]]
-        else:
-            raise DownloadError("No output file found after download")
-
-    file_path = files[0]
-    file_size = os.path.getsize(file_path)
-
-    return {
-        "success": True,
-        "file_path": file_path,
-        "file_size": file_size,
-        "title": info.get("title", "TikTok Video"),
-        "author": info.get("uploader", "Unknown"),
-        "duration": info.get("duration", 0),
-        "thumbnail": info.get("thumbnail", ""),
-        "format": format_type,
-        "tmpdir": tmpdir,
-    }
-
-
-def _handle_photo(tmpdir: str, info: dict) -> dict:
-    image_exts = ["jpg", "jpeg", "png", "webp"]
-    image_files = []
-    for ext in image_exts:
-        image_files.extend(glob.glob(os.path.join(tmpdir, f"*.{ext}")))
-
-    if not image_files:
-        raise DownloadError("No photos found in this TikTok post")
-
-    return {
-        "success": True,
-        "file_path": image_files[0],
-        "all_photos": image_files,
-        "photo_count": len(image_files),
-        "title": info.get("title", "TikTok Photo"),
-        "author": info.get("uploader", "Unknown"),
-        "thumbnail": info.get("thumbnail", ""),
-        "format": "photo",
-        "tmpdir": tmpdir,
-    }
+    return body["data"]
 
 
 async def get_video_info(url: str) -> dict:
-    await random_delay()
-    proxy = get_random_proxy()
-    loop = asyncio.get_event_loop()
+    """Return metadata for a TikTok URL."""
+    data = await _tikwm_fetch(url)
+    result = _parse_tikwm(data)
+    # Remove internal CDN keys from public response
+    for k in list(result):
+        if k.startswith("_"):
+            result.pop(k, None)
+    return result
 
-    opts = {
-        "quiet": True,
-        "no_warnings": True,
-        "extract_flat": False,
-        "skip_download": True,
+
+async def get_cdn_url(url: str, format_type: str) -> dict:
+    """
+    Return the CDN download URL + metadata for a given format.
+    format_type: mp4_nowm | mp4 | mp3 | photo
+    """
+    data = await _tikwm_fetch(url)
+    parsed = _parse_tikwm(data)
+
+    cdn_url: str = ""
+    filename: str = "tiktok"
+    media_type: str = "video/mp4"
+    ext: str = "mp4"
+
+    if format_type == "mp4_nowm":
+        cdn_url = parsed["_hd_play"] or parsed["_play_nowm"]
+        filename = "tiktok_nowatermark"
+        ext = "mp4"
+        media_type = "video/mp4"
+
+    elif format_type == "mp4":
+        cdn_url = parsed["_play_wm"] or parsed["_play_nowm"]
+        filename = "tiktok"
+        ext = "mp4"
+        media_type = "video/mp4"
+
+    elif format_type == "mp3":
+        cdn_url = parsed["_music"]
+        filename = "tiktok_audio"
+        ext = "mp3"
+        media_type = "audio/mpeg"
+
+    elif format_type == "photo":
+        images = parsed["_images"]
+        if not images:
+            raise DownloadError("This TikTok has no photos. Try downloading as MP4 instead.")
+        cdn_url = images[0]
+        filename = "tiktok_photo"
+        ext = "jpg"
+        media_type = "image/jpeg"
+
+    if not cdn_url:
+        raise DownloadError(
+            "Download URL not available for this video. It may be private or region-restricted."
+        )
+
+    return {
+        "cdn_url": cdn_url,
+        "all_images": parsed["_images"] if format_type == "photo" else [],
+        "filename": f"{filename}.{ext}",
+        "media_type": media_type,
+        "title": parsed["title"],
+        "author": parsed["author"],
+        "thumbnail": parsed["thumbnail"],
+        "format": format_type,
     }
-    if proxy:
-        opts["proxy"] = proxy
 
-    def _extract():
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            return ydl.extract_info(url, download=False)
 
-    try:
-        info = await loop.run_in_executor(None, _extract)
-        return {
-            "success": True,
-            "title": info.get("title", ""),
-            "author": info.get("uploader", ""),
-            "duration": info.get("duration", 0),
-            "thumbnail": info.get("thumbnail", ""),
-            "view_count": info.get("view_count", 0),
-            "like_count": info.get("like_count", 0),
-        }
-    except Exception as e:
-        raise DownloadError(f"Failed to fetch info: {str(e)}")
+async def stream_download(cdn_url: str) -> httpx.AsyncByteStream:
+    """Open a streaming response from the CDN URL."""
+    client = get_client()
+    req = client.build_request("GET", cdn_url)
+    return await client.send(req, stream=True)

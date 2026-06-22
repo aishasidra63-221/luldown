@@ -1,20 +1,20 @@
 import asyncio
 import logging
 import os
-import shutil
 from contextlib import asynccontextmanager
 from typing import Literal, Optional
 
-from fastapi import FastAPI, HTTPException, Request, Header
+import httpx
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from cache import init_redis, cache_get, cache_set, make_cache_key, cache_stats
-from downloader import DownloadError, download_tiktok, get_video_info
+from downloader import DownloadError, get_video_info, get_cdn_url, stream_download
 from history import add_to_history, get_history, clear_history, history_stats
 from proxy_pool import build_proxy_pool
 from recaptcha import verify_token as verify_recaptcha, is_enabled as recaptcha_enabled
@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="TikTok Downloader API", version="2.0.0", lifespan=lifespan)
+app = FastAPI(title="TikTok Downloader API", version="2.1.0", lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -57,10 +57,10 @@ def get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-def validate_tiktok_url(url: str):
+def validate_tiktok_url(url: str) -> str:
     url = url.strip()
-    if "tiktok.com" not in url and "vm.tiktok.com" not in url:
-        raise HTTPException(status_code=400, detail="Invalid TikTok URL")
+    if "tiktok.com" not in url:
+        raise HTTPException(status_code=400, detail="Invalid TikTok URL. Please copy the link from TikTok app.")
     return url
 
 
@@ -84,7 +84,8 @@ class InfoRequest(BaseModel):
 async def health():
     return {
         "status": "ok",
-        "version": "2.0.0",
+        "version": "2.1.0",
+        "engine": "tikwm",
         "cache": cache_stats(),
         "history": history_stats(),
         "recaptcha_enabled": recaptcha_enabled(),
@@ -93,24 +94,21 @@ async def health():
 
 @app.get("/api/token")
 async def get_session_token():
-    """Frontend calls this to get a short-lived session token before download."""
     token = generate_token()
     return {"token": token, "ttl_seconds": 300}
 
 
 @app.post("/api/info")
-@limiter.limit("10/minute")
+@limiter.limit("20/minute")
 async def video_info(request: Request, body: InfoRequest):
     url = validate_tiktok_url(body.url)
     ip = get_client_ip(request)
 
-    # reCAPTCHA check
     if recaptcha_enabled():
         ok, score, _ = await verify_recaptcha(body.recaptcha_token, ip)
         if not ok:
             raise HTTPException(status_code=403, detail="Bot detected")
 
-    # Cache check
     cache_key = make_cache_key(url, "info")
     cached = await cache_get(cache_key)
     if cached:
@@ -132,24 +130,26 @@ async def download(request: Request, body: DownloadRequest):
     url = validate_tiktok_url(body.url)
     ip = get_client_ip(request)
 
-    # Session token check
     if body.session_token:
         valid, reason = verify_session_token(body.session_token)
         if not valid:
             raise HTTPException(status_code=401, detail=f"Invalid session: {reason}")
 
-    # reCAPTCHA check
     if recaptcha_enabled():
-        ok, score, _ = await verify_recaptcha(body.recaptcha_token, ip)
+        ok, _, _ = await verify_recaptcha(body.recaptcha_token, ip)
         if not ok:
             raise HTTPException(status_code=403, detail="Bot detected")
 
-    # Cache check (only for info, not file)
-    cache_key = make_cache_key(url, body.format)
-    cached_info = await cache_get(make_cache_key(url, "info"))
+    # Check cache for CDN URL
+    cdn_cache_key = make_cache_key(url, body.format + "_cdn")
+    cached_cdn = await cache_get(cdn_cache_key)
 
     try:
-        result = await download_tiktok(url, body.format)
+        if cached_cdn and cached_cdn.get("cdn_url"):
+            cdn_data = cached_cdn
+        else:
+            cdn_data = await get_cdn_url(url, body.format)
+            await cache_set(cdn_cache_key, cdn_data)
     except DownloadError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
@@ -157,45 +157,36 @@ async def download(request: Request, body: DownloadRequest):
     add_to_history(
         ip=ip,
         url=url,
-        title=result.get("title", ""),
-        author=result.get("author", ""),
-        thumbnail=result.get("thumbnail", ""),
+        title=cdn_data.get("title", ""),
+        author=cdn_data.get("author", ""),
+        thumbnail=cdn_data.get("thumbnail", ""),
         format_type=body.format,
     )
 
-    # Cache video info
-    info_cache = {
-        "title": result.get("title", ""),
-        "author": result.get("author", ""),
-        "thumbnail": result.get("thumbnail", ""),
-        "duration": result.get("duration", 0),
-    }
-    await cache_set(make_cache_key(url, "info"), info_cache)
+    cdn_url = cdn_data["cdn_url"]
+    filename = cdn_data["filename"]
+    media_type = cdn_data["media_type"]
 
-    file_path = result["file_path"]
-    tmpdir = result["tmpdir"]
+    # Proxy the stream so user downloads from our domain
+    try:
+        response = await stream_download(cdn_url)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Failed to fetch video from CDN: {e}")
 
-    ext_map = {
-        "mp4": "video/mp4",
-        "mp4_nowm": "video/mp4",
-        "mp3": "audio/mpeg",
-        "photo": "image/jpeg",
-    }
-    media_type = ext_map.get(body.format, "application/octet-stream")
+    async def iter_content():
+        try:
+            async for chunk in response.aiter_bytes(chunk_size=65536):
+                yield chunk
+        finally:
+            await response.aclose()
 
-    async def cleanup():
-        await asyncio.sleep(120)
-        shutil.rmtree(tmpdir, ignore_errors=True)
-
-    asyncio.create_task(cleanup())
-
-    return FileResponse(
-        path=file_path,
+    return StreamingResponse(
+        iter_content(),
         media_type=media_type,
-        filename=os.path.basename(file_path),
         headers={
-            "X-Video-Title": result.get("title", "")[:100],
-            "X-Video-Author": result.get("author", "")[:50],
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Video-Title": (cdn_data.get("title") or "")[:100],
+            "X-Video-Author": (cdn_data.get("author") or "")[:50],
         },
     )
 
@@ -214,40 +205,6 @@ async def delete_history(request: Request):
     ip = get_client_ip(request)
     clear_history(ip)
     return {"success": True, "message": "History cleared"}
-
-
-@app.post("/api/download/photos")
-@limiter.limit("10/minute")
-async def download_photos(request: Request, body: DownloadRequest):
-    url = validate_tiktok_url(body.url)
-    ip = get_client_ip(request)
-
-    if recaptcha_enabled():
-        ok, _, _ = await verify_recaptcha(body.recaptcha_token, ip)
-        if not ok:
-            raise HTTPException(status_code=403, detail="Bot detected")
-
-    try:
-        result = await download_tiktok(url, "photo")
-    except DownloadError as e:
-        raise HTTPException(status_code=422, detail=str(e))
-
-    add_to_history(
-        ip=ip,
-        url=url,
-        title=result.get("title", ""),
-        author=result.get("author", ""),
-        thumbnail=result.get("thumbnail", ""),
-        format_type="photo",
-    )
-
-    return {
-        "success": True,
-        "photo_count": result.get("photo_count", 0),
-        "title": result.get("title", ""),
-        "author": result.get("author", ""),
-        "photos": result.get("all_photos", []),
-    }
 
 
 if __name__ == "__main__":
