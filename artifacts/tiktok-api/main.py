@@ -163,18 +163,32 @@ async def download(request: Request, body: DownloadRequest):
         format_type=body.format,
     )
 
-    # Return CDN URL directly — browser downloads straight from TikTok CDN (faster)
-    return {
-        "success": True,
-        "cdn_url": cdn_data["cdn_url"],
-        "all_images": cdn_data.get("all_images", []),
-        "filename": cdn_data["filename"],
-        "media_type": cdn_data["media_type"],
-        "title": cdn_data.get("title", ""),
-        "author": cdn_data.get("author", ""),
-        "thumbnail": cdn_data.get("thumbnail", ""),
-        "format": body.format,
-    }
+    cdn_url = cdn_data["cdn_url"]
+    filename = cdn_data["filename"]
+    media_type = cdn_data["media_type"]
+
+    # Proxy the stream so user downloads from our domain
+    try:
+        response = await stream_download(cdn_url)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Failed to fetch video from CDN: {e}")
+
+    async def iter_content():
+        try:
+            async for chunk in response.aiter_bytes(chunk_size=65536):
+                yield chunk
+        finally:
+            await response.aclose()
+
+    return StreamingResponse(
+        iter_content(),
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Video-Title": (cdn_data.get("title") or "")[:100],
+            "X-Video-Author": (cdn_data.get("author") or "")[:50],
+        },
+    )
 
 
 @app.get("/api/history")
