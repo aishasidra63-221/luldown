@@ -125,8 +125,12 @@ async def video_info(request: Request, body: InfoRequest):
 
 
 @app.post("/api/download")
-@limiter.limit("10/minute")
+@limiter.limit("20/minute")
 async def download(request: Request, body: DownloadRequest):
+    """
+    Returns a direct CDN URL — zero server bandwidth used.
+    Frontend downloads straight from TikTok CDN.
+    """
     url = validate_tiktok_url(body.url)
     ip = get_client_ip(request)
 
@@ -140,7 +144,7 @@ async def download(request: Request, body: DownloadRequest):
         if not ok:
             raise HTTPException(status_code=403, detail="Bot detected")
 
-    # Check cache for CDN URL
+    # Cache CDN URLs (30 min TTL)
     cdn_cache_key = make_cache_key(url, body.format + "_cdn")
     cached_cdn = await cache_get(cdn_cache_key)
 
@@ -163,32 +167,17 @@ async def download(request: Request, body: DownloadRequest):
         format_type=body.format,
     )
 
-    cdn_url = cdn_data["cdn_url"]
-    filename = cdn_data["filename"]
-    media_type = cdn_data["media_type"]
-
-    # Proxy the stream so user downloads from our domain
-    try:
-        response = await stream_download(cdn_url)
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Failed to fetch video from CDN: {e}")
-
-    async def iter_content():
-        try:
-            async for chunk in response.aiter_bytes(chunk_size=65536):
-                yield chunk
-        finally:
-            await response.aclose()
-
-    return StreamingResponse(
-        iter_content(),
-        media_type=media_type,
-        headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
-            "X-Video-Title": (cdn_data.get("title") or "")[:100],
-            "X-Video-Author": (cdn_data.get("author") or "")[:50],
-        },
-    )
+    # Return CDN URL directly — no streaming, no server bandwidth
+    return JSONResponse({
+        "success": True,
+        "cdn_url": cdn_data["cdn_url"],
+        "all_images": cdn_data.get("all_images", []),
+        "filename": cdn_data["filename"],
+        "media_type": cdn_data["media_type"],
+        "title": cdn_data.get("title", ""),
+        "author": cdn_data.get("author", ""),
+        "format": body.format,
+    })
 
 
 @app.get("/api/history")

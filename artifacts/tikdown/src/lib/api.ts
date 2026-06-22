@@ -44,6 +44,7 @@ export async function fetchVideoInfo(url: string): Promise<VideoInfo> {
 export async function downloadVideo(url: string, format: DownloadFormat): Promise<void> {
   const token = await getSessionToken();
 
+  // Step 1: Ask our server for the CDN URL (lightweight — no video data)
   const res = await fetch(`${API_BASE}/api/download`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -55,25 +56,37 @@ export async function downloadVideo(url: string, format: DownloadFormat): Promis
     throw new Error(err.detail || "Download failed");
   }
 
-  const blob = await res.blob();
-  const extMap: Record<DownloadFormat, string> = {
-    mp4_nowm: "mp4",
-    mp4: "mp4",
-    mp3: "mp3",
-    photo: "jpg",
-  };
-  const ext = extMap[format];
-  const title = res.headers.get("X-Video-Title") || "tiktok";
-  const filename = `${title.slice(0, 40).replace(/[^a-z0-9]/gi, "_")}.${ext}`;
+  const data = await res.json();
+  const cdnUrl: string = data.cdn_url;
+  const filename: string = data.filename || "lul_downloader.mp4";
 
-  const objectUrl = URL.createObjectURL(blob);
+  if (!cdnUrl) throw new Error("No download URL received");
+
+  // Photo format — download first image, open rest
+  if (format === "photo" && data.all_images?.length > 0) {
+    for (const imgUrl of data.all_images) {
+      _triggerDownload(imgUrl, filename);
+      await new Promise((r) => setTimeout(r, 300));
+    }
+    return;
+  }
+
+  // Step 2: Trigger direct download from TikTok CDN — zero server load
+  _triggerDownload(cdnUrl, filename);
+}
+
+function _triggerDownload(cdnUrl: string, filename: string) {
+  // Open CDN URL in new tab — browser downloads directly from TikTok CDN
+  // Our server = 0 bytes transferred
   const a = document.createElement("a");
-  a.href = objectUrl;
+  a.href = cdnUrl;
+  a.target = "_blank";
+  a.rel = "noopener noreferrer";
+  // download attr only works same-origin; for cross-origin CDN we use target=_blank
   a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(objectUrl);
 }
 
 export async function fetchHistory(): Promise<HistoryItem[]> {
