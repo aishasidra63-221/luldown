@@ -75,7 +75,11 @@ export default function HomePage() {
   const handleDownload = async (format: DownloadFormat) => {
     setActiveDownload(format);
     try {
-      await downloadVideo(url.trim(), format);
+      await downloadVideo(url.trim(), format, {
+        title: info?.title,
+        author: info?.author,
+        thumbnail: info?.thumbnail,
+      });
     } catch (e: any) {
       setError(e.message || "Download failed");
       setStep("error");

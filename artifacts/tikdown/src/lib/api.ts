@@ -1,4 +1,6 @@
 const API_BASE = "/tikapi";
+const HISTORY_KEY = "lul_history";
+const MAX_HISTORY = 10;
 
 export interface VideoInfo {
   success: boolean;
@@ -21,12 +23,41 @@ export interface HistoryItem {
 
 export type DownloadFormat = "mp4_nowm" | "mp4" | "mp3" | "photo";
 
-async function getSessionToken(): Promise<string> {
-  const res = await fetch(`${API_BASE}/api/token`);
-  if (!res.ok) return "";
-  const data = await res.json();
-  return data.token || "";
+// ─── Local history helpers ────────────────────────────────────────────────────
+
+function _loadHistory(): HistoryItem[] {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+  } catch {
+    return [];
+  }
 }
+
+function _saveHistory(items: HistoryItem[]) {
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(items));
+}
+
+function _addHistoryEntry(entry: HistoryItem) {
+  let items = _loadHistory().filter((h) => h.url !== entry.url); // dedupe
+  items.unshift(entry);
+  if (items.length > MAX_HISTORY) items = items.slice(0, MAX_HISTORY);
+  _saveHistory(items);
+}
+
+// ─── Session token ────────────────────────────────────────────────────────────
+
+async function getSessionToken(): Promise<string> {
+  try {
+    const res = await fetch(`${API_BASE}/api/token`);
+    if (!res.ok) return "";
+    const data = await res.json();
+    return data.token || "";
+  } catch {
+    return "";
+  }
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function fetchVideoInfo(url: string): Promise<VideoInfo> {
   const res = await fetch(`${API_BASE}/api/info`, {
@@ -41,10 +72,13 @@ export async function fetchVideoInfo(url: string): Promise<VideoInfo> {
   return res.json();
 }
 
-export async function downloadVideo(url: string, format: DownloadFormat): Promise<void> {
+export async function downloadVideo(
+  url: string,
+  format: DownloadFormat,
+  videoMeta?: { title?: string; author?: string; thumbnail?: string },
+): Promise<void> {
   const token = await getSessionToken();
 
-  // Step 1: Ask our server for the CDN URL (lightweight — no video data)
   const res = await fetch(`${API_BASE}/api/download`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -58,46 +92,51 @@ export async function downloadVideo(url: string, format: DownloadFormat): Promis
 
   const data = await res.json();
   const cdnUrl: string = data.cdn_url;
-  const filename: string = data.filename || "lul_downloader.mp4";
+  const filename: string = data.filename || "lul_download.mp4";
 
   if (!cdnUrl) throw new Error("No download URL received");
 
-  // Photo format — download first image, open rest
+  // ── Save to localStorage history immediately ──
+  _addHistoryEntry({
+    url,
+    title: data.title || videoMeta?.title || "TikTok Video",
+    author: data.author || videoMeta?.author || "Unknown",
+    thumbnail: videoMeta?.thumbnail || "",
+    format,
+    downloaded_at: Math.floor(Date.now() / 1000),
+  });
+
+  // ── Trigger direct CDN download ──
   if (format === "photo" && data.all_images?.length > 0) {
-    for (const imgUrl of data.all_images) {
+    for (const imgUrl of data.all_images as string[]) {
       _triggerDownload(imgUrl, filename);
-      await new Promise((r) => setTimeout(r, 300));
+      await new Promise((r) => setTimeout(r, 350));
     }
     return;
   }
 
-  // Step 2: Trigger direct download from TikTok CDN — zero server load
   _triggerDownload(cdnUrl, filename);
 }
 
 function _triggerDownload(cdnUrl: string, filename: string) {
-  // Open CDN URL in new tab — browser downloads directly from TikTok CDN
-  // Our server = 0 bytes transferred
   const a = document.createElement("a");
   a.href = cdnUrl;
   a.target = "_blank";
   a.rel = "noopener noreferrer";
-  // download attr only works same-origin; for cross-origin CDN we use target=_blank
   a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
 }
 
+// ─── History (localStorage) ───────────────────────────────────────────────────
+
 export async function fetchHistory(): Promise<HistoryItem[]> {
-  const res = await fetch(`${API_BASE}/api/history`);
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.history || [];
+  return _loadHistory();
 }
 
 export async function clearHistory(): Promise<void> {
-  await fetch(`${API_BASE}/api/history`, { method: "DELETE" });
+  _saveHistory([]);
 }
 
 export async function checkHealth(): Promise<boolean> {
