@@ -27,11 +27,26 @@ logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)
 
 
+async def _keep_alive(port: int):
+    """Ping /health every 14 min so Render free tier stays awake."""
+    await asyncio.sleep(60)  # wait for server to be fully up first
+    while True:
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                await client.get(f"http://localhost:{port}/health")
+            logger.info("keep-alive ping sent")
+        except Exception as e:
+            logger.debug(f"keep-alive ping failed (harmless): {e}")
+        await asyncio.sleep(14 * 60)  # 14 minutes
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    port = int(os.environ.get("PORT", 8000))
     asyncio.create_task(build_proxy_pool())
     asyncio.create_task(init_redis())
     asyncio.create_task(schedule_midnight_update())
+    asyncio.create_task(_keep_alive(port))
     yield
 
 
@@ -200,4 +215,5 @@ async def delete_history(request: Request):
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
+    workers = int(os.environ.get("WORKERS", 2))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, workers=workers, reload=False)

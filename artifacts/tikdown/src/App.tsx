@@ -7,6 +7,10 @@ import Footer from "@/components/Footer";
 import HomePage from "@/pages/HomePage";
 import HistoryPage from "@/pages/HistoryPage";
 import SettingsPage from "@/pages/SettingsPage";
+import PrivacyPage from "@/pages/PrivacyPage";
+import FAQPage from "@/pages/FAQPage";
+import TermsPage from "@/pages/TermsPage";
+import DisclaimerPage from "@/pages/DisclaimerPage";
 
 declare const __RECAPTCHA_SITE_KEY__: string;
 
@@ -35,6 +39,10 @@ function Router() {
       <Route path="/" component={HomePage} />
       <Route path="/history" component={HistoryPage} />
       <Route path="/settings" component={SettingsPage} />
+      <Route path="/privacy" component={PrivacyPage} />
+      <Route path="/faq" component={FAQPage} />
+      <Route path="/terms" component={TermsPage} />
+      <Route path="/disclaimer" component={DisclaimerPage} />
       <Route component={NotFound} />
     </Switch>
   );
