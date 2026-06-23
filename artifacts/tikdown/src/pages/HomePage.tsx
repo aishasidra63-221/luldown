@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { fetchVideoInfo, downloadVideo, VideoInfo, DownloadFormat } from "@/lib/api";
+import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import {
   Video, Music, Image, Film, Copy, Search, Download, CheckCircle2,
   AlertCircle, Play, Clock, User, Eye, Heart, Loader2, X, ChevronRight,
@@ -55,6 +56,12 @@ export default function HomePage() {
   const [info, setInfo] = useState<VideoInfo | null>(null);
   const [error, setError] = useState("");
   const [activeDownload, setActiveDownload] = useState<DownloadFormat | null>(null);
+  const { executeRecaptcha } = useGoogleReCaptcha();
+
+  const getToken = useCallback(async (action: string): Promise<string | undefined> => {
+    if (!executeRecaptcha) return undefined;
+    try { return await executeRecaptcha(action); } catch { return undefined; }
+  }, [executeRecaptcha]);
 
   const handleFetch = async () => {
     const trimmed = url.trim();
@@ -63,7 +70,8 @@ export default function HomePage() {
     setError("");
     setInfo(null);
     try {
-      const data = await fetchVideoInfo(trimmed);
+      const rcToken = await getToken("fetch_info");
+      const data = await fetchVideoInfo(trimmed, rcToken);
       setInfo(data);
       setStep("info-ready");
     } catch (e: any) {
@@ -75,11 +83,12 @@ export default function HomePage() {
   const handleDownload = async (format: DownloadFormat) => {
     setActiveDownload(format);
     try {
+      const rcToken = await getToken("download");
       await downloadVideo(url.trim(), format, {
         title: info?.title,
         author: info?.author,
         thumbnail: info?.thumbnail,
-      });
+      }, rcToken);
     } catch (e: any) {
       setError(e.message || "Download failed");
       setStep("error");

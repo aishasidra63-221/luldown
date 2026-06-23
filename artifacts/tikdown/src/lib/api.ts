@@ -38,7 +38,7 @@ function _saveHistory(items: HistoryItem[]) {
 }
 
 function _addHistoryEntry(entry: HistoryItem) {
-  let items = _loadHistory().filter((h) => h.url !== entry.url); // dedupe
+  let items = _loadHistory().filter((h) => h.url !== entry.url);
   items.unshift(entry);
   if (items.length > MAX_HISTORY) items = items.slice(0, MAX_HISTORY);
   _saveHistory(items);
@@ -59,11 +59,14 @@ async function getSessionToken(): Promise<string> {
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-export async function fetchVideoInfo(url: string): Promise<VideoInfo> {
+export async function fetchVideoInfo(
+  url: string,
+  recaptchaToken?: string,
+): Promise<VideoInfo> {
   const res = await fetch(`${API_BASE}/api/info`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url }),
+    body: JSON.stringify({ url, recaptcha_token: recaptchaToken ?? null }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: "Failed to fetch info" }));
@@ -76,13 +79,19 @@ export async function downloadVideo(
   url: string,
   format: DownloadFormat,
   videoMeta?: { title?: string; author?: string; thumbnail?: string },
+  recaptchaToken?: string,
 ): Promise<void> {
   const token = await getSessionToken();
 
   const res = await fetch(`${API_BASE}/api/download`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url, format, session_token: token }),
+    body: JSON.stringify({
+      url,
+      format,
+      session_token: token,
+      recaptcha_token: recaptchaToken ?? null,
+    }),
   });
 
   if (!res.ok) {
@@ -92,11 +101,10 @@ export async function downloadVideo(
 
   const data = await res.json();
   const cdnUrl: string = data.cdn_url;
-  const filename: string = data.filename || "lul_download.mp4";
+  const filename: string = data.filename || "luldown.mp4";
 
   if (!cdnUrl) throw new Error("No download URL received");
 
-  // ── Save to localStorage history immediately ──
   _addHistoryEntry({
     url,
     title: data.title || videoMeta?.title || "TikTok Video",
@@ -106,7 +114,6 @@ export async function downloadVideo(
     downloaded_at: Math.floor(Date.now() / 1000),
   });
 
-  // ── Trigger direct CDN download ──
   if (format === "photo" && data.all_images?.length > 0) {
     for (const imgUrl of data.all_images as string[]) {
       _triggerDownload(imgUrl, filename);

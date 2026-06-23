@@ -98,6 +98,12 @@ export default function Footer() {
           <p className="text-xs text-muted-foreground">
             Not affiliated with TikTok or ByteDance.
           </p>
+          <p className="text-xs text-muted-foreground">
+            Protected by reCAPTCHA —{" "}
+            <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">Privacy</a>
+            {" & "}
+            <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">Terms</a>
+          </p>
         </div>
       </div>
     </footer>

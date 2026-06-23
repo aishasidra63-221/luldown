@@ -1,11 +1,14 @@
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, useEffect, createContext, useContext } from "react";
+import { GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import HomePage from "@/pages/HomePage";
 import HistoryPage from "@/pages/HistoryPage";
 import SettingsPage from "@/pages/SettingsPage";
+
+declare const __RECAPTCHA_SITE_KEY__: string;
 
 const queryClient = new QueryClient();
 
@@ -57,7 +60,9 @@ function App() {
 
   const toggle = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
 
-  return (
+  const siteKey = __RECAPTCHA_SITE_KEY__;
+
+  const inner = (
     <ThemeContext.Provider value={{ theme, toggle }}>
       <QueryClientProvider client={queryClient}>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
@@ -72,6 +77,16 @@ function App() {
       </QueryClientProvider>
     </ThemeContext.Provider>
   );
+
+  if (siteKey) {
+    return (
+      <GoogleReCaptchaProvider reCaptchaKey={siteKey} scriptProps={{ async: true, defer: true }}>
+        {inner}
+      </GoogleReCaptchaProvider>
+    );
+  }
+
+  return inner;
 }
 
 export default App;
