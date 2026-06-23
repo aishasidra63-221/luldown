@@ -24,7 +24,7 @@ export default function Navbar() {
               <Download className="w-4 h-4 text-white" strokeWidth={2.5} />
             </div>
             <span className="text-xl font-bold tracking-tight">
-              LUL<span className="text-primary"> Downloader</span>
+              Lul<span className="text-primary">down</span>
             </span>
           </div>
         </Link>

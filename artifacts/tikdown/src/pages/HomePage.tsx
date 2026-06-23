@@ -104,7 +104,7 @@ export default function HomePage() {
           Fast · Free · No Login Required
         </div>
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight">
-          LUL Downloader<br />
+          Luldown<br />
           <span className="text-primary">TikTok Videos Free</span>
         </h1>
         <p className="text-muted-foreground text-base sm:text-lg max-w-xl mx-auto">
@@ -250,9 +250,9 @@ export default function HomePage() {
       {/* ── SEO Content ── */}
       <article className="space-y-6 text-sm text-muted-foreground border-t border-border pt-8">
         <div>
-          <h2 className="text-xl font-bold text-foreground mb-2">LUL Downloader — Best TikTok Downloader Without Watermark</h2>
+          <h2 className="text-xl font-bold text-foreground mb-2">Luldown — Best TikTok Downloader Without Watermark</h2>
           <p className="leading-relaxed">
-            LUL Downloader is the fastest and most reliable TikTok video downloader in 2025. Paste any TikTok URL
+            Luldown is the fastest and most reliable TikTok video downloader in 2025. Paste any TikTok URL
             and instantly download in HD MP4 without watermark, extract MP3 audio, or save photos from TikTok
             slideshows — completely free, no account or app installation needed.
           </p>

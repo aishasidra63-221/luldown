@@ -40,7 +40,7 @@ function Router() {
 function App() {
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem("lul-theme") as Theme) || "dark";
+      return (localStorage.getItem("luldown-theme") as Theme) || "dark";
     }
     return "dark";
   });
@@ -52,7 +52,7 @@ function App() {
     } else {
       root.classList.remove("dark");
     }
-    localStorage.setItem("lul-theme", theme);
+    localStorage.setItem("luldown-theme", theme);
   }, [theme]);
 
   const toggle = () => setTheme((t) => (t === "dark" ? "light" : "dark"));

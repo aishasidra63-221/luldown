@@ -15,7 +15,7 @@ export default function Footer() {
               <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
                 <Download className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
               </div>
-              <span className="font-bold text-foreground">LUL<span className="text-primary"> Downloader</span></span>
+              <span className="font-bold text-foreground">Lul<span className="text-primary">down</span></span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
               The fastest free TikTok downloader. No watermark. No login. No limits.
@@ -90,7 +90,7 @@ export default function Footer() {
 
         <div className="border-t border-border pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
-            © {year} TikDown. All rights reserved.
+            © {year} Luldown. All rights reserved.
           </p>
           <p className="text-xs text-muted-foreground flex items-center gap-1">
             Made with <Heart className="w-3 h-3 text-primary fill-primary" /> for creators worldwide

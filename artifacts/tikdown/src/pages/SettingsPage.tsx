@@ -46,7 +46,7 @@ export default function SettingsPage() {
     <div className="max-w-2xl mx-auto px-4 py-12 space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-foreground">Settings</h1>
-        <p className="text-muted-foreground text-sm mt-1">Customize your LUL Downloader experience</p>
+        <p className="text-muted-foreground text-sm mt-1">Customize your Luldown experience</p>
       </div>
 
       {/* Appearance */}

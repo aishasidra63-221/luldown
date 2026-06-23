@@ -1,5 +1,5 @@
 const API_BASE = "/tikapi";
-const HISTORY_KEY = "lul_history";
+const HISTORY_KEY = "luldown_history";
 const MAX_HISTORY = 10;
 
 export interface VideoInfo {
