@@ -10,6 +10,8 @@ export interface VideoInfo {
   thumbnail: string;
   view_count?: number;
   like_count?: number;
+  is_photo?: boolean;
+  images?: string[];
 }
 
 export interface HistoryItem {
@@ -21,7 +23,7 @@ export interface HistoryItem {
   downloaded_at: number;
 }
 
-export type DownloadFormat = "mp4_nowm" | "mp4" | "mp3" | "photo";
+export type DownloadFormat = "mp4_720" | "mp4_1080" | "mp3";
 
 // ─── Local history helpers ────────────────────────────────────────────────────
 
@@ -113,14 +115,6 @@ export async function downloadVideo(
     format,
     downloaded_at: Math.floor(Date.now() / 1000),
   });
-
-  if (format === "photo" && data.all_images?.length > 0) {
-    for (const imgUrl of data.all_images as string[]) {
-      _triggerDownload(imgUrl, filename);
-      await new Promise((r) => setTimeout(r, 350));
-    }
-    return;
-  }
 
   _triggerDownload(cdnUrl, filename);
 }

@@ -6,6 +6,11 @@ TikTok downloader — tikwm.com API with 4-layer bypass:
   Layer 4: Rotating Referer
 Random delay 0.5–2.5 s before each request.
 Bad proxies auto-evicted on failure.
+
+Formats:
+  mp4_720  — no-watermark standard quality
+  mp4_1080 — no-watermark HD (hdplay)
+  mp3      — audio 192kbps
 """
 import asyncio
 import logging
@@ -36,18 +41,20 @@ def strip_ansi(text: str) -> str:
 
 def _parse_tikwm(data: dict) -> dict:
     author = data.get("author", {})
+    images = data.get("images", []) or []
     return {
-        "success": True,
+        "success":     True,
         "title":       data.get("title", "TikTok Video"),
         "author":      author.get("nickname", "") if isinstance(author, dict) else str(author),
         "duration":    data.get("duration", 0),
         "thumbnail":   data.get("cover", "") or data.get("origin_cover", ""),
         "view_count":  data.get("play_count", 0),
         "like_count":  data.get("digg_count", 0),
+        "is_photo":    len(images) > 0,
+        "_images":     images,
         "_play_nowm":  data.get("play", ""),
         "_play_wm":    data.get("wmplay", ""),
         "_music":      data.get("music", ""),
-        "_images":     data.get("images", []) or [],
         "_hd_play":    data.get("hdplay", "") or data.get("play", ""),
     }
 
@@ -84,7 +91,6 @@ async def _tikwm_fetch(url: str) -> dict:
     last_error: Optional[Exception] = None
 
     for attempt in range(MAX_RETRIES):
-        # Last attempt: go direct (no proxy)
         is_last = attempt == MAX_RETRIES - 1
         proxy_url: Optional[str] = None
         country: Optional[str] = None
@@ -94,7 +100,6 @@ async def _tikwm_fetch(url: str) -> dict:
             if picked:
                 proxy_url, country = picked
 
-        # Random human-like delay
         await random_delay()
 
         try:
@@ -108,7 +113,6 @@ async def _tikwm_fetch(url: str) -> dict:
                 logger.warning(f"Direct request failed: {e}")
             continue
 
-        # tikwm business-logic error
         if body.get("code") != 0 or not body.get("data"):
             msg = body.get("msg", "Unknown error from download service")
             if proxy_url:
@@ -131,6 +135,9 @@ async def _tikwm_fetch(url: str) -> dict:
 async def get_video_info(url: str) -> dict:
     data = await _tikwm_fetch(url)
     result = _parse_tikwm(data)
+    # Expose images for photo posts (CDN URLs — frontend displays directly)
+    result["images"] = result.pop("_images", [])
+    # Strip internal-only keys
     for k in list(result):
         if k.startswith("_"):
             result.pop(k, None)
@@ -142,36 +149,30 @@ async def get_cdn_url(url: str, format_type: str) -> dict:
     parsed = _parse_tikwm(data)
 
     cdn_url: str = ""
-    filename: str = "tiktok"
+    filename: str = "luldown"
     media_type: str = "video/mp4"
     ext: str = "mp4"
 
-    if format_type == "mp4_nowm":
-        cdn_url = parsed["_hd_play"] or parsed["_play_nowm"]
-        filename = "tiktok_nowatermark"
+    if format_type == "mp4_720":
+        cdn_url = parsed["_play_nowm"] or parsed["_hd_play"]
+        filename = "luldown_720p"
         ext = "mp4"
         media_type = "video/mp4"
 
-    elif format_type == "mp4":
-        cdn_url = parsed["_play_wm"] or parsed["_play_nowm"]
-        filename = "tiktok"
+    elif format_type == "mp4_1080":
+        cdn_url = parsed["_hd_play"] or parsed["_play_nowm"]
+        filename = "luldown_1080p"
         ext = "mp4"
         media_type = "video/mp4"
 
     elif format_type == "mp3":
         cdn_url = parsed["_music"]
-        filename = "tiktok_audio"
+        filename = "luldown_audio"
         ext = "mp3"
         media_type = "audio/mpeg"
 
-    elif format_type == "photo":
-        images = parsed["_images"]
-        if not images:
-            raise DownloadError("This TikTok has no photos. Try downloading as MP4 instead.")
-        cdn_url = images[0]
-        filename = "tiktok_photo"
-        ext = "jpg"
-        media_type = "image/jpeg"
+    else:
+        raise DownloadError(f"Unknown format: {format_type}")
 
     if not cdn_url:
         raise DownloadError(
@@ -180,7 +181,6 @@ async def get_cdn_url(url: str, format_type: str) -> dict:
 
     return {
         "cdn_url":    cdn_url,
-        "all_images": parsed["_images"] if format_type == "photo" else [],
         "filename":   f"{filename}.{ext}",
         "media_type": media_type,
         "title":      parsed["title"],

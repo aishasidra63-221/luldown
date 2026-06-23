@@ -68,7 +68,7 @@ def validate_tiktok_url(url: str) -> str:
 
 class DownloadRequest(BaseModel):
     url: str
-    format: Literal["mp4", "mp4_nowm", "mp3", "photo"] = "mp4_nowm"
+    format: Literal["mp4_720", "mp4_1080", "mp3"] = "mp4_1080"
     recaptcha_token: Optional[str] = None
     session_token: Optional[str] = None
 

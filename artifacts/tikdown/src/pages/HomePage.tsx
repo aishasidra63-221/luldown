@@ -2,9 +2,9 @@ import { useState, useCallback } from "react";
 import { fetchVideoInfo, downloadVideo, VideoInfo, DownloadFormat } from "@/lib/api";
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import {
-  Video, Music, Image, Film, Copy, Search, Download, CheckCircle2,
-  AlertCircle, Play, Clock, User, Eye, Heart, Loader2, X, ChevronRight,
-  Shield, Zap, Lock, Smartphone
+  Video, Music, Film, Copy, Search, Download, CheckCircle2,
+  AlertCircle, Clock, User, Eye, Heart, Loader2, X, ChevronRight,
+  Shield, Zap, Lock, Smartphone, ExternalLink
 } from "lucide-react";
 
 type Step = "idle" | "loading-info" | "info-ready" | "downloading" | "error";
@@ -18,23 +18,22 @@ interface FormatOption {
 }
 
 const FORMAT_OPTIONS: FormatOption[] = [
-  { format: "mp4_nowm", label: "MP4 — No Watermark", sublabel: "HD quality, clean", Icon: Video, color: "text-blue-500" },
-  { format: "mp4",      label: "MP4 — Original",     sublabel: "With watermark",    Icon: Film,  color: "text-purple-500" },
-  { format: "mp3",      label: "MP3 Audio",           sublabel: "192kbps audio",    Icon: Music, color: "text-green-500" },
-  { format: "photo",    label: "Photo / Slideshow",   sublabel: "Download images",  Icon: Image, color: "text-orange-500" },
+  { format: "mp4_1080", label: "MP4 — 1080p",  sublabel: "HD · No Watermark",  Icon: Video, color: "text-blue-500"  },
+  { format: "mp4_720",  label: "MP4 — 720p",   sublabel: "Standard · No Watermark", Icon: Film,  color: "text-purple-500" },
+  { format: "mp3",      label: "MP3 Audio",     sublabel: "192kbps · Audio only", Icon: Music, color: "text-green-500" },
 ];
 
 const FEATURES = [
-  { Icon: CheckCircle2, label: "No Watermark",    desc: "Clean videos",    color: "text-green-500"  },
+  { Icon: CheckCircle2, label: "No Watermark",   desc: "Clean videos",     color: "text-green-500"  },
   { Icon: Zap,          label: "Lightning Fast",  desc: "Instant download", color: "text-yellow-500" },
-  { Icon: Lock,         label: "100% Private",    desc: "No data stored",  color: "text-blue-500"   },
+  { Icon: Lock,         label: "100% Private",    desc: "No data stored",   color: "text-blue-500"   },
   { Icon: Smartphone,   label: "Mobile Ready",    desc: "Works everywhere", color: "text-purple-500" },
 ];
 
 const STEPS = [
-  { Icon: Copy,     title: "Copy Link",   desc: "Open TikTok, tap Share → Copy Link" },
-  { Icon: Search,   title: "Paste & Fetch", desc: "Paste the link and click Fetch"     },
-  { Icon: Download, title: "Download",    desc: "Pick MP4, MP3 or Photo format"       },
+  { Icon: Copy,     title: "Copy Link",    desc: "Open TikTok, tap Share → Copy Link" },
+  { Icon: Search,   title: "Paste & Fetch", desc: "Paste the link and click Fetch"    },
+  { Icon: Download, title: "Download",     desc: "Pick 720p, 1080p or MP3"            },
 ];
 
 function fmtNum(n?: number) {
@@ -103,6 +102,8 @@ export default function HomePage() {
 
   const reset = () => { setUrl(""); setStep("idle"); setInfo(null); setError(""); };
 
+  const isPhoto = info?.is_photo && (info.images?.length ?? 0) > 0;
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-12 space-y-10">
 
@@ -117,7 +118,7 @@ export default function HomePage() {
           <span className="text-primary">TikTok Videos Free</span>
         </h1>
         <p className="text-muted-foreground text-base sm:text-lg max-w-xl mx-auto">
-          The easiest way to save TikTok videos, music, and photos — free forever, no account needed.
+          The easiest way to save TikTok videos and music — free forever, no account needed.
         </p>
       </header>
 
@@ -154,8 +155,7 @@ export default function HomePage() {
           </button>
         </div>
 
-        {/* Error */}
-        {(step === "error") && (
+        {step === "error" && (
           <div className="mt-3 flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-sm text-destructive">
             <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
             {error}
@@ -163,10 +163,11 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* ── Video Info + Download ── */}
+      {/* ── Result Card ── */}
       {step === "info-ready" && info && (
         <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-3 duration-300">
-          {/* Thumbnail header */}
+
+          {/* Thumbnail / meta header */}
           <div className="relative">
             {info.thumbnail ? (
               <div className="relative h-40 sm:h-52 overflow-hidden bg-secondary">
@@ -194,32 +195,72 @@ export default function HomePage() {
             )}
           </div>
 
-          {/* Format buttons */}
-          <div className="p-5 space-y-2">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Choose Format</p>
-            {FORMAT_OPTIONS.map(({ format, label, sublabel, Icon, color }) => {
-              const isActive = activeDownload === format;
-              return (
-                <button
-                  key={format}
-                  onClick={() => handleDownload(format)}
-                  disabled={!!activeDownload}
-                  className="w-full flex items-center gap-4 p-3.5 rounded-xl border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed group"
-                >
-                  <div className={`w-9 h-9 rounded-lg bg-secondary group-hover:bg-white/20 flex items-center justify-center flex-shrink-0 transition-colors`}>
-                    {isActive
-                      ? <Loader2 className="w-4 h-4 animate-spin" />
-                      : <Icon className={`w-4 h-4 ${color} group-hover:text-white`} />}
-                  </div>
-                  <div className="text-left flex-1">
-                    <div className="font-semibold text-sm">{isActive ? "Downloading…" : label}</div>
-                    <div className="text-xs text-muted-foreground group-hover:text-primary-foreground/70">{sublabel}</div>
-                  </div>
-                  <Download className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                </button>
-              );
-            })}
-          </div>
+          {/* ── Photo post: show images directly from CDN ── */}
+          {isPhoto ? (
+            <div className="p-5 space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                📸 Photo Post — {info.images!.length} image{info.images!.length > 1 ? "s" : ""}
+              </p>
+              <div className={`grid gap-2 ${info.images!.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                {info.images!.map((imgUrl, i) => (
+                  <a
+                    key={i}
+                    href={imgUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    download
+                    className="group relative block rounded-xl overflow-hidden border border-border bg-secondary aspect-[9/16]"
+                  >
+                    <img
+                      src={imgUrl}
+                      alt={`Photo ${i + 1}`}
+                      className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 rounded-full p-2">
+                        <ExternalLink className="w-4 h-4 text-black" />
+                      </div>
+                    </div>
+                    <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs rounded-md px-1.5 py-0.5">
+                      {i + 1}/{info.images!.length}
+                    </div>
+                  </a>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Tap any photo to open · Long-press to save on mobile
+              </p>
+            </div>
+
+          ) : (
+            /* ── Video post: 3 download format buttons ── */
+            <div className="p-5 space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Choose Format</p>
+              {FORMAT_OPTIONS.map(({ format, label, sublabel, Icon, color }) => {
+                const isActive = activeDownload === format;
+                return (
+                  <button
+                    key={format}
+                    onClick={() => handleDownload(format)}
+                    disabled={!!activeDownload}
+                    className="w-full flex items-center gap-4 p-3.5 rounded-xl border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed group"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-secondary group-hover:bg-white/20 flex items-center justify-center flex-shrink-0 transition-colors">
+                      {isActive
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <Icon className={`w-4 h-4 ${color} group-hover:text-white`} />}
+                    </div>
+                    <div className="text-left flex-1">
+                      <div className="font-semibold text-sm">{isActive ? "Downloading…" : label}</div>
+                      <div className="text-xs text-muted-foreground group-hover:text-primary-foreground/70">{sublabel}</div>
+                    </div>
+                    <Download className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -262,17 +303,23 @@ export default function HomePage() {
           <h2 className="text-xl font-bold text-foreground mb-2">Luldown — Best TikTok Downloader Without Watermark</h2>
           <p className="leading-relaxed">
             Luldown is the fastest and most reliable TikTok video downloader in 2025. Paste any TikTok URL
-            and instantly download in HD MP4 without watermark, extract MP3 audio, or save photos from TikTok
-            slideshows — completely free, no account or app installation needed.
+            and instantly download in 1080p or 720p MP4 without watermark, or extract 192kbps MP3 audio —
+            completely free, no account or app installation needed.
           </p>
         </div>
 
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <h3 className="font-semibold text-base text-foreground mb-2 flex items-center gap-2">
-              <ChevronRight className="w-4 h-4 text-primary" /> Download MP4 Without Watermark
+              <ChevronRight className="w-4 h-4 text-primary" /> Download 1080p Without Watermark
             </h3>
-            <p>Save TikTok videos in full HD quality with no watermark or logo overlay. Perfect for repurposing content or saving memories.</p>
+            <p>Save TikTok videos in full HD 1080p quality with no watermark or logo overlay. Perfect for repurposing content or saving memories.</p>
+          </div>
+          <div>
+            <h3 className="font-semibold text-base text-foreground mb-2 flex items-center gap-2">
+              <ChevronRight className="w-4 h-4 text-primary" /> Download 720p Without Watermark
+            </h3>
+            <p>Get standard HD 720p quality videos, smaller file size with clean output — great for mobile storage.</p>
           </div>
           <div>
             <h3 className="font-semibold text-base text-foreground mb-2 flex items-center gap-2">
@@ -282,15 +329,9 @@ export default function HomePage() {
           </div>
           <div>
             <h3 className="font-semibold text-base text-foreground mb-2 flex items-center gap-2">
-              <ChevronRight className="w-4 h-4 text-primary" /> Download TikTok Photos
-            </h3>
-            <p>Save images from TikTok photo slideshows and carousel posts in full resolution with a single click.</p>
-          </div>
-          <div>
-            <h3 className="font-semibold text-base text-foreground mb-2 flex items-center gap-2">
               <ChevronRight className="w-4 h-4 text-primary" /> Works on All Devices
             </h3>
-            <p>Fully responsive — use TikDown on iPhone, Android, tablet, or desktop. No app download required.</p>
+            <p>Fully responsive — use Luldown on iPhone, Android, tablet, or desktop. No app download required.</p>
           </div>
         </div>
       </article>
