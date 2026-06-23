@@ -29,7 +29,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd artifacts/tiktok-api && PORT=8000 python main.py"
+args = "cd artifacts/tiktok-api && PORT=8000 WORKERS=4 python main.py"
 waitForPort = 8000
 
 [agent]
@@ -47,10 +47,6 @@ externalPort = 80
 [[ports]]
 localPort = 8000
 externalPort = 8000
-
-[[ports]]
-localPort = 25828
-externalPort = 3001
 
 [nix]
 channel = "stable-25_05"
