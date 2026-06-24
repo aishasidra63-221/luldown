@@ -324,9 +324,9 @@ async function fetchOembed(tiktokUrl, webFingerprint) {
 // Mimics TikTok's Android app. aweme/v1/feed returns full video metadata
 // including multiple CDN URLs. play_addr URLs don't have the watermark
 // baked into the file (watermark is added client-side by the app).
+// Retries up to 2 different hosts before giving up.
 
-async function fetchMobileAPI(videoId, device) {
-  const host    = getRandomHost();
+async function _fetchMobileAPIOnce(videoId, device, host) {
   const devId   = randomDeviceId();
   const version = "300904";
   const appVer  = "30.9.4";
@@ -350,15 +350,14 @@ async function fetchMobileAPI(videoId, device) {
   });
 
   const ua = `com.ss.android.ugc.trill/${version} (Linux; U; Android ${device.android}; en_US; ${device.model}; Build/${device.build}; Cronet/TTNetVersion:c5b2a578 3d6d7cd7 MultiProcessNotSupport)`;
-
   const url = `https://${host}/aweme/v1/feed/?${params}`;
 
   const res = await fetch(url, {
     headers: {
-      "User-Agent":   ua,
-      "Accept":       "application/json",
-      "sdk-version":  "2",
-      "X-SS-DP":      "1233",
+      "User-Agent":  ua,
+      "Accept":      "application/json",
+      "sdk-version": "2",
+      "X-SS-DP":     "1233",
     },
   });
 
@@ -368,8 +367,21 @@ async function fetchMobileAPI(videoId, device) {
   if (!data.aweme_list || data.aweme_list.length === 0) {
     throw new Error("Video not found or private");
   }
-
   return data.aweme_list[0];
+}
+
+async function fetchMobileAPI(videoId, device) {
+  // Shuffle hosts — pick 2 different ones to try
+  const shuffled = [...MOBILE_API_HOSTS].sort(() => Math.random() - 0.5);
+  let lastError;
+  for (const host of shuffled.slice(0, 2)) {
+    try {
+      return await _fetchMobileAPIOnce(videoId, device, host);
+    } catch (e) {
+      lastError = e;
+    }
+  }
+  throw lastError;
 }
 
 // ── Resolve short URLs (vm.tiktok.com, vt.tiktok.com, tiktok.com/t/) ────────
@@ -433,6 +445,16 @@ async function extractVideoId(rawUrl) {
 }
 
 // ── Parse aweme response into our format ─────────────────────────────────────
+// Prefer download_addr over play_addr — download_addr is the watermark-free
+// download link; play_addr is the streaming URL (may have client-side watermark).
+function getBestAddrUrl(bitRateEntry) {
+  return (
+    bitRateEntry?.download_addr?.url_list?.[0] ||
+    bitRateEntry?.play_addr?.url_list?.[0] ||
+    ""
+  );
+}
+
 function parseMobileAPI(aweme) {
   const video  = aweme.video  || {};
   const music  = aweme.music  || {};
@@ -449,17 +471,20 @@ function parseMobileAPI(aweme) {
 
   const isPhoto = images.length > 0;
 
+  // Sort by bitrate descending; entries must have at least one of play_addr / download_addr
   const bitRates = (video.bit_rate || [])
-    .filter(b => b.play_addr?.url_list?.length > 0)
+    .filter(b => b.play_addr?.url_list?.length > 0 || b.download_addr?.url_list?.length > 0)
     .sort((a, b) => (b.bit_rate || 0) - (a.bit_rate || 0));
 
-  const hdUrl  = bitRates[0]?.play_addr?.url_list?.[0] || video.play_addr?.url_list?.[0] || "";
-  const sdUrl  = bitRates[1]?.play_addr?.url_list?.[0] || video.play_addr?.url_list?.[0] || hdUrl;
+  // HD = highest bitrate, SD = second highest (fallback to same as HD)
+  const hdFallback = video.download_addr?.url_list?.[0] || video.play_addr?.url_list?.[0] || "";
+  const hdUrl    = bitRates[0] ? getBestAddrUrl(bitRates[0]) : hdFallback;
+  const sdUrl    = bitRates[1] ? getBestAddrUrl(bitRates[1]) : (hdFallback || hdUrl);
   const audioUrl = music.play_url?.url_list?.[0] || "";
 
   const thumbnail = video.cover?.url_list?.[0]
     || video.origin_cover?.url_list?.[0]
-    || aweme.video?.animated_cover?.url_list?.[0]
+    || video.animated_cover?.url_list?.[0]
     || "";
 
   return {
@@ -469,6 +494,8 @@ function parseMobileAPI(aweme) {
     thumbnail,
     view_count: stats.play_count  || 0,
     like_count: stats.digg_count  || 0,
+    comment_count: stats.comment_count || 0,
+    share_count:   stats.share_count   || 0,
     is_photo:   isPhoto,
     images,
     _hd_url:    hdUrl,
@@ -492,7 +519,9 @@ function err(detail, status = 422) {
 
 function validateTikTokUrl(raw) {
   const u = (raw || "").trim();
-  return u.includes("tiktok.com") ? u : null;
+  if (!u.startsWith("http")) return null;
+  if (u.includes("tiktok.com") || u.includes("douyin.com")) return u;
+  return null;
 }
 
 // ── Main handler ──────────────────────────────────────────────────────────────
@@ -560,15 +589,22 @@ export default {
       }
 
       return json({
-        success:    true,
-        title:      p.title,
-        author:     p.author,
-        duration:   p.duration,
-        thumbnail:  p.thumbnail,
-        view_count: p.view_count,
-        like_count: p.like_count,
-        is_photo:   p.is_photo,
-        images:     p.images,
+        success:       true,
+        title:         p.title,
+        author:        p.author,
+        duration:      p.duration,
+        thumbnail:     p.thumbnail,
+        view_count:    p.view_count,
+        like_count:    p.like_count,
+        comment_count: p.comment_count,
+        share_count:   p.share_count,
+        is_photo:      p.is_photo,
+        images:        p.images,
+        download_urls: {
+          mp4_1080: p._hd_url,
+          mp4_720:  p._sd_url,
+          mp3:      p._audio_url,
+        },
       });
     }
 

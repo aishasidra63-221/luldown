@@ -164,9 +164,7 @@ async def _get_video_id(tiktok_url: str) -> str:
 
 # ── Phase 2: TikTok Mobile API ────────────────────────────────────────────────
 
-async def _fetch_mobile_api(video_id: str) -> dict:
-    device  = _random_device()
-    host    = _random_host()
+async def _fetch_mobile_api_once(video_id: str, device: dict, host: str) -> dict:
     version = "300904"
     app_ver = "30.9.4"
     dev_id  = _random_device_id()
@@ -189,7 +187,7 @@ async def _fetch_mobile_api(video_id: str) -> dict:
         "ts":                    str(int(time.time())),
     }
 
-    ua = _build_mobile_ua(device, version)
+    ua  = _build_mobile_ua(device, version)
     url = f"https://{host}/aweme/v1/feed/"
 
     async with httpx.AsyncClient(
@@ -210,8 +208,21 @@ async def _fetch_mobile_api(video_id: str) -> dict:
     aweme_list = data.get("aweme_list", [])
     if not aweme_list:
         raise DownloadError("Video not found or private")
-
     return aweme_list[0]
+
+
+async def _fetch_mobile_api(video_id: str) -> dict:
+    """Try up to 2 random hosts before giving up."""
+    device = _random_device()
+    hosts  = random.sample(MOBILE_API_HOSTS, min(2, len(MOBILE_API_HOSTS)))
+    last_err: Exception = DownloadError("No hosts available")
+    for host in hosts:
+        try:
+            return await _fetch_mobile_api_once(video_id, device, host)
+        except Exception as e:
+            last_err = e
+            logger.warning("Mobile API failed on %s: %s", host, e)
+    raise last_err
 
 
 # ── Parse aweme response ──────────────────────────────────────────────────────
@@ -235,37 +246,49 @@ def _parse_aweme(aweme: dict) -> dict:
 
     is_photo = len(images) > 0
 
+    def _best_url(b: dict) -> str:
+        return (
+            (b.get("download_addr") or {}).get("url_list", [""])[0]
+            or (b.get("play_addr") or {}).get("url_list", [""])[0]
+            or ""
+        )
+
     bit_rates = sorted(
-        [b for b in video.get("bit_rate", []) if b.get("play_addr", {}).get("url_list")],
+        [b for b in video.get("bit_rate", [])
+         if (b.get("play_addr") or b.get("download_addr") or {}).get("url_list")],
         key=lambda b: b.get("bit_rate", 0),
         reverse=True,
     )
 
-    hd_url    = (bit_rates[0]["play_addr"]["url_list"][0] if bit_rates
-                 else (video.get("play_addr", {}).get("url_list", [""])[0]))
-    sd_url    = (bit_rates[1]["play_addr"]["url_list"][0] if len(bit_rates) > 1
-                 else video.get("play_addr", {}).get("url_list", [""])[0] or hd_url)
-    audio_url = music.get("play_url", {}).get("url_list", [""])[0]
+    hd_fallback = (
+        (video.get("download_addr") or {}).get("url_list", [""])[0]
+        or (video.get("play_addr") or {}).get("url_list", [""])[0]
+    )
+    hd_url    = _best_url(bit_rates[0]) if bit_rates else hd_fallback
+    sd_url    = _best_url(bit_rates[1]) if len(bit_rates) > 1 else (hd_fallback or hd_url)
+    audio_url = (music.get("play_url") or {}).get("url_list", [""])[0] or ""
 
     thumbnail = (
-        video.get("cover", {}).get("url_list", [""])[0]
-        or video.get("origin_cover", {}).get("url_list", [""])[0]
+        (video.get("cover") or {}).get("url_list", [""])[0]
+        or (video.get("origin_cover") or {}).get("url_list", [""])[0]
         or ""
     )
 
     return {
-        "success":    True,
-        "title":      aweme.get("desc", "TikTok Video"),
-        "author":     author.get("nickname") or author.get("unique_id", ""),
-        "duration":   int((aweme.get("duration") or video.get("duration") or 0) / 1000),
-        "thumbnail":  thumbnail,
-        "view_count": stats.get("play_count", 0),
-        "like_count": stats.get("digg_count", 0),
-        "is_photo":   is_photo,
-        "images":     images,
-        "_hd_url":    hd_url,
-        "_sd_url":    sd_url,
-        "_audio_url": audio_url,
+        "success":       True,
+        "title":         aweme.get("desc", "TikTok Video"),
+        "author":        author.get("nickname") or author.get("unique_id", ""),
+        "duration":      int((aweme.get("duration") or video.get("duration") or 0) / 1000),
+        "thumbnail":     thumbnail,
+        "view_count":    stats.get("play_count", 0),
+        "like_count":    stats.get("digg_count", 0),
+        "comment_count": stats.get("comment_count", 0),
+        "share_count":   stats.get("share_count", 0),
+        "is_photo":      is_photo,
+        "images":        images,
+        "_hd_url":       hd_url,
+        "_sd_url":       sd_url,
+        "_audio_url":    audio_url,
     }
 
 
@@ -287,9 +310,11 @@ async def get_video_info(url: str) -> dict:
         except Exception:
             pass
 
-    for k in list(result):
-        if k.startswith("_"):
-            result.pop(k, None)
+    result["download_urls"] = {
+        "mp4_1080": result.pop("_hd_url", ""),
+        "mp4_720":  result.pop("_sd_url", ""),
+        "mp3":      result.pop("_audio_url", ""),
+    }
 
     return result
 

@@ -84,9 +84,10 @@ export default function HomePage() {
     try {
       const rcToken = await getToken("download");
       await downloadVideo(url.trim(), format, {
-        title: info?.title,
-        author: info?.author,
-        thumbnail: info?.thumbnail,
+        title:         info?.title,
+        author:        info?.author,
+        thumbnail:     info?.thumbnail,
+        download_urls: info?.download_urls,
       }, rcToken);
     } catch (e: any) {
       setError(e.message || "Download failed");

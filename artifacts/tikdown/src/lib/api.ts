@@ -7,16 +7,25 @@ const API_BASE = WORKER_URL || "/tikapi";
 const HISTORY_KEY = "luldown_history";
 const MAX_HISTORY = 10;
 
+export interface DownloadUrls {
+  mp4_1080?: string;
+  mp4_720?:  string;
+  mp3?:      string;
+}
+
 export interface VideoInfo {
   success: boolean;
   title: string;
   author: string;
   duration: number;
   thumbnail: string;
-  view_count?: number;
-  like_count?: number;
+  view_count?:    number;
+  like_count?:    number;
+  comment_count?: number;
+  share_count?:   number;
   is_photo?: boolean;
   images?: string[];
+  download_urls?: DownloadUrls;
 }
 
 export interface HistoryItem {
@@ -93,33 +102,57 @@ export async function fetchVideoInfo(
   return res.json();
 }
 
+const FORMAT_FILENAME: Record<DownloadFormat, string> = {
+  mp4_1080: "luldown_1080p.mp4",
+  mp4_720:  "luldown_720p.mp4",
+  mp3:      "luldown_audio.mp3",
+};
+
 export async function downloadVideo(
   url: string,
   format: DownloadFormat,
-  videoMeta?: { title?: string; author?: string; thumbnail?: string },
+  videoMeta?: { title?: string; author?: string; thumbnail?: string; download_urls?: DownloadUrls },
   recaptchaToken?: string,
 ): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/download`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url, format, recaptcha_token: recaptchaToken ?? null }),
-  });
+  // Fast path — use the CDN URL already returned by /api/info (no second API call)
+  const cachedCdnUrl = videoMeta?.download_urls?.[format];
 
-  if (!res.ok) {
-    const errData = await res.json().catch(() => ({ detail: "Download failed" }));
-    throw new Error(errData.detail || "Download failed");
+  let cdnUrl: string;
+  let filename: string;
+  let title:    string;
+  let author:   string;
+
+  if (cachedCdnUrl) {
+    cdnUrl   = cachedCdnUrl;
+    filename = FORMAT_FILENAME[format];
+    title    = videoMeta?.title  || "TikTok Video";
+    author   = videoMeta?.author || "Unknown";
+  } else {
+    // Fallback — call /api/download (e.g. if info was fetched by older code)
+    const res = await fetch(`${API_BASE}/api/download`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, format, recaptcha_token: recaptchaToken ?? null }),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({ detail: "Download failed" }));
+      throw new Error(errData.detail || "Download failed");
+    }
+
+    const data  = await res.json();
+    cdnUrl   = data.cdn_url;
+    filename = data.filename || FORMAT_FILENAME[format];
+    title    = data.title    || videoMeta?.title  || "TikTok Video";
+    author   = data.author   || videoMeta?.author || "Unknown";
+
+    if (!cdnUrl) throw new Error("No download URL received");
   }
-
-  const data = await res.json();
-  const cdnUrl: string = data.cdn_url;
-  const filename: string = data.filename || "luldown.mp4";
-
-  if (!cdnUrl) throw new Error("No download URL received");
 
   _addHistoryEntry({
     url,
-    title:         data.title || videoMeta?.title || "TikTok Video",
-    author:        data.author || videoMeta?.author || "Unknown",
+    title,
+    author,
     thumbnail:     videoMeta?.thumbnail || "",
     format,
     downloaded_at: Math.floor(Date.now() / 1000),
