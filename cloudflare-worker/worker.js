@@ -372,25 +372,64 @@ async function fetchMobileAPI(videoId, device) {
   return data.aweme_list[0];
 }
 
-// ── Resolve short URLs (vm.tiktok.com, vt.tiktok.com) ───────────────────────
+// ── Resolve short URLs (vm.tiktok.com, vt.tiktok.com, tiktok.com/t/) ────────
 async function resolveUrl(url) {
-  if (url.includes("/video/")) return url;
-  const res = await fetch(url, { redirect: "follow" });
-  return res.url;
+  const res = await fetch(url, {
+    redirect: "follow",
+    headers: {
+      "User-Agent":      "Mozilla/5.0 (Linux; Android 14; SM-S921B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.82 Mobile Safari/537.36",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Referer":         "https://www.tiktok.com/",
+    },
+  });
+  return { finalUrl: res.url, html: await res.text() };
 }
 
 // ── Extract video ID from TikTok URL ────────────────────────────────────────
+function extractIdFromString(s) {
+  const m = s.match(/\/video\/(\d{10,20})/);
+  return m ? m[1] : null;
+}
+
+function extractIdFromHtml(html) {
+  const patterns = [
+    /["']\/video\/(\d{15,20})["']/,
+    /"aweme_id"\s*:\s*"(\d{15,20})"/,
+    /"video_id"\s*:\s*"(\d{15,20})"/,
+    /\/video\/(\d{15,20})/,
+  ];
+  for (const p of patterns) {
+    const m = html.match(p);
+    if (m) return m[1];
+  }
+  return null;
+}
+
 async function extractVideoId(rawUrl) {
-  let url = rawUrl.trim();
+  const url = rawUrl.trim();
 
-  const directMatch = url.match(/\/video\/(\d+)/);
-  if (directMatch) return directMatch[1];
+  // Fast path — full URL already has the video ID
+  const direct = extractIdFromString(url);
+  if (direct) return direct;
 
-  const resolved = await resolveUrl(url);
-  const resolvedMatch = resolved.match(/\/video\/(\d+)/);
-  if (resolvedMatch) return resolvedMatch[1];
+  // Short link (/t/, vm., vt.) — follow redirects with browser UA
+  let finalUrl, html;
+  try {
+    ({ finalUrl, html } = await resolveUrl(url));
+  } catch (e) {
+    throw new Error(`Could not resolve URL: ${e.message}`);
+  }
 
-  throw new Error("Could not extract video ID from URL");
+  // Check resolved URL
+  const fromUrl = extractIdFromString(finalUrl);
+  if (fromUrl) return fromUrl;
+
+  // Scrape HTML for video ID
+  const fromHtml = extractIdFromHtml(html);
+  if (fromHtml) return fromHtml;
+
+  throw new Error("Could not extract video ID. Make sure the link is a valid public TikTok video.");
 }
 
 // ── Parse aweme response into our format ─────────────────────────────────────

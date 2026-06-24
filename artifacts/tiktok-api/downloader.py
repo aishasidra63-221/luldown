@@ -93,31 +93,73 @@ async def _fetch_oembed(tiktok_url: str) -> dict:
 
 # ── Short URL resolution ──────────────────────────────────────────────────────
 
+_BROWSER_UA = (
+    "Mozilla/5.0 (Linux; Android 14; SM-S921B) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/125.0.6422.82 Mobile Safari/537.36"
+)
+
+
 async def _resolve_url(url: str) -> str:
-    if "/video/" in url:
-        return url
+    """Follow redirects and return the final URL with browser-like headers."""
     async with httpx.AsyncClient(
         timeout=httpx.Timeout(15.0, connect=8.0),
         follow_redirects=True,
+        headers={
+            "User-Agent":      _BROWSER_UA,
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Referer":         "https://www.tiktok.com/",
+        },
     ) as client:
         resp = await client.get(url)
-        return str(resp.url)
+        return str(resp.url), resp.text
+
+
+def _extract_video_id_from_text(text: str) -> Optional[str]:
+    """Try to find a video ID inside page HTML (meta, JSON-LD, etc.)."""
+    for pattern in [
+        r'"/video/(\d{15,20})"',
+        r'"aweme_id"\s*:\s*"(\d{15,20})"',
+        r'"video_id"\s*:\s*"(\d{15,20})"',
+        r'/video/(\d{15,20})',
+    ]:
+        m = re.search(pattern, text)
+        if m:
+            return m.group(1)
+    return None
 
 
 def _extract_video_id_from_url(url: str) -> Optional[str]:
-    match = re.search(r"/video/(\d+)", url)
+    match = re.search(r"/video/(\d{10,20})", url)
     return match.group(1) if match else None
 
 
 async def _get_video_id(tiktok_url: str) -> str:
+    # Fast path — full URL already has the video ID
     vid = _extract_video_id_from_url(tiktok_url)
     if vid:
         return vid
-    resolved = await _resolve_url(tiktok_url)
-    vid = _extract_video_id_from_url(resolved)
+
+    # Short link or /t/ link — follow redirects with browser UA
+    try:
+        final_url, html = await _resolve_url(tiktok_url)
+    except Exception as e:
+        raise DownloadError(f"Could not resolve URL: {e}")
+
+    # Check the resolved URL
+    vid = _extract_video_id_from_url(final_url)
     if vid:
         return vid
-    raise DownloadError("Could not extract video ID from URL")
+
+    # Scrape the HTML for the video ID
+    vid = _extract_video_id_from_text(html)
+    if vid:
+        return vid
+
+    raise DownloadError(
+        "Could not extract video ID. Make sure the link is a valid public TikTok video."
+    )
 
 
 # ── Phase 2: TikTok Mobile API ────────────────────────────────────────────────
