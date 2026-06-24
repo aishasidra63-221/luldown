@@ -18,10 +18,14 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "TikTok Downloader API"
+args = "TikTok API"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
 
 [[workflows.workflow]]
-name = "TikTok Downloader API"
+name = "TikTok API"
 author = "agent"
 
 [workflows.workflow.metadata]
@@ -29,8 +33,19 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd artifacts/tiktok-api && PORT=8000 WORKERS=4 python main.py"
-waitForPort = 8000
+args = "cd artifacts/tiktok-api && PORT=8000 WORKERS=1 python main.py"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/tikdown run dev"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
@@ -44,10 +59,11 @@ timeoutMs = 120000
 localPort = 5000
 externalPort = 80
 
-[[ports]]
-localPort = 8000
-externalPort = 8000
-
 [nix]
 channel = "stable-25_05"
 packages = ["libxcrypt"]
+
+[userenv]
+
+[userenv.shared]
+PORT = "5000"
