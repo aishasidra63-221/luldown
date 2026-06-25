@@ -33,7 +33,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd artifacts/tiktok-api && PORT=8000 WORKERS=1 python main.py"
+args = "fuser -k 8000/tcp 2>/dev/null; sleep 1; cd artifacts/tiktok-api && PORT=8000 WORKERS=1 python main.py"
 waitForPort = 8000
 
 [[workflows.workflow]]

@@ -428,6 +428,37 @@ function extractIdFromHtml(html) {
   return null;
 }
 
+async function getVideoIdFromOembed(tiktokUrl) {
+  // TikTok oembed API accepts short links and returns embed_product_id (= aweme_id)
+  try {
+    const endpoint = `https://www.tiktok.com/oembed?url=${encodeURIComponent(tiktokUrl)}`;
+    const res = await fetch(endpoint, {
+      headers: {
+        "User-Agent":  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "Accept":      "application/json",
+        "Referer":     "https://www.tiktok.com/",
+      },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+
+    // embed_product_id is the aweme/video ID
+    if (data.embed_product_id) return String(data.embed_product_id);
+    if (data.video_id)         return String(data.video_id);
+
+    // Parse from embed HTML: data-video-id="..."
+    const embedHtml = data.html || "";
+    const m1 = embedHtml.match(/data-video-id=["'](\d{10,20})["']/);
+    if (m1) return m1[1];
+
+    // Parse from author_url just in case
+    const authorUrl = data.author_url || "";
+    const m2 = authorUrl.match(/\/video\/(\d{10,20})/);
+    if (m2) return m2[1];
+  } catch (_) {}
+  return null;
+}
+
 async function extractVideoId(rawUrl) {
   const url = rawUrl.trim();
 
@@ -450,6 +481,10 @@ async function extractVideoId(rawUrl) {
   // Scrape HTML for video ID
   const fromHtml = extractIdFromHtml(html);
   if (fromHtml) return fromHtml;
+
+  // Fallback: oembed API — works with tiktok.com/t/ short links
+  const fromOembed = await getVideoIdFromOembed(url);
+  if (fromOembed) return fromOembed;
 
   throw new Error("Could not extract video ID. Make sure the link is a valid public TikTok video.");
 }

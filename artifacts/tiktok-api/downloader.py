@@ -135,6 +135,45 @@ def _extract_video_id_from_url(url: str) -> Optional[str]:
     return match.group(1) if match else None
 
 
+async def _get_video_id_from_oembed(tiktok_url: str) -> Optional[str]:
+    """Use TikTok's oembed API to get video ID — works with short links too."""
+    try:
+        endpoint = f"https://www.tiktok.com/oembed?url={tiktok_url}"
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(15.0, connect=8.0),
+            follow_redirects=True,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+                "Accept": "application/json",
+                "Referer": "https://www.tiktok.com/",
+            },
+        ) as client:
+            resp = await client.get(endpoint)
+            if not resp.is_success:
+                return None
+            data = resp.json()
+            # embed_product_id is the video/aweme ID
+            vid = data.get("embed_product_id") or data.get("video_id")
+            if vid:
+                return str(vid)
+            # Try parsing it from the embed HTML: <blockquote ... data-video-id="...">
+            html_embed = data.get("html", "")
+            m = re.search(r'data-video-id=["\'](\d{10,20})["\']', html_embed)
+            if m:
+                return m.group(1)
+            # Try author_url which often has full profile but thumbnail_url has video id sometimes
+            author_url = data.get("author_url", "")
+            m = re.search(r"/video/(\d{10,20})", author_url)
+            if m:
+                return m.group(1)
+    except Exception as e:
+        logger.debug("oembed video ID lookup failed: %s", e)
+    return None
+
+
+_REGION_BLOCK_PATHS = ("/in/about", "/about", "/restricted", "/unavailable")
+
+
 async def _get_video_id(tiktok_url: str) -> str:
     # Fast path — full URL already has the video ID
     vid = _extract_video_id_from_url(tiktok_url)
@@ -147,6 +186,13 @@ async def _get_video_id(tiktok_url: str) -> str:
     except Exception as e:
         raise DownloadError(f"Could not resolve URL: {e}")
 
+    # Detect region-block redirect (e.g., /in/about when TikTok is banned in India)
+    if any(p in final_url for p in _REGION_BLOCK_PATHS):
+        raise DownloadError(
+            "Short link could not be resolved — TikTok is restricted in this server region. "
+            "Please paste the full video URL (e.g. https://www.tiktok.com/@username/video/1234...) instead of a short link."
+        )
+
     # Check the resolved URL
     vid = _extract_video_id_from_url(final_url)
     if vid:
@@ -154,6 +200,11 @@ async def _get_video_id(tiktok_url: str) -> str:
 
     # Scrape the HTML for the video ID
     vid = _extract_video_id_from_text(html)
+    if vid:
+        return vid
+
+    # Fallback: oembed API accepts short links and returns embed_product_id
+    vid = await _get_video_id_from_oembed(tiktok_url)
     if vid:
         return vid
 
