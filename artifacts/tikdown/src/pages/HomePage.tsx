@@ -58,26 +58,29 @@ export default function HomePage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-12 space-y-10">
 
-      <header className="text-center space-y-4">
-        <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 text-primary text-xs font-semibold px-3 py-1.5 rounded-full">
-          <Zap className="w-3.5 h-3.5" />
-          Fast · Free · No Login Required
+      <header className="text-center space-y-4 relative overflow-visible">
+        <div className="hero-glow" />
+        <div className="relative z-10 space-y-4">
+          <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 text-primary text-xs font-semibold px-3 py-1.5 rounded-full backdrop-blur-sm">
+            <Zap className="w-3.5 h-3.5" />
+            Fast · Free · No Login Required
+          </div>
+          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight">
+            Luldown<br />
+            <span className="text-primary">TikTok Videos Free</span>
+          </h1>
+          <p className="text-muted-foreground text-base sm:text-lg max-w-xl mx-auto">
+            The easiest way to save TikTok videos and music — free forever, no account needed.
+          </p>
         </div>
-        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight">
-          Luldown<br />
-          <span className="text-primary">TikTok Videos Free</span>
-        </h1>
-        <p className="text-muted-foreground text-base sm:text-lg max-w-xl mx-auto">
-          The easiest way to save TikTok videos and music — free forever, no account needed.
-        </p>
       </header>
 
       <DownloaderBox />
 
       <div className="grid grid-cols-3 gap-3">
         {STEPS.map(({ Icon, title, desc }, i) => (
-          <div key={title} className="bg-card border border-border rounded-2xl p-4 text-center relative">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
+          <div key={title} className="step-card bg-card border border-primary/20 rounded-2xl p-4 text-center relative">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center shadow-[0_0_10px_rgba(254,44,85,0.5)]">
               {i + 1}
             </div>
             <div className="mt-2 flex justify-center mb-2">
@@ -93,8 +96,8 @@ export default function HomePage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {FEATURES.map(({ Icon, label, desc, color }) => (
-          <div key={label} className="bg-card border border-border rounded-xl p-4 flex flex-col items-start gap-2">
-            <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+          <div key={label} className="feature-card bg-card border border-border rounded-xl p-4 flex flex-col items-start gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
               <Icon className={`w-4 h-4 ${color}`} />
             </div>
             <div>

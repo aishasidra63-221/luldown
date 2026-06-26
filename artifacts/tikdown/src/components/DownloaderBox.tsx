@@ -133,7 +133,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
           <button
             onClick={handleFetch}
             disabled={!url.trim() || step === "loading-info"}
-            className="px-5 py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl transition-all hover:opacity-90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 text-sm whitespace-nowrap"
+            className="fetch-btn px-5 py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 text-sm whitespace-nowrap"
           >
             {step === "loading-info"
               ? <><Loader2 className="w-4 h-4 animate-spin" /> Fetching</>
