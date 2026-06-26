@@ -74,21 +74,25 @@ export default function HomePage() {
 
       <DownloaderBox />
 
-      <div className="grid grid-cols-3 gap-3">
-        {STEPS.map(({ Icon, title, desc }, i) => (
-          <div key={title} className="bg-card border border-border rounded-2xl p-4 text-center relative">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
-              {i + 1}
-            </div>
-            <div className="mt-2 flex justify-center mb-2">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Icon className="w-5 h-5 text-primary" />
+      <div className="space-y-2">
+        <h2 className="text-2xl font-bold text-foreground text-center">How It Works</h2>
+        <p className="text-muted-foreground text-sm text-center mb-6">Three simple steps to download your favorite TikTok content.</p>
+        <div className="space-y-4">
+          {STEPS.map(({ Icon, title, desc }, i) => (
+            <div key={title} className="bg-card border border-border rounded-2xl p-5 flex items-center gap-5">
+              <div className="flex-shrink-0 w-16 h-16 rounded-full border-2 border-primary flex items-center justify-center relative">
+                <Icon className="w-7 h-7 text-primary" />
+                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
+                  {i + 1}
+                </div>
+              </div>
+              <div>
+                <div className="font-bold text-base text-foreground">{title}</div>
+                <div className="text-sm text-muted-foreground mt-0.5">{desc}</div>
               </div>
             </div>
-            <div className="font-semibold text-sm text-foreground">{title}</div>
-            <div className="text-xs text-muted-foreground mt-1 leading-relaxed">{desc}</div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

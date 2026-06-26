@@ -37,16 +37,16 @@
   --foreground: 0 0% 8%;
   --border: 0 0% 88%;
   --input: 0 0% 88%;
-  --ring: 348 100% 58%;
+  --ring: 26 100% 52%;
   --card: 0 0% 100%;
   --card-foreground: 0 0% 8%;
-  --primary: 348 100% 58%;
+  --primary: 26 100% 52%;
   --primary-foreground: 0 0% 100%;
   --secondary: 0 0% 94%;
   --secondary-foreground: 0 0% 20%;
   --muted: 0 0% 94%;
   --muted-foreground: 0 0% 45%;
-  --accent: 348 100% 58%;
+  --accent: 26 100% 52%;
   --accent-foreground: 0 0% 100%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
@@ -59,16 +59,16 @@
   --foreground: 0 0% 96%;
   --border: 0 0% 18%;
   --input: 0 0% 18%;
-  --ring: 348 100% 58%;
+  --ring: 26 100% 52%;
   --card: 0 0% 11%;
   --card-foreground: 0 0% 96%;
-  --primary: 348 100% 58%;
+  --primary: 26 100% 52%;
   --primary-foreground: 0 0% 100%;
   --secondary: 0 0% 15%;
   --secondary-foreground: 0 0% 90%;
   --muted: 0 0% 15%;
   --muted-foreground: 0 0% 55%;
-  --accent: 348 100% 58%;
+  --accent: 26 100% 52%;
   --accent-foreground: 0 0% 100%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
@@ -80,7 +80,7 @@
 }
 
 .tiktok-gradient {
-  background: linear-gradient(135deg, #FE2C55 0%, #010101 50%, #25F4EE 100%);
+  background: linear-gradient(135deg, #FF6B00 0%, #010101 50%, #25F4EE 100%);
 }
 
 .download-btn {
@@ -100,9 +100,9 @@
 }
 
 @keyframes pulse-ring {
-  0% { box-shadow: 0 0 0 0 rgba(254, 44, 85, 0.4); }
-  70% { box-shadow: 0 0 0 10px rgba(254, 44, 85, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(254, 44, 85, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(255, 107, 0, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(255, 107, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 107, 0, 0); }
 }
 
 .loading-pulse {
