@@ -34,20 +34,20 @@
 
 /* ── Light mode ─────────────────────────────────────────────────────────────── */
 :root {
-  --background: 262 30% 97%;
-  --foreground: 262 40% 8%;
-  --border: 262 20% 87%;
-  --input: 262 20% 87%;
-  --ring: 262 83% 60%;
+  --background: 225 20% 97%;
+  --foreground: 225 15% 8%;
+  --border: 225 15% 87%;
+  --input: 225 15% 87%;
+  --ring: 231 85% 62%;
   --card: 0 0% 100%;
-  --card-foreground: 262 40% 8%;
-  --primary: 262 83% 60%;
+  --card-foreground: 225 15% 8%;
+  --primary: 231 85% 62%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 262 20% 93%;
-  --secondary-foreground: 262 30% 20%;
-  --muted: 262 20% 93%;
-  --muted-foreground: 262 15% 45%;
-  --accent: 197 80% 45%;
+  --secondary: 225 15% 93%;
+  --secondary-foreground: 225 15% 20%;
+  --muted: 225 15% 93%;
+  --muted-foreground: 225 10% 45%;
+  --accent: 187 90% 50%;
   --accent-foreground: 0 0% 100%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
@@ -55,22 +55,22 @@
   --radius: 0.75rem;
 }
 
-/* ── Dark mode — purple-black + cyan ────────────────────────────────────────── */
+/* ── Dark mode — deep navy + indigo-blue + TikTok cyan ──────────────────────── */
 .dark {
-  --background: 262 43% 5%;
+  --background: 229 28% 5%;
   --foreground: 210 20% 95%;
-  --border: 262 25% 14%;
-  --input: 262 25% 12%;
-  --ring: 262 83% 68%;
-  --card: 262 35% 7%;
+  --border: 229 20% 14%;
+  --input: 229 20% 12%;
+  --ring: 231 85% 62%;
+  --card: 229 25% 7%;
   --card-foreground: 210 20% 95%;
-  --primary: 262 83% 68%;
+  --primary: 231 85% 62%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 262 28% 12%;
+  --secondary: 229 22% 12%;
   --secondary-foreground: 210 15% 88%;
-  --muted: 262 25% 12%;
+  --muted: 229 20% 12%;
   --muted-foreground: 210 10% 58%;
-  --accent: 197 100% 55%;
+  --accent: 187 90% 50%;
   --accent-foreground: 220 40% 4%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
@@ -82,11 +82,13 @@
 }
 
 /* ── Background orbs (dark mode only) ──────────────────────────────────────── */
-.dark .bg-orb-purple {
-  background: radial-gradient(circle, hsl(262 83% 68%), transparent 70%);
+/* Blue-indigo orb — matches logo primary */
+.dark .bg-orb-blue {
+  background: radial-gradient(circle, hsl(231 85% 62%), transparent 70%);
 }
+/* TikTok cyan orb */
 .dark .bg-orb-cyan {
-  background: radial-gradient(circle, hsl(197 100% 55%), transparent 70%);
+  background: radial-gradient(circle, hsl(187 90% 50%), transparent 70%);
 }
 
 /* ── Glass card ─────────────────────────────────────────────────────────────── */
@@ -101,7 +103,7 @@
 }
 .download-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(168, 85, 247, 0.4);
+  box-shadow: 0 8px 25px rgba(75, 108, 247, 0.4);
 }
 .download-btn:active {
   transform: translateY(0);
@@ -109,14 +111,14 @@
 
 /* ── TikTok gradient ─────────────────────────────────────────────────────────── */
 .tiktok-gradient {
-  background: linear-gradient(135deg, #a855f7 0%, #07050f 50%, #00c8e6 100%);
+  background: linear-gradient(135deg, #4B6CF7 0%, #0d0f1a 50%, #25F4EE 100%);
 }
 
 /* ── Pulse ring ──────────────────────────────────────────────────────────────── */
 @keyframes pulse-ring {
-  0%   { box-shadow: 0 0 0 0  rgba(168, 85, 247, 0.4); }
-  70%  { box-shadow: 0 0 0 10px rgba(168, 85, 247, 0); }
-  100% { box-shadow: 0 0 0 0  rgba(168, 85, 247, 0); }
+  0%   { box-shadow: 0 0 0 0  rgba(75, 108, 247, 0.4); }
+  70%  { box-shadow: 0 0 0 10px rgba(75, 108, 247, 0); }
+  100% { box-shadow: 0 0 0 0  rgba(75, 108, 247, 0); }
 }
 .loading-pulse {
   animation: pulse-ring 1.5s infinite;

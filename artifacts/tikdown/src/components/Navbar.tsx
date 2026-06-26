@@ -20,8 +20,8 @@ export default function Navbar() {
     <nav
       className="sticky top-0 z-50 border-b"
       style={isDark ? {
-        borderColor: "rgba(168,85,247,0.15)",
-        background: "rgba(7,5,15,0.80)",
+        borderColor: "rgba(75,108,247,0.15)",
+        background: "rgba(7,10,26,0.82)",
         backdropFilter: "blur(24px)",
         WebkitBackdropFilter: "blur(24px)",
       } : {
@@ -36,15 +36,15 @@ export default function Navbar() {
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center"
               style={isDark ? {
-                background: "linear-gradient(135deg, hsl(262 83% 68%), hsl(197 100% 55%))",
-                boxShadow: "0 0 16px rgba(168,85,247,0.5)",
-              } : { background: "hsl(262 83% 60%)" }}
+                background: "linear-gradient(135deg, #4B6CF7, #25F4EE)",
+                boxShadow: "0 0 16px rgba(75,108,247,0.55)",
+              } : { background: "hsl(231 85% 62%)" }}
             >
               <Download className="w-4 h-4 text-white" strokeWidth={2.5} />
             </div>
             <span className="text-xl font-bold tracking-tight">
               Lul
-              <span style={isDark ? { color: "hsl(197 100% 55%)" } : { color: "hsl(262 83% 60%)" }}>
+              <span style={isDark ? { color: "#25F4EE" } : { color: "hsl(231 85% 62%)" }}>
                 down
               </span>
             </span>
@@ -73,8 +73,8 @@ export default function Navbar() {
             onClick={toggle}
             className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
             style={isDark ? {
-              background: "rgba(168,85,247,0.12)",
-              border: "1px solid rgba(168,85,247,0.2)",
+              background: "rgba(75,108,247,0.12)",
+              border: "1px solid rgba(75,108,247,0.2)",
             } : { background: "hsl(var(--secondary))" }}
             aria-label="Toggle theme"
           >

@@ -55,14 +55,14 @@ function DarkBackground() {
       <div className="absolute inset-0"
         style={{ background: "linear-gradient(135deg, #07050f 0%, #050a18 100%)" }} />
 
-      {/* Purple orb — top left */}
+      {/* Blue-indigo orb — top left (logo colour) */}
       <div
-        className="absolute top-[-15%] left-[-8%] w-[65vw] h-[65vw] max-w-[900px] max-h-[900px] rounded-full opacity-[0.14] bg-orb-purple"
+        className="absolute top-[-15%] left-[-8%] w-[65vw] h-[65vw] max-w-[900px] max-h-[900px] rounded-full opacity-[0.16] bg-orb-blue"
       />
 
-      {/* Cyan orb — bottom right */}
+      {/* TikTok cyan orb — bottom right */}
       <div
-        className="absolute bottom-[-20%] right-[-10%] w-[55vw] h-[55vw] max-w-[750px] max-h-[750px] rounded-full opacity-[0.11] bg-orb-cyan"
+        className="absolute bottom-[-20%] right-[-10%] w-[55vw] h-[55vw] max-w-[750px] max-h-[750px] rounded-full opacity-[0.12] bg-orb-cyan"
       />
 
       {/* Subtle grid lines */}
