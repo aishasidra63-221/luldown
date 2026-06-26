@@ -234,6 +234,21 @@ function extractJsonFromHtml(html) {
   return null;
 }
 
+// ── Base64 URL decode ─────────────────────────────────────────────────────────
+// TikTok sometimes encodes CDN URLs in Base64 (e.g. ssscdn.io style responses).
+// If a "URL" doesn't start with http, try decoding it as Base64.
+// If the decoded result starts with http → use it. Otherwise keep original.
+
+function decodeUrl(raw) {
+  if (!raw || typeof raw !== "string") return raw;
+  if (raw.startsWith("http")) return raw; // already a real URL
+  try {
+    const decoded = atob(raw.replace(/-/g, "+").replace(/_/g, "/"));
+    if (decoded.startsWith("http")) return decoded;
+  } catch (_) {}
+  return raw;
+}
+
 function safeGet(obj, ...keys) {
   let cur = obj;
   for (const k of keys) {
@@ -269,44 +284,45 @@ function parseItemStruct(item) {
   if (imgPost) {
     const imgList = imgPost.images || [];
     for (const img of imgList) {
-      const url =
+      const url = decodeUrl(
         safeGet(img, "display_image", "url_list", 0) ||
         safeGet(img, "displayImage", "urlList", 0) ||
         safeGet(img, "ownerWatermarkImage", "urlList", 0) ||
-        "";
+        "",
+      );
       if (url) images.push(url);
     }
   }
 
   const isPhoto = images.length > 0;
 
-  // Video URLs
-  const videoHd = firstStr(
+  // Video URLs — decodeUrl handles both plain URLs and Base64-encoded ones
+  const videoHd = decodeUrl(firstStr(
     safeGet(video, "downloadAddr"),
     safeGet(video, "download_addr"),
     safeGet(video, "playAddr"),
     safeGet(video, "play_addr"),
-  );
+  ));
 
-  const videoWm = firstStr(
+  const videoWm = decodeUrl(firstStr(
     safeGet(video, "playAddr"),
     safeGet(video, "play_addr"),
     videoHd,
-  );
+  ));
 
   // Audio
-  const audio = firstStr(
+  const audio = decodeUrl(firstStr(
     safeGet(music, "playUrl"),
     safeGet(music, "play_url"),
-  );
+  ));
 
   // Thumbnail
-  const thumbnail = firstStr(
+  const thumbnail = decodeUrl(firstStr(
     safeGet(video, "cover"),
     safeGet(video, "originCover"),
     safeGet(video, "origin_cover"),
     safeGet(video, "dynamicCover"),
-  );
+  ));
 
   // Author
   const authorName = firstStr(
