@@ -15,16 +15,18 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
+    <nav className="sticky top-0 z-50 border-b border-border/50 backdrop-blur-xl"
+      style={{ background: "rgba(7,8,18,0.82)" }}>
       <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+
         {/* Logo */}
         <Link href="/">
-          <div className="flex items-center gap-2 cursor-pointer select-none">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+          <div className="flex items-center gap-2.5 cursor-pointer select-none group">
+            <div className="w-8 h-8 rounded-xl gradient-btn flex items-center justify-center">
               <Download className="w-4 h-4 text-white" strokeWidth={2.5} />
             </div>
             <span className="text-xl font-bold tracking-tight">
-              Lul<span className="text-primary">down</span>
+              Lul<span className="gradient-text">down</span>
             </span>
           </div>
         </Link>
@@ -33,10 +35,10 @@ export default function Navbar() {
         <div className="hidden sm:flex items-center gap-1">
           {navLinks.map(({ href, label, Icon }) => (
             <Link key={href} href={href}>
-              <div className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors ${
+              <div className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all duration-150 ${
                 location === href
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                  ? "bg-primary/15 text-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-white/5"
               }`}>
                 <Icon className="w-4 h-4" />
                 {label}
@@ -49,18 +51,18 @@ export default function Navbar() {
           {/* Theme toggle */}
           <button
             onClick={toggle}
-            className="w-9 h-9 rounded-lg flex items-center justify-center bg-secondary hover:bg-secondary/70 transition-colors"
+            className="w-9 h-9 rounded-lg flex items-center justify-center bg-white/5 hover:bg-white/10 border border-white/8 transition-all"
             aria-label="Toggle theme"
           >
             {theme === "dark"
-              ? <Sun className="w-4 h-4 text-foreground" />
-              : <Moon className="w-4 h-4 text-foreground" />}
+              ? <Sun className="w-4 h-4 text-muted-foreground" />
+              : <Moon className="w-4 h-4 text-muted-foreground" />}
           </button>
 
           {/* Mobile menu */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="sm:hidden w-9 h-9 rounded-lg flex items-center justify-center bg-secondary"
+            className="sm:hidden w-9 h-9 rounded-lg flex items-center justify-center bg-white/5 border border-white/8"
           >
             {mobileOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
@@ -69,15 +71,16 @@ export default function Navbar() {
 
       {/* Mobile dropdown */}
       {mobileOpen && (
-        <div className="sm:hidden border-t border-border bg-card px-4 py-3 space-y-1">
+        <div className="sm:hidden border-t border-border/50 px-4 py-3 space-y-1"
+          style={{ background: "rgba(7,8,18,0.95)" }}>
           {navLinks.map(({ href, label, Icon }) => (
             <Link key={href} href={href}>
               <div
                 onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-colors ${
+                className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all ${
                   location === href
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                    ? "bg-primary/15 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                 }`}
               >
                 <Icon className="w-4 h-4" />

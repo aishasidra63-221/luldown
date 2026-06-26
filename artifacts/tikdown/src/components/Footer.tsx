@@ -5,35 +5,36 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-border bg-card mt-16">
+    <footer className="border-t border-border/50 mt-20"
+      style={{ background: "rgba(7,8,18,0.9)" }}>
       <div className="max-w-5xl mx-auto px-4 py-12">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 mb-10">
 
           {/* Brand */}
           <div className="col-span-2 sm:col-span-1">
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
+              <div className="w-7 h-7 rounded-xl gradient-btn flex items-center justify-center">
                 <Download className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
               </div>
-              <span className="font-bold text-foreground">Lul<span className="text-primary">down</span></span>
+              <span className="font-bold text-foreground">Lul<span className="gradient-text">down</span></span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
               The fastest free TikTok downloader. No watermark. No login. No limits.
             </p>
             <div className="flex gap-2 mt-4">
-              <span className="flex items-center gap-1 text-xs bg-secondary px-2 py-1 rounded-full text-muted-foreground">
-                <Shield className="w-3 h-3" /> Secure
+              <span className="flex items-center gap-1 text-xs bg-white/5 border border-white/8 px-2 py-1 rounded-full text-muted-foreground">
+                <Shield className="w-3 h-3 text-emerald-400" /> Secure
               </span>
-              <span className="flex items-center gap-1 text-xs bg-secondary px-2 py-1 rounded-full text-muted-foreground">
-                <Zap className="w-3 h-3" /> Fast
+              <span className="flex items-center gap-1 text-xs bg-white/5 border border-white/8 px-2 py-1 rounded-full text-muted-foreground">
+                <Zap className="w-3 h-3 text-amber-400" /> Fast
               </span>
             </div>
           </div>
 
           {/* Tools */}
           <div>
-            <h4 className="font-semibold text-sm text-foreground mb-3">Tools</h4>
-            <ul className="space-y-2">
+            <h4 className="font-semibold text-xs text-foreground/60 uppercase tracking-widest mb-4">Tools</h4>
+            <ul className="space-y-2.5">
               {[
                 { href: "/", label: "TikTok Downloader" },
                 { href: "/", label: "MP3 Extractor" },
@@ -51,13 +52,13 @@ export default function Footer() {
 
           {/* Info */}
           <div>
-            <h4 className="font-semibold text-sm text-foreground mb-3">Info</h4>
-            <ul className="space-y-2">
+            <h4 className="font-semibold text-xs text-foreground/60 uppercase tracking-widest mb-4">Info</h4>
+            <ul className="space-y-2.5">
               {[
                 { href: "/how-it-works", label: "How it Works" },
-                { href: "/faq", label: "FAQ" },
-                { href: "/about", label: "About Us" },
-                { href: "/contact", label: "Contact" },
+                { href: "/faq",          label: "FAQ" },
+                { href: "/about",        label: "About Us" },
+                { href: "/contact",      label: "Contact" },
               ].map((l) => (
                 <li key={l.label}>
                   <Link href={l.href}>
@@ -70,12 +71,12 @@ export default function Footer() {
 
           {/* Legal */}
           <div>
-            <h4 className="font-semibold text-sm text-foreground mb-3">Legal</h4>
-            <ul className="space-y-2">
+            <h4 className="font-semibold text-xs text-foreground/60 uppercase tracking-widest mb-4">Legal</h4>
+            <ul className="space-y-2.5">
               {[
-                { href: "/privacy", label: "Privacy Policy" },
-                { href: "/terms", label: "Terms of Service" },
-                { href: "/dmca", label: "DMCA" },
+                { href: "/privacy",    label: "Privacy Policy" },
+                { href: "/terms",      label: "Terms of Service" },
+                { href: "/dmca",       label: "DMCA" },
                 { href: "/disclaimer", label: "Disclaimer" },
               ].map((l) => (
                 <li key={l.label}>
@@ -88,7 +89,7 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-border pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="border-t border-border/50 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
             © {year} Luldown. All rights reserved.
           </p>
