@@ -415,6 +415,53 @@ function validateTikTokUrl(raw) {
   return null;
 }
 
+// ── HMAC Token System ─────────────────────────────────────────────────────────
+// Each page load gets a signed token (timestamp + HMAC-SHA256).
+// Worker validates it on every /api/info and /api/download request.
+// Bots hitting the API directly won't have a valid token → blocked.
+// If TOKEN_SECRET env var is not set, validation is skipped (dev mode).
+
+const TOKEN_TTL_SECONDS = 900; // 15 minutes
+
+async function hmacSign(secret, message) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(message),
+  );
+  return Array.from(new Uint8Array(sig))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function generateToken(secret) {
+  const ts  = Math.floor(Date.now() / 1000);
+  const sig = await hmacSign(secret, String(ts));
+  return `${ts}.${sig}`;
+}
+
+async function validateToken(token, secret) {
+  if (!token || typeof token !== "string") return false;
+  const dot = token.indexOf(".");
+  if (dot === -1) return false;
+  const ts  = token.slice(0, dot);
+  const sig = token.slice(dot + 1);
+  const timestamp = parseInt(ts, 10);
+  if (isNaN(timestamp)) return false;
+  const now = Math.floor(Date.now() / 1000);
+  if (now - timestamp > TOKEN_TTL_SECONDS) return false;
+  if (timestamp > now + 30) return false; // clock skew guard
+  const expected = await hmacSign(secret, ts);
+  return sig === expected;
+}
+
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 export default {
@@ -430,28 +477,43 @@ export default {
     const cfCountry = request.cf?.country || null;
     const lang      = getLanguage(cfCountry);
 
+    // Secret for token signing — set TOKEN_SECRET in Cloudflare Worker env vars.
+    // If not set, token validation is skipped (dev / local proxy mode).
+    const secret = env.TOKEN_SECRET || null;
+
     // GET /health
     if (pathname === "/health" && method === "GET") {
       return json({
-        status:   "ok",
-        version:  "5.1.0",
-        engine:   "tiktok-html-direct",
-        cf_colo:  request.cf?.colo   || "?",
-        cf_country: cfCountry        || "?",
-        lang_used:  lang,
-        ua_pool:  USER_AGENTS.length,
+        status:        "ok",
+        version:       "5.2.0",
+        engine:        "tiktok-html-direct",
+        cf_colo:       request.cf?.colo || "?",
+        cf_country:    cfCountry        || "?",
+        lang_used:     lang,
+        ua_pool:       USER_AGENTS.length,
+        token_enabled: !!secret,
       });
     }
 
-    // GET /api/token — compatibility stub
+    // GET /api/token — generate a real HMAC-signed token
     if (pathname === "/api/token" && method === "GET") {
-      return json({ token: "", ttl_seconds: 300 });
+      if (!secret) {
+        // Dev mode — return empty token, validation will be skipped
+        return json({ token: "", ttl_seconds: TOKEN_TTL_SECONDS, dev_mode: true });
+      }
+      const token = await generateToken(secret);
+      return json({ token, ttl_seconds: TOKEN_TTL_SECONDS });
     }
 
     // POST /api/info — fetch video metadata + CDN URLs
     if (pathname === "/api/info" && method === "POST") {
       let body;
       try { body = await request.json(); } catch { return err("Invalid JSON", 400); }
+
+      if (secret) {
+        const ok = await validateToken(body.token, secret);
+        if (!ok) return err("Invalid or expired token. Please refresh the page.", 401);
+      }
 
       const tiktokUrl = validateTikTokUrl(body.url);
       if (!tiktokUrl) return err("Invalid TikTok URL. Please copy the link from TikTok app.", 400);
@@ -487,6 +549,11 @@ export default {
     if (pathname === "/api/download" && method === "POST") {
       let body;
       try { body = await request.json(); } catch { return err("Invalid JSON", 400); }
+
+      if (secret) {
+        const ok = await validateToken(body.token, secret);
+        if (!ok) return err("Invalid or expired token. Please refresh the page.", 401);
+      }
 
       const tiktokUrl = validateTikTokUrl(body.url);
       if (!tiktokUrl) return err("Invalid TikTok URL", 400);

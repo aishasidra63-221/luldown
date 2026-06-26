@@ -39,8 +39,52 @@ export interface HistoryItem {
 
 export type DownloadFormat = "mp4_720" | "mp4_1080" | "mp3";
 
+// ─── HMAC Token cache ─────────────────────────────────────────────────────────
+// Token is fetched once on first use and cached for 14 min (1 min buffer before
+// the 15 min server-side expiry). Refreshed automatically on next request.
+
+const TOKEN_CACHE_MS = 14 * 60 * 1000; // 14 minutes in ms
+
+let _cachedToken    = "";
+let _tokenFetchedAt = 0;
+let _tokenFetching: Promise<string> | null = null;
+
+async function getToken(): Promise<string> {
+  const now = Date.now();
+
+  // Return cached token if still fresh
+  if (_cachedToken && now - _tokenFetchedAt < TOKEN_CACHE_MS) {
+    return _cachedToken;
+  }
+
+  // Deduplicate concurrent fetches — only one in-flight at a time
+  if (_tokenFetching) return _tokenFetching;
+
+  _tokenFetching = (async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/token`);
+      if (res.ok) {
+        const data = await res.json();
+        _cachedToken    = data.token || "";
+        _tokenFetchedAt = Date.now();
+      }
+    } catch {
+      // Network error — use empty token (Worker will allow if secret not set)
+      _cachedToken    = "";
+      _tokenFetchedAt = Date.now();
+    } finally {
+      _tokenFetching = null;
+    }
+    return _cachedToken;
+  })();
+
+  return _tokenFetching;
+}
+
+// Pre-fetch token as soon as this module loads (so it's ready before first use)
+getToken();
+
 // ─── Local history (localStorage) ────────────────────────────────────────────
-// History is stored client-side — no server needed, fully private.
 
 function _loadHistory(): HistoryItem[] {
   try {
@@ -90,13 +134,23 @@ export async function fetchVideoInfo(
   url: string,
   recaptchaToken?: string,
 ): Promise<VideoInfo> {
+  const token = await getToken();
   const res = await fetch(`${API_BASE}/api/info`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url, recaptcha_token: recaptchaToken ?? null }),
+    body: JSON.stringify({
+      url,
+      token,
+      recaptcha_token: recaptchaToken ?? null,
+    }),
   });
   if (!res.ok) {
     const errData = await res.json().catch(() => ({ detail: "Failed to fetch info" }));
+    // Token expired mid-session — clear cache so next call gets a fresh one
+    if (res.status === 401) {
+      _cachedToken    = "";
+      _tokenFetchedAt = 0;
+    }
     throw new Error(errData.detail || "Failed to fetch video info");
   }
   return res.json();
@@ -129,14 +183,24 @@ export async function downloadVideo(
     author   = videoMeta?.author || "Unknown";
   } else {
     // Fallback — call /api/download (e.g. if info was fetched by older code)
+    const token = await getToken();
     const res = await fetch(`${API_BASE}/api/download`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url, format, recaptcha_token: recaptchaToken ?? null }),
+      body: JSON.stringify({
+        url,
+        format,
+        token,
+        recaptcha_token: recaptchaToken ?? null,
+      }),
     });
 
     if (!res.ok) {
       const errData = await res.json().catch(() => ({ detail: "Download failed" }));
+      if (res.status === 401) {
+        _cachedToken    = "";
+        _tokenFetchedAt = 0;
+      }
       throw new Error(errData.detail || "Download failed");
     }
 
