@@ -144,6 +144,43 @@ function randomUA() {
   return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 }
 
+// ── sec-ch-ua Client Hints — match the selected User-Agent ───────────────────
+// Chrome/Edge/Opera send Client Hints. Firefox and Safari do NOT — so we skip
+// these headers for those browsers to stay authentic.
+
+function getBrowserHints(ua) {
+  // Firefox — does not support Client Hints at all
+  if (ua.includes("Firefox/")) return null;
+
+  // Safari (without Chrome) — does not support Client Hints
+  if (ua.includes("Safari/") && !ua.includes("Chrome/")) return null;
+
+  // All Chromium-based: Chrome, Edge, Opera, Brave, Vivaldi
+  const chromeVersion = (ua.match(/Chrome\/(\d+)/) || [])[1] || "126";
+
+  let platform = '"Windows"';
+  if (ua.includes("Macintosh"))        platform = '"macOS"';
+  else if (ua.includes("X11; Linux"))  platform = '"Linux"';
+
+  let brands;
+  if (ua.includes("Edg/")) {
+    const edgeV = (ua.match(/Edg\/(\d+)/) || [])[1] || chromeVersion;
+    brands = `"Not/A)Brand";v="8", "Chromium";v="${chromeVersion}", "Microsoft Edge";v="${edgeV}"`;
+  } else if (ua.includes("OPR/")) {
+    const operaV = (ua.match(/OPR\/(\d+)/) || [])[1] || chromeVersion;
+    brands = `"Not/A)Brand";v="8", "Chromium";v="${chromeVersion}", "Opera";v="${operaV}"`;
+  } else {
+    // Chrome / Brave / Vivaldi — all appear as Chrome to servers
+    brands = `"Not/A)Brand";v="8", "Chromium";v="${chromeVersion}", "Google Chrome";v="${chromeVersion}"`;
+  }
+
+  return {
+    "sec-ch-ua":          brands,
+    "sec-ch-ua-mobile":   "?0",
+    "sec-ch-ua-platform": platform,
+  };
+}
+
 // ── Step 1: Extract video ID ─────────────────────────────────────────────────
 
 function extractIdFromString(s) {
@@ -195,11 +232,14 @@ const BROWSER_HEADERS = {
 
 async function fetchTikTokPage(videoId, lang) {
   const url = `https://www.tiktok.com/@_/video/${videoId}`;
+  const ua    = randomUA();
+  const hints = getBrowserHints(ua);
   const res = await fetch(url, {
     headers: {
-      "User-Agent":      randomUA(),
+      "User-Agent":      ua,
       ...BROWSER_HEADERS,
       "Accept-Language": lang || "en-US,en;q=0.9",
+      ...(hints || {}),
     },
   });
 
