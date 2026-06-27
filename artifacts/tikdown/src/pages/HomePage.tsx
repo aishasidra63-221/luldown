@@ -91,21 +91,19 @@ export default function HomePage() {
 
           </div>
 
-          {/* ── RIGHT column: only visible on desktop ── */}
-          <div className="hidden lg:flex flex-col gap-6 w-80 xl:w-96 pt-4 flex-shrink-0">
-
-            {/* How it works — vertical on desktop (first) */}
-            <div className="rounded-2xl p-5 how-it-works-card">
+          {/* ── MIDDLE column: How it works — desktop only ── */}
+          <div className="hidden lg:flex flex-col gap-6 w-60 xl:w-64 pt-4 flex-shrink-0">
+            <div className="rounded-2xl p-5 how-it-works-card h-full">
               <h2 className="text-base font-black mb-5 how-it-works-title">How it works?</h2>
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col">
                 {STEPS.map(({ num, label, Icon, color }, i) => (
-                  <div key={num}>
-                    <div className="flex items-center gap-3">
+                  <div key={num} className="flex items-start gap-3">
+                    <div className="flex flex-col items-center flex-shrink-0">
                       <div
-                        className="relative w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+                        className="relative w-11 h-11 rounded-full flex items-center justify-center"
                         style={{ background: `${color}18`, border: `2px solid ${color}45` }}
                       >
-                        <Icon className="w-5 h-5" style={{ color }} strokeWidth={1.8} />
+                        <Icon className="w-4.5 h-4.5" style={{ color }} strokeWidth={1.8} />
                         <div
                           className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[10px] font-black text-white flex items-center justify-center"
                           style={{ background: color }}
@@ -113,19 +111,25 @@ export default function HomePage() {
                           {num}
                         </div>
                       </div>
-                      <p className="text-sm font-medium step-label" style={{ whiteSpace: "pre-line" }}>
+                      {i < STEPS.length - 1 && (
+                        <div className="w-0.5 h-7 mt-1" style={{ background: `${color}30` }} />
+                      )}
+                    </div>
+                    <div className="pt-2.5">
+                      <p className="text-xs font-semibold step-label leading-snug" style={{ whiteSpace: "pre-line" }}>
                         {label}
                       </p>
                     </div>
-                    {i < STEPS.length - 1 && (
-                      <div className="ml-6 mt-1 text-sm step-arrow opacity-30">↓</div>
-                    )}
                   </div>
                 ))}
               </div>
             </div>
+          </div>
 
-            {/* Feature icon cards — 2×2 grid (below How it works) */}
+          {/* ── RIGHT column: Feature cards + SEO — desktop only ── */}
+          <div className="hidden lg:flex flex-col gap-6 w-56 xl:w-64 pt-4 flex-shrink-0">
+
+            {/* Feature icon cards — 2×2 grid */}
             <div className="grid grid-cols-2 gap-3">
               {FEATURES.map(({ label, Icon, color }) => (
                 <div
@@ -134,10 +138,10 @@ export default function HomePage() {
                   style={{ background: `${color}08`, border: `1px solid ${color}20` }}
                 >
                   <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center"
+                    className="w-11 h-11 rounded-full flex items-center justify-center"
                     style={{ background: `${color}18`, border: `1.5px solid ${color}40` }}
                   >
-                    <Icon className="w-6 h-6" style={{ color }} strokeWidth={1.8} />
+                    <Icon className="w-5 h-5" style={{ color }} strokeWidth={1.8} />
                   </div>
                   <span className="text-xs font-bold text-center feature-label">{label}</span>
                 </div>
