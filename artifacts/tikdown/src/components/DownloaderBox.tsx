@@ -149,19 +149,19 @@ export default function DownloaderBox({ highlightFormat }: Props) {
         {url ? (
           <button
             onClick={reset}
-            className="flex items-center gap-1.5 mx-2.5 px-5 py-3 rounded-xl text-sm font-bold transition-all"
+            className="flex items-center gap-1 mx-2 px-3 py-2 sm:gap-1.5 sm:mx-2.5 sm:px-5 sm:py-3 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap shrink-0"
             style={{ background: "rgba(233,30,140,0.12)", color: "#e91e8c", border: "1px solid rgba(233,30,140,0.28)" }}
           >
-            <X className="w-4 h-4" />
+            <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             Clear
           </button>
         ) : (
           <button
             onClick={handlePaste}
-            className="flex items-center gap-1.5 mx-2.5 px-5 py-3 rounded-xl text-sm font-bold transition-all"
+            className="flex items-center gap-1 mx-2 px-3 py-2 sm:gap-1.5 sm:mx-2.5 sm:px-5 sm:py-3 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap shrink-0"
             style={{ background: "rgba(0,229,229,0.12)", color: "#00e5e5", border: "1px solid rgba(0,229,229,0.28)" }}
           >
-            <Copy className="w-4 h-4" />
+            <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             Paste
           </button>
         )}
