@@ -163,33 +163,34 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* ── How it works — mobile only, centered vertical ── */}
-        <div className="mt-6 rounded-2xl p-6 how-it-works-card lg:hidden">
-          <h2 className="text-lg font-black text-center mb-6 how-it-works-title">How it works?</h2>
-          <div className="flex flex-col items-center">
-            {STEPS.map(({ num, label, Icon, color }, i) => (
-              <div key={num} className="flex flex-col items-center">
-                {/* Icon circle */}
+        {/* ── How it works — mobile only, 2×2 separate column cards ── */}
+        <div className="mt-6 lg:hidden">
+          <h2 className="text-lg font-black text-center mb-4 how-it-works-title">How it works?</h2>
+          <div className="grid grid-cols-2 gap-3">
+            {STEPS.map(({ num, label, Icon, color }) => (
+              <div
+                key={num}
+                className="relative flex flex-col items-center gap-3 p-5 rounded-2xl how-it-works-card"
+                style={{ border: `1.5px solid ${color}25` }}
+              >
+                {/* Step number badge */}
                 <div
-                  className="relative w-16 h-16 rounded-full flex items-center justify-center"
-                  style={{ background: `${color}18`, border: `2px solid ${color}45` }}
+                  className="absolute top-3 right-3 w-5 h-5 rounded-full text-[10px] font-black text-white flex items-center justify-center"
+                  style={{ background: color }}
+                >
+                  {num}
+                </div>
+                {/* Icon */}
+                <div
+                  className="w-14 h-14 rounded-full flex items-center justify-center"
+                  style={{ background: `${color}18`, border: `2px solid ${color}40` }}
                 >
                   <Icon className="w-7 h-7" style={{ color }} strokeWidth={1.8} />
-                  <div
-                    className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full text-xs font-black text-white flex items-center justify-center"
-                    style={{ background: color }}
-                  >
-                    {num}
-                  </div>
                 </div>
-                {/* Label below icon */}
-                <p className="text-sm font-semibold step-label text-center mt-2 leading-snug" style={{ whiteSpace: "pre-line" }}>
+                {/* Label */}
+                <p className="text-xs font-bold step-label text-center leading-snug" style={{ whiteSpace: "pre-line" }}>
                   {label}
                 </p>
-                {/* Connecting line */}
-                {i < STEPS.length - 1 && (
-                  <div className="w-0.5 h-8 my-2" style={{ background: `${color}35` }} />
-                )}
               </div>
             ))}
           </div>
