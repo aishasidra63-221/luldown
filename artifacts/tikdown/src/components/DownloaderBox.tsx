@@ -137,8 +137,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
     <div className="space-y-3">
 
       {/* ── Input box ── */}
-      <div className="flex items-center rounded-2xl overflow-hidden"
-        style={{ background: "#131620", border: "1.5px solid rgba(255,255,255,0.09)" }}>
+      <div className="downloader-input-wrap flex items-center rounded-2xl overflow-hidden">
         <input
           type="url"
           value={url}
@@ -146,29 +145,24 @@ export default function DownloaderBox({ highlightFormat }: Props) {
           onKeyDown={(e) => e.key === "Enter" && handleFetch()}
           placeholder="Paste TikTok link here..."
           className="flex-1 bg-transparent pl-4 pr-2 py-4 text-sm outline-none"
-          style={{ color: "#f0f0f8" }}
         />
         {url ? (
-          <button onClick={reset}
-            className="px-4 py-4 transition-colors"
-            style={{ color: "rgba(200,215,235,0.4)" }}
-            onMouseEnter={e => (e.currentTarget.style.color = "rgba(200,215,235,0.8)")}
-            onMouseLeave={e => (e.currentTarget.style.color = "rgba(200,215,235,0.4)")}>
+          <button onClick={reset} className="px-4 py-4 opacity-40 hover:opacity-80 transition-opacity">
             <X className="w-4 h-4" />
           </button>
         ) : (
-          <button onClick={handlePaste}
+          <button
+            onClick={handlePaste}
             className="flex items-center gap-1.5 mx-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all"
-            style={{ background: "rgba(0,229,229,0.12)", color: "#00e5e5", border: "1px solid rgba(0,229,229,0.25)" }}
-            onMouseEnter={e => (e.currentTarget.style.background = "rgba(0,229,229,0.2)")}
-            onMouseLeave={e => (e.currentTarget.style.background = "rgba(0,229,229,0.12)")}>
+            style={{ background: "rgba(0,229,229,0.12)", color: "#00e5e5", border: "1px solid rgba(0,229,229,0.28)" }}
+          >
             <Copy className="w-3.5 h-3.5" />
             Paste
           </button>
         )}
       </div>
 
-      {/* ── Download Now button — full width ── */}
+      {/* ── Download Now — full width ── */}
       <button
         onClick={handleFetch}
         disabled={!url.trim() || step === "loading-info"}
@@ -183,12 +177,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
       {step === "idle" && (
         <button
           onClick={handleDemo}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all"
-          style={{
-            background: "rgba(0,229,229,0.05)",
-            border: "1px dashed rgba(0,229,229,0.22)",
-            color: "rgba(0,229,229,0.7)",
-          }}
+          className="demo-btn w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all"
         >
           <FlaskConical className="w-3.5 h-3.5" />
           Preview Demo — dekho result card kaisa dikhega
@@ -197,8 +186,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
 
       {/* ── Error ── */}
       {step === "error" && (
-        <div className="flex items-start gap-2.5 p-4 rounded-2xl text-sm border"
-          style={{ color: "#f87171", borderColor: "rgba(248,113,113,0.25)", background: "rgba(248,113,113,0.08)" }}>
+        <div className="error-box flex items-start gap-2.5 p-4 rounded-2xl text-sm border">
           <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
           {error}
         </div>
@@ -206,8 +194,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
 
       {/* ── Result card ── */}
       {step === "info-ready" && info && (
-        <div className="rounded-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-300"
-          style={{ background: "#131620", border: "1.5px solid rgba(255,255,255,0.08)", boxShadow: "0 8px 40px rgba(0,0,0,0.5)" }}>
+        <div className="result-card rounded-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-300">
 
           {/* Demo badge */}
           {isDemo && (
@@ -221,9 +208,9 @@ export default function DownloaderBox({ highlightFormat }: Props) {
           {/* Thumbnail */}
           {info.thumbnail ? (
             <div className="relative h-44 sm:h-52 overflow-hidden">
-              <img src={info.thumbnail} alt={info.title} className="w-full h-full object-cover opacity-75" />
+              <img src={info.thumbnail} alt={info.title} className="w-full h-full object-cover opacity-80" />
               <div className="absolute inset-0"
-                style={{ background: "linear-gradient(to top, rgba(8,10,18,0.95) 0%, rgba(8,10,18,0.4) 55%, transparent 100%)" }} />
+                style={{ background: "linear-gradient(to top, rgba(8,10,18,0.95) 0%, rgba(8,10,18,0.35) 55%, transparent 100%)" }} />
               <div className="absolute top-0 left-0 right-0 h-0.5"
                 style={{ background: "linear-gradient(90deg, #00e5e5, #e91e8c)" }} />
 
@@ -235,12 +222,12 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                     <User className="w-3 h-3" /> {info.author}
                   </span>
                   {info.duration > 0 && (
-                    <span className="flex items-center gap-1 text-xs" style={{ color: "rgba(200,215,235,0.55)" }}>
+                    <span className="flex items-center gap-1 text-xs" style={{ color: "rgba(200,215,235,0.6)" }}>
                       <Clock className="w-3 h-3" /> {fmtDuration(info.duration)}
                     </span>
                   )}
                   {!!info.view_count && (
-                    <span className="flex items-center gap-1 text-xs" style={{ color: "rgba(200,215,235,0.55)" }}>
+                    <span className="flex items-center gap-1 text-xs" style={{ color: "rgba(200,215,235,0.6)" }}>
                       <Eye className="w-3 h-3" /> {fmtNum(info.view_count)}
                     </span>
                   )}
@@ -271,14 +258,13 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                   disabled={photoDownloading !== null || isDemo}
                   className="gradient-btn w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm disabled:opacity-50"
                 >
-                  <Download className="w-4 h-4" />
-                  Save All {info.images!.length} Photos
+                  <Download className="w-4 h-4" /> Save All {info.images!.length} Photos
                 </button>
               )}
               <div className={`grid gap-3 ${info.images!.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
                 {info.images!.map((imgUrl, i) => (
                   <div key={i} className="rounded-xl overflow-hidden flex flex-col"
-                    style={{ border: "1px solid rgba(255,255,255,0.07)", background: "rgba(10,13,22,0.8)" }}>
+                    style={{ border: "1px solid rgba(255,255,255,0.07)", background: "rgba(10,13,22,0.6)" }}>
                     <div className="relative aspect-[3/4] overflow-hidden">
                       <img src={imgUrl} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
                       <div className="absolute top-2 right-2 bg-black/70 text-white text-xs rounded-md px-1.5 py-0.5 font-bold">
@@ -302,8 +288,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
           ) : (
             /* Format buttons */
             <div className="p-4 space-y-2">
-              <p className="text-[10px] font-black uppercase tracking-widest mb-3"
-                style={{ color: "rgba(200,215,235,0.3)" }}>Choose Format</p>
+              <p className="text-[10px] font-black uppercase tracking-widest mb-3 step-label">Choose Format</p>
               {formats.map(({ format, label, sublabel, Icon, color }) => {
                 const isActive      = activeDownload === format;
                 const isHighlighted = highlightFormat === format;
@@ -312,7 +297,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                     key={format}
                     onClick={() => handleDownload(format)}
                     disabled={!!activeDownload || isDemo}
-                    className="format-btn w-full flex items-center gap-3.5 p-3.5 rounded-xl disabled:cursor-not-allowed"
+                    className={`format-btn w-full flex items-center gap-3.5 p-3.5 rounded-xl ${isHighlighted ? "format-btn-active" : ""}`}
                     style={isHighlighted ? { borderColor: `${color}50`, background: `${color}08` } : {}}
                   >
                     <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -321,15 +306,11 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                         ? <Loader2 className="w-4 h-4 animate-spin" style={{ color }} />
                         : <Icon className="w-4 h-4" style={{ color }} />}
                     </div>
-
                     <div className="text-left flex-1">
-                      <div className="font-bold text-sm text-white">
-                        {isActive ? "Downloading…" : label}
-                      </div>
-                      <div className="text-xs" style={{ color: "rgba(200,215,235,0.38)" }}>{sublabel}</div>
+                      <div className="font-bold text-sm">{isActive ? "Downloading…" : label}</div>
+                      <div className="text-xs opacity-50">{sublabel}</div>
                     </div>
-
-                    <Download className="w-4 h-4 flex-shrink-0" style={{ color: "rgba(200,215,235,0.2)" }} />
+                    <Download className="w-4 h-4 flex-shrink-0 opacity-20" />
                   </button>
                 );
               })}
