@@ -296,19 +296,12 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                       key={format}
                       onClick={() => handleDownload(format)}
                       disabled={!!activeDownload || isDemo}
-                      className="gradient-btn w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl font-bold text-sm disabled:opacity-50"
+                      className="gradient-btn w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm disabled:opacity-50"
                     >
-                      {/* Left: icon + label */}
-                      <div className="flex items-center gap-2.5">
-                        {isActive
-                          ? <Loader2 className="w-4 h-4 animate-spin" />
-                          : <Icon className="w-4 h-4" />}
-                        <span>
-                          {isActive ? "Downloading…" : label}
-                        </span>
-                      </div>
-                      {/* Right: download icon */}
-                      <Download className="w-4 h-4 flex-shrink-0" />
+                      {isActive
+                        ? <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />
+                        : <Download className="w-4 h-4 flex-shrink-0" />}
+                      <span>{isActive ? "Downloading…" : label}</span>
                     </button>
                   );
                 })}
