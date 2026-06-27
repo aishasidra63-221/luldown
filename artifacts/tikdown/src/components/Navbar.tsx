@@ -45,12 +45,8 @@ export default function Navbar() {
               </div>
             </div>
             {/* Wordmark */}
-            <span className="text-xl font-black tracking-tight" style={{ color: isLight ? "#1a1a2e" : "#ffffff" }}>
-              Lul<span style={{
-                background: "linear-gradient(90deg, #00e5e5, #e91e8c)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}>Down</span>
+            <span className="logo-text text-xl font-black tracking-tight" style={{ color: isLight ? "#1a1a2e" : "#ffffff" }}>
+              LulDown
             </span>
           </div>
         </Link>
