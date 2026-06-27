@@ -124,48 +124,53 @@ export default function DownloaderBox({ highlightFormat }: Props) {
   return (
     <div className="space-y-3">
 
-      {/* ── Input box ── */}
-      <div className="downloader-input-wrap flex items-center rounded-2xl">
-        <input
-          type="text"
-          inputMode="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleFetch()}
-          placeholder="Paste TikTok link here..."
-          className="min-w-0 flex-1 bg-transparent pl-5 pr-2 py-5 text-base outline-none"
-        />
-        {url ? (
-          <button
-            onClick={reset}
-            className="flex items-center gap-2 mr-3 px-4 py-2.5 rounded-xl text-sm font-black transition-all whitespace-nowrap shrink-0 active:scale-95"
-            style={{ background: "rgba(233,30,140,0.22)", color: "#ff4da6", border: "2px solid rgba(233,30,140,0.55)", boxShadow: "0 0 12px rgba(233,30,140,0.18)" }}
-          >
-            <X className="w-4 h-4" />
-            <span>Clear</span>
-          </button>
-        ) : (
-          <button
-            onClick={handlePaste}
-            className="flex items-center gap-2 mr-3 px-4 py-2.5 rounded-xl text-sm font-black transition-all whitespace-nowrap shrink-0 active:scale-95"
-            style={{ background: "rgba(0,229,229,0.22)", color: "#00e5e5", border: "2px solid rgba(0,229,229,0.55)", boxShadow: "0 0 12px rgba(0,229,229,0.18)" }}
-          >
-            <Clipboard className="w-4 h-4" />
-            <span>Paste</span>
-          </button>
-        )}
-      </div>
+      {/* ── Input + Download Now row ── */}
+      <div className="flex flex-col sm:flex-row items-stretch gap-2.5">
 
-      {/* ── Download Now — full width ── */}
-      <button
-        onClick={handleFetch}
-        disabled={!url.trim() || step === "loading-info"}
-        className="gradient-btn w-full py-4 rounded-2xl text-base font-black flex items-center justify-center gap-2.5"
-      >
-        {step === "loading-info"
-          ? <><Loader2 className="w-5 h-5 animate-spin" /> Fetching…</>
-          : <><Download className="w-5 h-5" /> Download Now</>}
-      </button>
+        {/* Input box */}
+        <div className="downloader-input-wrap flex items-center rounded-2xl flex-1 min-w-0">
+          <input
+            type="text"
+            inputMode="url"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleFetch()}
+            placeholder="Paste TikTok link here..."
+            className="min-w-0 flex-1 bg-transparent pl-5 pr-2 py-3.5 text-base outline-none"
+          />
+          {url ? (
+            <button
+              onClick={reset}
+              className="flex items-center gap-2 mr-3 px-4 py-2 rounded-xl text-sm font-black transition-all whitespace-nowrap shrink-0 active:scale-95"
+              style={{ background: "rgba(233,30,140,0.22)", color: "#ff4da6", border: "2px solid rgba(233,30,140,0.55)", boxShadow: "0 0 12px rgba(233,30,140,0.18)" }}
+            >
+              <X className="w-4 h-4" />
+              <span>Clear</span>
+            </button>
+          ) : (
+            <button
+              onClick={handlePaste}
+              className="flex items-center gap-2 mr-3 px-4 py-2 rounded-xl text-sm font-black transition-all whitespace-nowrap shrink-0 active:scale-95"
+              style={{ background: "rgba(0,229,229,0.22)", color: "#00e5e5", border: "2px solid rgba(0,229,229,0.55)", boxShadow: "0 0 12px rgba(0,229,229,0.18)" }}
+            >
+              <Clipboard className="w-4 h-4" />
+              <span>Paste</span>
+            </button>
+          )}
+        </div>
+
+        {/* Download Now button — beside input on desktop */}
+        <button
+          onClick={handleFetch}
+          disabled={!url.trim() || step === "loading-info"}
+          className="gradient-btn sm:shrink-0 py-3.5 px-6 rounded-2xl text-base font-black flex items-center justify-center gap-2.5"
+        >
+          {step === "loading-info"
+            ? <><Loader2 className="w-5 h-5 animate-spin" /> Fetching…</>
+            : <><Download className="w-5 h-5" /> Download Now</>}
+        </button>
+
+      </div>
 
       {/* ── Demo button ── */}
       {step === "idle" && (
