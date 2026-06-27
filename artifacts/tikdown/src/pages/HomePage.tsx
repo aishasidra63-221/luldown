@@ -140,8 +140,32 @@ export default function HomePage() {
         </header>
 
         {/* ── Downloader ── */}
-        <div className="downloader-wrap rounded-3xl p-5 sm:p-6">
+        <div className="downloader-wrap rounded-3xl p-6 sm:p-8">
+
+          {/* Top label */}
+          <div className="flex items-center gap-2 mb-5">
+            <div className="w-2 h-2 rounded-full bg-[#ff2d78] shadow-[0_0_8px_#ff2d78]" />
+            <span className="text-xs font-bold text-white/40 uppercase tracking-widest">TikTok Video Downloader</span>
+          </div>
+
           <DownloaderBox />
+
+          {/* Format support row */}
+          <div className="flex items-center justify-center gap-1.5 mt-5 flex-wrap">
+            <span className="text-[10px] text-white/20 mr-1">Supports:</span>
+            {[
+              { label: "MP4 1080p", color: "#ff2d78" },
+              { label: "MP4 720p",  color: "#9b5de5" },
+              { label: "MP3",       color: "#00f2ea" },
+              { label: "Thumbnail", color: "#ffe94b" },
+            ].map(({ label, color }) => (
+              <span key={label}
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                style={{ background: `${color}15`, color, border: `1px solid ${color}30` }}>
+                {label}
+              </span>
+            ))}
+          </div>
         </div>
 
         {/* ── How it works ── */}

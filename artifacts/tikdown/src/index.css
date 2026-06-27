@@ -197,10 +197,32 @@
 
 /* ── Downloader wrapper ──────────────────────────────────────────────────────── */
 .downloader-wrap {
-  background: rgba(18, 14, 38, 0.9);
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 0 0 1px rgba(255,45,120,0.08), 0 20px 60px rgba(0,0,0,0.5);
-  backdrop-filter: blur(20px);
+  background: rgba(16, 10, 32, 0.92);
+  border: 1.5px solid transparent;
+  background-clip: padding-box;
+  position: relative;
+  backdrop-filter: blur(24px);
+}
+.downloader-wrap::before {
+  content: '';
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(135deg, rgba(255,45,120,0.6) 0%, rgba(155,93,229,0.4) 50%, rgba(0,242,234,0.5) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.downloader-wrap::after {
+  content: '';
+  position: absolute;
+  inset: -40px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(255,45,120,0.08) 0%, transparent 65%);
+  pointer-events: none;
+  z-index: -1;
 }
 
 /* ── Navbar ──────────────────────────────────────────────────────────────────── */
