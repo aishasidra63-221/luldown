@@ -138,10 +138,10 @@ export default function DownloaderBox({ highlightFormat }: Props) {
         {url ? (
           <button
             onClick={reset}
-            className="flex items-center gap-1.5 mr-2 px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0"
-            style={{ background: "rgba(233,30,140,0.12)", color: "#e91e8c", border: "1px solid rgba(233,30,140,0.28)" }}
+            className="flex items-center gap-2 mr-3 px-4 py-2.5 rounded-xl text-sm font-black transition-all whitespace-nowrap shrink-0 active:scale-95"
+            style={{ background: "rgba(233,30,140,0.22)", color: "#e91e8c", border: "2px solid rgba(233,30,140,0.55)", boxShadow: "0 0 12px rgba(233,30,140,0.18)" }}
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4" />
             <span>Clear</span>
           </button>
         ) : (
