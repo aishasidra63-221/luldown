@@ -137,35 +137,50 @@ export default function DownloaderBox({ highlightFormat }: Props) {
     <div className="space-y-3">
 
       {/* ── Input box ── */}
-      <div className="downloader-input-wrap flex items-center rounded-2xl overflow-hidden">
+      <div className="downloader-input-wrap flex items-center rounded-2xl">
         <input
-          type="url"
+          type="text"
+          inputMode="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleFetch()}
           placeholder="Paste TikTok link here..."
-          className="flex-1 bg-transparent pl-5 pr-2 py-5 text-base outline-none"
+          className="min-w-0 flex-1 bg-transparent pl-5 pr-2 py-5 text-base outline-none"
         />
         {url ? (
+          /* Clear button — visible on all screen sizes */
           <button
             onClick={reset}
-            className="flex items-center gap-1 mx-2 px-3 py-2 sm:gap-1.5 sm:mx-2.5 sm:px-5 sm:py-3 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap shrink-0"
+            className="flex items-center gap-1.5 mr-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0"
             style={{ background: "rgba(233,30,140,0.12)", color: "#e91e8c", border: "1px solid rgba(233,30,140,0.28)" }}
           >
-            <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <X className="w-3.5 h-3.5" />
             Clear
           </button>
         ) : (
+          /* Paste button — hidden on mobile (shown separately below), visible on sm+ */
           <button
             onClick={handlePaste}
-            className="flex items-center gap-1 mx-2 px-3 py-2 sm:gap-1.5 sm:mx-2.5 sm:px-5 sm:py-3 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap shrink-0"
+            className="hidden sm:flex items-center gap-1.5 mr-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0"
             style={{ background: "rgba(0,229,229,0.12)", color: "#00e5e5", border: "1px solid rgba(0,229,229,0.28)" }}
           >
-            <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <Copy className="w-3.5 h-3.5" />
             Paste
           </button>
         )}
       </div>
+
+      {/* ── Paste button — mobile only, full width row ── */}
+      {!url && (
+        <button
+          onClick={handlePaste}
+          className="sm:hidden w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all"
+          style={{ background: "rgba(0,229,229,0.12)", color: "#00e5e5", border: "1px solid rgba(0,229,229,0.28)" }}
+        >
+          <Copy className="w-4 h-4" />
+          Paste TikTok Link
+        </button>
+      )}
 
       {/* ── Download Now — full width ── */}
       <button
