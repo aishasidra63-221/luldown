@@ -4,7 +4,7 @@ import { Mail, MessageSquare, Shield, Clock } from "lucide-react";
 export default function ContactPage() {
   useSEO({
     title: "Contact Luldown — Get in Touch",
-    description: "Contact the Luldown team for support, DMCA requests, or general inquiries. We aim to respond within 48 hours.",
+    description: "Contact the Luldown team for support or general inquiries. We aim to respond within 48 hours.",
   });
 
   return (
@@ -20,7 +20,7 @@ export default function ContactPage() {
       <div className="grid sm:grid-cols-2 gap-4">
         {[
           { icon: MessageSquare, label: "General Support",   email: "support@luldown.com",   desc: "Questions about using Luldown, download issues, or feature requests.",     color: "text-primary"    },
-          { icon: Shield,        label: "Legal & DMCA",      email: "legal@luldown.com",     desc: "Copyright concerns, DMCA takedown requests, and legal inquiries.",         color: "text-yellow-500" },
+          { icon: Shield,        label: "Legal Inquiry",      email: "legal@luldown.com",     desc: "Legal concerns and inquiries.",         color: "text-yellow-500" },
           { icon: Mail,          label: "General Inquiry",   email: "hello@luldown.com",     desc: "Business inquiries, partnerships, and general correspondence.",              color: "text-green-500"  },
           { icon: Clock,         label: "Response Time",     email: null,                    desc: "We aim to respond to all inquiries within 48 business hours.",               color: "text-blue-500"   },
         ].map(({ icon: Icon, label, email, desc, color }) => (
