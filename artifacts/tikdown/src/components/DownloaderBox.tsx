@@ -147,8 +147,13 @@ export default function DownloaderBox({ highlightFormat }: Props) {
           className="flex-1 bg-transparent pl-5 pr-2 py-5 text-base outline-none"
         />
         {url ? (
-          <button onClick={reset} className="px-5 py-5 opacity-40 hover:opacity-80 transition-opacity">
-            <X className="w-5 h-5" />
+          <button
+            onClick={reset}
+            className="flex items-center gap-1.5 mx-2.5 px-5 py-3 rounded-xl text-sm font-bold transition-all"
+            style={{ background: "rgba(233,30,140,0.12)", color: "#e91e8c", border: "1px solid rgba(233,30,140,0.28)" }}
+          >
+            <X className="w-4 h-4" />
+            Clear
           </button>
         ) : (
           <button
