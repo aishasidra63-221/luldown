@@ -1,0 +1,38 @@
+name: Deploy Cloudflare Pages (Frontend)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "artifacts/tikdown/**"
+      - "lib/**"
+      - "pnpm-workspace.yaml"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build frontend
+        run: pnpm --filter @workspace/tikdown run build
+        env:
+          WORKER_URL: ${{ secrets.WORKER_URL }}
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          command: pages deploy artifacts/tikdown/dist/public --project-name=luldown
