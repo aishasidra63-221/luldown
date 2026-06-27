@@ -2,53 +2,22 @@ import { useState, useCallback } from "react";
 import { fetchVideoInfo, downloadVideo, downloadPhoto, VideoInfo, DownloadFormat } from "@/lib/api";
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import {
-  Video, Music, Film, Copy, Download,
+  Video, Music, Film, Copy, Search, Download,
   AlertCircle, Clock, User, Eye, Heart, Loader2, X,
-  CheckCircle2, LinkIcon,
 } from "lucide-react";
 
-// ── TikTok URL validation ─────────────────────────────────────────────────────
-const TIKTOK_PATTERN = /^https?:\/\/(www\.|vm\.|vt\.|m\.)?tiktok\.com\//i;
-
-function isTikTokUrl(s: string): boolean {
-  return TIKTOK_PATTERN.test(s.trim());
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 interface FormatOption {
   format: DownloadFormat;
   label: string;
   sublabel: string;
   Icon: React.ElementType;
-  iconBg: string;
-  iconColor: string;
+  color: string;
 }
 
 const FORMAT_OPTIONS: FormatOption[] = [
-  {
-    format:    "mp4_1080",
-    label:     "MP4 — 1080p HD",
-    sublabel:  "Full HD · No Watermark",
-    Icon:      Video,
-    iconBg:    "bg-blue-50 dark:bg-blue-950/40",
-    iconColor: "text-blue-500",
-  },
-  {
-    format:    "mp4_720",
-    label:     "MP4 — 720p",
-    sublabel:  "Standard HD · No Watermark",
-    Icon:      Film,
-    iconBg:    "bg-violet-50 dark:bg-violet-950/40",
-    iconColor: "text-violet-500",
-  },
-  {
-    format:    "mp3",
-    label:     "MP3 Audio",
-    sublabel:  "192kbps · Audio only",
-    Icon:      Music,
-    iconBg:    "bg-emerald-50 dark:bg-emerald-950/40",
-    iconColor: "text-emerald-500",
-  },
+  { format: "mp4_1080", label: "MP4 — 1080p",  sublabel: "HD · No Watermark",       Icon: Video, color: "text-blue-500"  },
+  { format: "mp4_720",  label: "MP4 — 720p",   sublabel: "Standard · No Watermark",  Icon: Film,  color: "text-purple-500" },
+  { format: "mp3",      label: "MP3 Audio",    sublabel: "192kbps · Audio only",      Icon: Music, color: "text-green-500" },
 ];
 
 function fmtNum(n?: number) {
@@ -66,26 +35,17 @@ function fmtDuration(sec: number) {
 
 type Step = "idle" | "loading-info" | "info-ready" | "downloading" | "error";
 
-interface Props { highlightFormat?: DownloadFormat; }
-
-// ── TikTok Icon SVG ───────────────────────────────────────────────────────────
-function TikTokIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.79 1.53V6.77a4.85 4.85 0 0 1-1.02-.08z"/>
-    </svg>
-  );
+interface Props {
+  highlightFormat?: DownloadFormat;
 }
 
-// ── Main Component ────────────────────────────────────────────────────────────
 export default function DownloaderBox({ highlightFormat }: Props) {
-  const [url, setUrl]                           = useState("");
-  const [step, setStep]                         = useState<Step>("idle");
-  const [info, setInfo]                         = useState<VideoInfo | null>(null);
-  const [error, setError]                       = useState("");
-  const [activeDownload, setActiveDownload]     = useState<DownloadFormat | null>(null);
+  const [url, setUrl]                         = useState("");
+  const [step, setStep]                       = useState<Step>("idle");
+  const [info, setInfo]                       = useState<VideoInfo | null>(null);
+  const [error, setError]                     = useState("");
+  const [activeDownload, setActiveDownload]   = useState<DownloadFormat | null>(null);
   const [photoDownloading, setPhotoDownloading] = useState<number | null>(null);
-  const [urlError, setUrlError]                 = useState("");
   const { executeRecaptcha } = useGoogleReCaptcha();
 
   const getToken = useCallback(async (action: string): Promise<string | undefined> => {
@@ -93,25 +53,11 @@ export default function DownloaderBox({ highlightFormat }: Props) {
     try { return await executeRecaptcha(action); } catch { return undefined; }
   }, [executeRecaptcha]);
 
-  const handleChange = (val: string) => {
-    setUrl(val);
-    setUrlError("");
-    if (step === "error") { setStep("idle"); setError(""); }
-  };
-
   const handleFetch = async () => {
     const trimmed = url.trim();
     if (!trimmed) return;
-
-    // TikTok-only validation
-    if (!isTikTokUrl(trimmed)) {
-      setUrlError("Please paste a TikTok link (tiktok.com, vm.tiktok.com)");
-      return;
-    }
-
     setStep("loading-info");
     setError("");
-    setUrlError("");
     setInfo(null);
     try {
       const token = await getToken("fetch_info");
@@ -149,186 +95,84 @@ export default function DownloaderBox({ highlightFormat }: Props) {
   };
 
   const handlePaste = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      setUrl(text);
-      setUrlError("");
-    } catch {}
+    try { setUrl(await navigator.clipboard.readText()); } catch {}
   };
 
-  const reset = () => {
-    setUrl(""); setStep("idle"); setInfo(null);
-    setError(""); setUrlError("");
-  };
+  const reset = () => { setUrl(""); setStep("idle"); setInfo(null); setError(""); };
 
-  const isPhoto   = info?.is_photo && (info.images?.length ?? 0) > 0;
-  const isValid   = isTikTokUrl(url);
-  const hasUrl    = url.trim().length > 0;
-  const formats   = highlightFormat
+  const isPhoto = info?.is_photo && (info.images?.length ?? 0) > 0;
+
+  const formats = highlightFormat
     ? [...FORMAT_OPTIONS].sort((a) => (a.format === highlightFormat ? -1 : 1))
     : FORMAT_OPTIONS;
 
-  // input border state
-  const inputBorder = urlError
-    ? "border-red-400 ring-2 ring-red-400/20"
-    : hasUrl && isValid
-    ? "border-emerald-400 ring-2 ring-emerald-400/20"
-    : "border-border focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20";
-
   return (
     <div className="space-y-4">
-
-      {/* ── Input Box ─────────────────────────────────────────────────────── */}
-      <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
-
-        {/* Header strip */}
-        <div className="flex items-center gap-2 px-5 py-3 border-b border-border/60 bg-secondary/30">
-          <TikTokIcon className="w-3.5 h-3.5 text-muted-foreground" />
-          <span className="text-xs font-medium text-muted-foreground">
-            Paste a TikTok link to download
-          </span>
-          <div className="ml-auto flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[10px] text-muted-foreground font-medium">Ready</span>
-          </div>
-        </div>
-
-        {/* Input row */}
-        <div className="p-4">
-          <div className={`flex items-center gap-2 rounded-xl border-2 transition-all duration-200 px-4 bg-zinc-800
-            ${urlError
-              ? "border-red-500"
-              : hasUrl && isValid
-              ? "border-emerald-500"
-              : "border-zinc-600 focus-within:border-violet-500"
-            }`}>
-            {/* Link icon */}
-            <LinkIcon className="w-4 h-4 text-zinc-400 flex-shrink-0" />
-
-            {/* Input */}
+      {/* Input */}
+      <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1 relative">
             <input
               type="url"
               value={url}
-              onChange={(e) => handleChange(e.target.value)}
+              onChange={(e) => setUrl(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleFetch()}
               placeholder="https://www.tiktok.com/@user/video/..."
-              className="flex-1 py-3.5 bg-transparent text-white placeholder:text-zinc-500 focus:outline-none text-sm min-w-0"
+              className="w-full pl-4 pr-16 py-3.5 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary text-sm"
             />
-
-            {/* Valid check / clear */}
-            {hasUrl && (
-              isValid
-                ? <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                : <button onClick={reset} className="p-0.5 text-zinc-400 hover:text-white">
-                    <X className="w-4 h-4" />
-                  </button>
-            )}
-
-            {/* Paste button (when empty) */}
-            {!hasUrl && (
-              <button
-                onClick={handlePaste}
-                className="flex items-center gap-1.5 text-xs font-semibold text-violet-400 hover:text-violet-300 transition-colors flex-shrink-0 px-2.5 py-1 rounded-lg border border-violet-500/50 hover:border-violet-400"
-              >
-                <Copy className="w-3 h-3" />
-                Paste
+            {url ? (
+              <button onClick={reset} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1">
+                <X className="w-4 h-4" />
+              </button>
+            ) : (
+              <button onClick={handlePaste} className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs text-primary font-medium hover:underline">
+                <Copy className="w-3 h-3" /> Paste
               </button>
             )}
           </div>
-
-          {/* URL validation error */}
-          {urlError && (
-            <p className="mt-2 flex items-center gap-1.5 text-xs text-red-500 font-medium px-1">
-              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-              {urlError}
-            </p>
-          )}
-
-          {/* Download button */}
           <button
             onClick={handleFetch}
-            disabled={!hasUrl || step === "loading-info"}
-            className="gradient-btn mt-3 w-full py-3.5 text-white font-semibold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 text-sm"
+            disabled={!url.trim() || step === "loading-info"}
+            className="gradient-btn w-full sm:w-auto px-8 py-3.5 text-white font-semibold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 text-sm whitespace-nowrap"
           >
             {step === "loading-info"
-              ? <><Loader2 className="w-4 h-4 animate-spin" /> Fetching info…</>
-              : <><Download className="w-4 h-4" /> Download Video</>}
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> Fetching…</>
+              : <><Download className="w-4 h-4" /> Download</>}
           </button>
-
-          {/* Supported hint */}
-          <p className="text-center text-[11px] text-muted-foreground mt-2.5">
-            Supports TikTok videos, MP3 audio &amp; photo slideshows
-          </p>
         </div>
 
-        {/* API error */}
-        {step === "error" && error && (
-          <div className="mx-4 mb-4 flex items-start gap-2 p-3 bg-destructive/8 border border-destructive/20 rounded-xl text-sm text-destructive">
+        {step === "error" && (
+          <div className="mt-3 flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-sm text-destructive">
             <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <span>{error}</span>
+            {error}
           </div>
         )}
       </div>
 
-      {/* ── Result Card ───────────────────────────────────────────────────── */}
+      {/* Result */}
       {step === "info-ready" && info && (
         <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-3 duration-300">
 
           {/* Thumbnail */}
           <div className="relative">
             {info.thumbnail ? (
-              <div className="relative h-44 sm:h-56 overflow-hidden bg-secondary">
-                <img
-                  src={info.thumbnail}
-                  alt={info.title}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
-
-                {/* Reset button */}
-                <button
-                  onClick={reset}
-                  className="absolute top-3 right-3 w-7 h-7 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center transition-colors"
-                >
-                  <X className="w-3.5 h-3.5 text-white" />
-                </button>
-
-                {/* Video meta */}
+              <div className="relative h-40 sm:h-52 overflow-hidden bg-secondary">
+                <img src={info.thumbnail} alt={info.title} className="w-full h-full object-cover opacity-80" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                 <div className="absolute bottom-3 left-4 right-4">
-                  <p className="text-white font-semibold text-sm line-clamp-2 mb-1.5 drop-shadow">
-                    {info.title}
-                  </p>
-                  <div className="flex items-center gap-3 text-white/75 text-xs flex-wrap">
-                    <span className="flex items-center gap-1">
-                      <User className="w-3 h-3" /> @{info.author}
-                    </span>
-                    {info.duration > 0 && (
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> {fmtDuration(info.duration)}
-                      </span>
-                    )}
-                    {!!info.view_count && (
-                      <span className="flex items-center gap-1">
-                        <Eye className="w-3 h-3" /> {fmtNum(info.view_count)}
-                      </span>
-                    )}
-                    {!!info.like_count && (
-                      <span className="flex items-center gap-1">
-                        <Heart className="w-3 h-3" /> {fmtNum(info.like_count)}
-                      </span>
-                    )}
+                  <p className="text-white font-semibold text-sm line-clamp-2 mb-1">{info.title}</p>
+                  <div className="flex items-center gap-3 text-white/70 text-xs flex-wrap">
+                    <span className="flex items-center gap-1"><User className="w-3 h-3" /> @{info.author}</span>
+                    {info.duration > 0 && <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {fmtDuration(info.duration)}</span>}
+                    {!!info.view_count && <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {fmtNum(info.view_count)}</span>}
+                    {!!info.like_count && <span className="flex items-center gap-1"><Heart className="w-3 h-3" /> {fmtNum(info.like_count)}</span>}
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="p-5 border-b border-border flex items-start justify-between">
-                <div>
-                  <p className="font-semibold text-foreground">{info.title || "TikTok Video"}</p>
-                  <p className="text-sm text-muted-foreground mt-0.5">@{info.author}</p>
-                </div>
-                <button onClick={reset} className="text-muted-foreground hover:text-foreground p-1">
-                  <X className="w-4 h-4" />
-                </button>
+              <div className="p-5 border-b border-border">
+                <p className="font-semibold text-foreground">{info.title || "TikTok Video"}</p>
+                <p className="text-sm text-muted-foreground mt-1">@{info.author}</p>
               </div>
             )}
           </div>
@@ -336,16 +180,14 @@ export default function DownloaderBox({ highlightFormat }: Props) {
           {/* Photo grid */}
           {isPhoto ? (
             <div className="p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  📸 Photo Post — {info.images!.length} image{info.images!.length > 1 ? "s" : ""}
-                </p>
-              </div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                📸 Photo Post — {info.images!.length} image{info.images!.length > 1 ? "s" : ""}
+              </p>
               {info.images!.length > 1 && (
                 <button
                   onClick={() => info.images!.forEach((u, i) => setTimeout(() => handlePhotoDownload(u, i), i * 400))}
                   disabled={photoDownloading !== null}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl gradient-btn text-white text-sm font-semibold disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-primary text-primary text-sm font-semibold hover:bg-primary hover:text-primary-foreground transition-all disabled:opacity-50"
                 >
                   <Download className="w-4 h-4" />
                   Save All {info.images!.length} Photos
@@ -363,7 +205,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                     <button
                       onClick={() => handlePhotoDownload(imgUrl, i)}
                       disabled={photoDownloading !== null}
-                      className="flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-primary hover:bg-primary hover:text-white transition-all disabled:opacity-50"
+                      className="flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-primary hover:bg-primary hover:text-primary-foreground transition-all disabled:opacity-50"
                     >
                       {photoDownloading === i
                         ? <><Loader2 className="w-3 h-3 animate-spin" /> Saving…</>
@@ -375,47 +217,34 @@ export default function DownloaderBox({ highlightFormat }: Props) {
             </div>
           ) : (
             /* Format buttons */
-            <div className="p-5 space-y-2.5">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
-                Choose Format
-              </p>
-              {formats.map(({ format, label, sublabel, Icon, iconBg, iconColor }) => {
-                const isActive      = activeDownload === format;
+            <div className="p-5 space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Choose Format</p>
+              {formats.map(({ format, label, sublabel, Icon, color }) => {
+                const isActive = activeDownload === format;
                 const isHighlighted = highlightFormat === format;
                 return (
                   <button
                     key={format}
                     onClick={() => handleDownload(format)}
                     disabled={!!activeDownload}
-                    className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed group ${
+                    className={`w-full flex items-center gap-4 p-3.5 rounded-xl border transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed group ${
                       isHighlighted
-                        ? "gradient-btn border-transparent text-white"
-                        : "border-border bg-background hover:border-primary/40 hover:bg-primary/5"
+                        ? "bg-primary text-primary-foreground border-primary hover:opacity-90"
+                        : "border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary"
                     }`}
                   >
-                    {/* Icon */}
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
-                      isHighlighted ? "bg-white/20" : `${iconBg} group-hover:bg-primary/10`
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
+                      isHighlighted ? "bg-white/20" : "bg-secondary group-hover:bg-white/20"
                     }`}>
                       {isActive
-                        ? <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                        : <Icon className={`w-5 h-5 ${isHighlighted ? "text-white" : `${iconColor} group-hover:text-primary`}`} />}
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <Icon className={`w-4 h-4 ${isHighlighted ? "text-white" : `${color} group-hover:text-white`}`} />}
                     </div>
-
-                    {/* Labels */}
                     <div className="text-left flex-1">
-                      <div className={`font-semibold text-sm ${isHighlighted ? "text-white" : "text-foreground"}`}>
-                        {isActive ? "Downloading…" : label}
-                      </div>
-                      <div className={`text-xs mt-0.5 ${isHighlighted ? "text-white/70" : "text-muted-foreground"}`}>
-                        {sublabel}
-                      </div>
+                      <div className="font-semibold text-sm">{isActive ? "Downloading…" : label}</div>
+                      <div className={`text-xs ${isHighlighted ? "text-primary-foreground/70" : "text-muted-foreground group-hover:text-primary-foreground/70"}`}>{sublabel}</div>
                     </div>
-
-                    {/* Arrow */}
-                    <Download className={`w-4 h-4 flex-shrink-0 transition-all ${
-                      isHighlighted ? "text-white opacity-80" : "opacity-0 group-hover:opacity-60 text-primary"
-                    }`} />
+                    <Download className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                   </button>
                 );
               })}
