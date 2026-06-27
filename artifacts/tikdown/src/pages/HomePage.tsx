@@ -88,25 +88,6 @@ export default function HomePage() {
             {/* Downloader */}
             <DownloaderBox />
 
-            {/* ── Feature badges — below downloader ── */}
-            <div className="flex flex-wrap gap-2 mt-1">
-              {[
-                { label: "Unlimited Download", color: "#00e5e5" },
-                { label: "Fast Download",      color: "#e91e8c" },
-                { label: "HD Quality",         color: "#a855f7" },
-                { label: "All Devices",        color: "#00e5e5" },
-              ].map(({ label, color }) => (
-                <span
-                  key={label}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold"
-                  style={{ background: `${color}18`, color, border: `1px solid ${color}40` }}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
-                  {label}
-                </span>
-              ))}
-            </div>
-
           </div>
 
           {/* ── RIGHT column: only visible on desktop ── */}
@@ -179,29 +160,31 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* ── How it works — mobile only (vertical) ── */}
-        <div className="mt-6 rounded-2xl p-5 how-it-works-card lg:hidden">
-          <h2 className="text-base font-black mb-4 how-it-works-title">How it works?</h2>
-          <div className="flex flex-col gap-3">
+        {/* ── How it works — mobile only (below downloader, upar features se) ── */}
+        <div className="mt-6 rounded-2xl p-6 how-it-works-card lg:hidden">
+          <h2 className="text-lg font-black text-center mb-6 how-it-works-title">How it works?</h2>
+          <div className="flex items-start justify-between gap-1">
             {STEPS.map(({ num, label, Icon, color }, i) => (
-              <div key={num}>
-                <div className="flex items-center gap-3">
+              <div key={num} className="flex items-start gap-1 flex-1">
+                <div className="flex flex-col items-center gap-2.5 flex-1">
                   <div
-                    className="relative w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
+                    className="relative w-14 h-14 rounded-full flex items-center justify-center"
                     style={{ background: `${color}18`, border: `2px solid ${color}45` }}
                   >
-                    <Icon className="w-5 h-5" style={{ color }} strokeWidth={1.8} />
+                    <Icon className="w-6 h-6" style={{ color }} strokeWidth={1.8} />
                     <div
-                      className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-black text-white flex items-center justify-center"
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[10px] font-black text-white flex items-center justify-center"
                       style={{ background: color }}
                     >
                       {num}
                     </div>
                   </div>
-                  <p className="text-sm font-medium step-label">{label.replace("\n", " ")}</p>
+                  <p className="text-xs text-center leading-snug font-medium step-label" style={{ whiteSpace: "pre-line" }}>
+                    {label}
+                  </p>
                 </div>
                 {i < STEPS.length - 1 && (
-                  <div className="ml-5 mt-1 text-xs step-arrow opacity-30">↓</div>
+                  <div className="flex-shrink-0 mt-5 text-sm font-bold step-arrow">→</div>
                 )}
               </div>
             ))}
