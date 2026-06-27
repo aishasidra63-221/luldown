@@ -74,7 +74,7 @@ export default function HomePage() {
                   fontFamily: "'Poppins', sans-serif",
                 }}
               >
-                <span style={{ color: "#00e5e5" }}>TikTok</span> Video Downloader
+                <span style={{ background: "linear-gradient(90deg, #00e5e5, #e91e8c)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>TikTok</span> Video Downloader
                 <br />
                 <span style={{ fontSize: "90%" }}>No Watermark</span>
               </h1>
