@@ -98,16 +98,18 @@ export default function HomePage() {
               {FEATURES.map(({ label, Icon, color }) => (
                 <div
                   key={label}
-                  className="flex flex-col items-center gap-2 p-4 rounded-2xl"
-                  style={{ background: `${color}08`, border: `1px solid ${color}20` }}
+                  className="flex flex-col items-center gap-3 p-5 rounded-2xl relative overflow-hidden"
+                  style={{ background: `${color}0c`, border: `1.5px solid ${color}30` }}
                 >
+                  {/* Glow blob */}
+                  <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ background: `radial-gradient(circle at 50% 0%, ${color}55 0%, transparent 70%)` }} />
                   <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center"
-                    style={{ background: `${color}18`, border: `1.5px solid ${color}40` }}
+                    className="w-13 h-13 rounded-2xl flex items-center justify-center relative z-10"
+                    style={{ background: `${color}22`, border: `2px solid ${color}50`, width: 52, height: 52 }}
                   >
                     <Icon className="w-6 h-6" style={{ color }} strokeWidth={1.8} />
                   </div>
-                  <span className="text-xs font-bold text-center feature-label">{label}</span>
+                  <span className="text-xs font-bold text-center feature-label relative z-10">{label}</span>
                 </div>
               ))}
             </div>
@@ -189,19 +191,22 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* ── Feature icons — mobile only (How it works ke baad) ── */}
-        <div className="grid grid-cols-4 gap-2.5 mt-4 lg:hidden">
+        {/* ── Feature cards — mobile only ── */}
+        <div className="grid grid-cols-1 gap-2 mt-4 lg:hidden">
           {FEATURES.map(({ label, Icon, color }) => (
-            <div key={label} className="feature-icon-card">
+            <div
+              key={label}
+              className="flex items-center gap-3.5 px-4 py-3 rounded-2xl"
+              style={{ background: `${color}10`, border: `1.5px solid ${color}30` }}
+            >
               <div
-                className="w-11 h-11 rounded-full flex items-center justify-center mb-1"
-                style={{ background: `${color}18`, border: `1.5px solid ${color}35` }}
+                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: `${color}20`, border: `1.5px solid ${color}45` }}
               >
                 <Icon className="w-5 h-5" style={{ color }} strokeWidth={1.8} />
               </div>
-              <span className="text-[10px] font-semibold leading-tight text-center feature-label">
-                {label}
-              </span>
+              <span className="text-sm font-bold feature-label">{label}</span>
+              <div className="ml-auto w-2 h-2 rounded-full flex-shrink-0" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />
             </div>
           ))}
         </div>
