@@ -193,63 +193,58 @@ export default function DownloaderBox({ highlightFormat }: Props) {
         return (
           <div className="result-card rounded-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-300">
 
-            {/* ── Hero: blurred thumbnail bg + info on top ── */}
-            <div className="relative">
-              {/* Blurred background thumbnail */}
-              {info.thumbnail && (
-                <>
-                  <img
-                    src={info.thumbnail}
-                    alt=""
-                    aria-hidden
-                    className="absolute inset-0 w-full h-full object-cover"
-                    style={{ filter: "blur(5px) brightness(0.6) saturate(1.2)", transform: "scale(1.05)" }}
-                  />
-                </>
-              )}
-
-              {/* Content overlay */}
-              <div className="relative px-4 pt-4 pb-4 space-y-3">
-
-                {/* Demo badge */}
-                {isDemo && (
-                  <div className="flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest w-full"
-                    style={{ background: "rgba(0,229,229,0.12)", color: "#00e5e5", border: "1px solid rgba(0,229,229,0.2)" }}>
-                    <FlaskConical className="w-3 h-3" />
-                    DEMO — Yeh sirf preview hai
-                  </div>
-                )}
-
-                {/* Avatar + username + title */}
-                <div className="flex items-start gap-3">
-                  <div className="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center font-black text-lg text-white shadow-lg"
-                    style={{ background: "linear-gradient(135deg, #00c8c8, #e91e8c)", boxShadow: "0 2px 12px rgba(0,200,200,0.3)" }}>
-                    {info.author ? info.author.replace("@","").charAt(0).toUpperCase() : "T"}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    {info.author && (
-                      <p className="font-black text-sm" style={{ color: "#00e5e5", textShadow: "0 1px 6px rgba(0,0,0,0.9)" }}>{info.author}</p>
-                    )}
-                    {cleanTitle && (
-                      <p className="text-xs leading-snug line-clamp-3 mt-1" style={{ color: "rgba(255,255,255,0.95)", textShadow: "0 1px 6px rgba(0,0,0,0.9)" }}>
-                        {cleanTitle}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Tags */}
-                {tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {tags.slice(0, 6).map((tag) => (
-                      <span key={tag} className="text-[11px] font-bold px-2.5 py-0.5 rounded-full"
-                        style={{ background: "rgba(168,85,247,0.18)", color: "#c084fc", border: "1px solid rgba(168,85,247,0.3)" }}>
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
+            {/* ── Demo badge ── */}
+            {isDemo && (
+              <div className="flex items-center justify-center gap-1.5 py-2 text-[10px] font-black uppercase tracking-widest"
+                style={{ background: "rgba(0,229,229,0.08)", color: "#00e5e5", borderBottom: "1px solid rgba(0,229,229,0.12)" }}>
+                <FlaskConical className="w-3 h-3" />
+                DEMO — Yeh sirf preview hai
               </div>
+            )}
+
+            {/* ── Thumbnail image ── */}
+            {info.thumbnail && (
+              <div className="relative w-full overflow-hidden" style={{ maxHeight: "160px" }}>
+                <img
+                  src={info.thumbnail}
+                  alt={info.title}
+                  className="w-full object-cover"
+                  style={{ maxHeight: "160px" }}
+                />
+              </div>
+            )}
+
+            {/* ── Creator info ── */}
+            <div className="px-4 pt-3 pb-3 space-y-2.5">
+              {/* Avatar + username + title */}
+              <div className="flex items-start gap-3">
+                <div className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center font-black text-base text-white"
+                  style={{ background: "linear-gradient(135deg, #00c8c8, #e91e8c)" }}>
+                  {info.author ? info.author.replace("@","").charAt(0).toUpperCase() : "T"}
+                </div>
+                <div className="flex-1 min-w-0">
+                  {info.author && (
+                    <p className="font-black text-sm" style={{ color: "#00e5e5" }}>{info.author}</p>
+                  )}
+                  {cleanTitle && (
+                    <p className="text-xs leading-snug line-clamp-3 mt-1" style={{ color: "rgba(200,215,235,0.75)" }}>
+                      {cleanTitle}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Tags */}
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {tags.slice(0, 6).map((tag) => (
+                    <span key={tag} className="text-[11px] font-bold px-2.5 py-0.5 rounded-full"
+                      style={{ background: "rgba(168,85,247,0.18)", color: "#c084fc", border: "1px solid rgba(168,85,247,0.3)" }}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* ── Photo post ── */}
