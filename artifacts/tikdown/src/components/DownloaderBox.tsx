@@ -288,7 +288,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
               </div>
             ) : (
               /* ── Big download buttons ── */
-              <div className="p-3 space-y-2">
+              <div className="p-3 space-y-2.5">
                 {formats.map(({ format, label, Icon, color }) => {
                   const isActive = activeDownload === format;
                   return (
@@ -296,27 +296,24 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                       key={format}
                       onClick={() => handleDownload(format)}
                       disabled={!!activeDownload || isDemo}
-                      className="w-full flex items-center justify-between gap-3 px-5 py-4 rounded-2xl font-black text-sm transition-all active:scale-[0.99] disabled:opacity-40"
+                      className="w-full flex items-center justify-between gap-3 px-5 py-4 rounded-2xl font-black text-sm transition-all active:scale-[0.99] disabled:opacity-50"
                       style={{
-                        background: `linear-gradient(90deg, ${color}22 0%, ${color}0a 100%)`,
-                        border: `2px solid ${color}55`,
-                        color,
+                        background: color,
+                        color: "#ffffff",
+                        boxShadow: `0 4px 18px ${color}55`,
                       }}
                     >
                       {/* Left: icon + label */}
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                          style={{ background: `${color}25`, border: `1.5px solid ${color}45` }}>
-                          {isActive
-                            ? <Loader2 className="w-5 h-5 animate-spin" style={{ color }} />
-                            : <Icon className="w-5 h-5" style={{ color }} />}
-                        </div>
-                        <span style={{ color }}>
+                        {isActive
+                          ? <Loader2 className="w-5 h-5 animate-spin" />
+                          : <Icon className="w-5 h-5" />}
+                        <span className="text-base">
                           {isActive ? "Downloading…" : label}
                         </span>
                       </div>
                       {/* Right: download icon */}
-                      <Download className="w-5 h-5 flex-shrink-0" style={{ color }} />
+                      <Download className="w-5 h-5 flex-shrink-0" />
                     </button>
                   );
                 })}
