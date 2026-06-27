@@ -45,7 +45,7 @@ export default function HomePage() {
           {/* Badge */}
           <div className="inline-flex items-center gap-1.5 hero-badge text-xs font-bold px-4 py-1.5 rounded-full mb-5">
             <Zap className="w-3 h-3 fill-current" />
-            100% Free
+            Free • Fast • Secure
           </div>
 
           {/* Title */}
