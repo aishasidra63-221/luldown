@@ -15,10 +15,10 @@ interface FormatOption {
 }
 
 const FORMAT_OPTIONS: FormatOption[] = [
-  { format: "mp4_1080", label: "MP4 — 1080p HD",  sublabel: "Best quality · No Watermark",   Icon: Video, color: "#00e5e5" },
-  { format: "mp4_720",  label: "MP4 — 720p",       sublabel: "Standard HD · No Watermark",    Icon: Film,  color: "#a855f7" },
-  { format: "mp3",      label: "MP3 Audio",         sublabel: "192 kbps · Audio only",         Icon: Music, color: "#e91e8c" },
-  { format: "thumbnail",label: "Thumbnail",         sublabel: "Cover image · JPG",             Icon: Image, color: "#f59e0b" },
+  { format: "mp4_1080", label: "Without Watermark HD",  sublabel: "1080p · Best Quality",    Icon: Video, color: "#00e5e5" },
+  { format: "mp4_720",  label: "Without Watermark",      sublabel: "720p · Standard HD",      Icon: Film,  color: "#a855f7" },
+  { format: "mp3",      label: "Download MP3",           sublabel: "192 kbps · Audio Only",   Icon: Music, color: "#e91e8c" },
+  { format: "thumbnail",label: "Download Thumbnail",     sublabel: "Cover Image · JPG",       Icon: Image, color: "#f59e0b" },
 ];
 
 const DEMO_DATA: VideoInfo = {
@@ -293,30 +293,36 @@ export default function DownloaderBox({ highlightFormat }: Props) {
             </div>
           ) : (
             /* Format buttons */
-            <div className="p-4 space-y-2">
-              <p className="text-[10px] font-black uppercase tracking-widest mb-3 step-label">Choose Format</p>
+            <div className="p-4 space-y-2.5">
               {formats.map(({ format, label, sublabel, Icon, color }) => {
-                const isActive      = activeDownload === format;
-                const isHighlighted = highlightFormat === format;
+                const isActive = activeDownload === format;
                 return (
                   <button
                     key={format}
                     onClick={() => handleDownload(format)}
                     disabled={!!activeDownload || isDemo}
-                    className={`format-btn w-full flex items-center gap-3.5 p-3.5 rounded-xl ${isHighlighted ? "format-btn-active" : ""}`}
-                    style={isHighlighted ? { borderColor: `${color}50`, background: `${color}08` } : {}}
+                    className="w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl font-bold text-sm transition-all active:scale-[0.98] disabled:opacity-50"
+                    style={{
+                      background: `${color}18`,
+                      border: `1.5px solid ${color}45`,
+                      color: color,
+                    }}
                   >
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{ background: `${color}14`, border: `1.5px solid ${color}28` }}>
-                      {isActive
-                        ? <Loader2 className="w-4 h-4 animate-spin" style={{ color }} />
-                        : <Icon className="w-4 h-4" style={{ color }} />}
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ background: `${color}22` }}>
+                        {isActive
+                          ? <Loader2 className="w-4 h-4 animate-spin" />
+                          : <Icon className="w-4 h-4" />}
+                      </div>
+                      <div className="text-left">
+                        <div className="font-bold text-sm leading-tight" style={{ color: "inherit" }}>
+                          {isActive ? "Downloading…" : label}
+                        </div>
+                        <div className="text-[11px] font-medium opacity-60 mt-0.5">{sublabel}</div>
+                      </div>
                     </div>
-                    <div className="text-left flex-1">
-                      <div className="font-bold text-sm">{isActive ? "Downloading…" : label}</div>
-                      <div className="text-xs opacity-50">{sublabel}</div>
-                    </div>
-                    <Download className="w-4 h-4 flex-shrink-0 opacity-20" />
+                    <Download className="w-4 h-4 flex-shrink-0 opacity-50" />
                   </button>
                 );
               })}
