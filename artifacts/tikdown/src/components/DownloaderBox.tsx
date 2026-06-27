@@ -110,7 +110,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
     <div className="space-y-4">
       {/* Input */}
       <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
             <input
               type="url"
@@ -133,11 +133,11 @@ export default function DownloaderBox({ highlightFormat }: Props) {
           <button
             onClick={handleFetch}
             disabled={!url.trim() || step === "loading-info"}
-            className="px-5 py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl transition-all hover:opacity-90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 text-sm whitespace-nowrap"
+            className="gradient-btn w-full sm:w-auto px-8 py-3.5 text-white font-semibold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 text-sm whitespace-nowrap"
           >
             {step === "loading-info"
-              ? <><Loader2 className="w-4 h-4 animate-spin" /> Fetching</>
-              : <><Search className="w-4 h-4" /> Fetch</>}
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> Fetching…</>
+              : <><Download className="w-4 h-4" /> Download</>}
           </button>
         </div>
 
