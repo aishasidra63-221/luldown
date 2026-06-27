@@ -24,7 +24,10 @@ export default function Navbar() {
         <Link href="/">
           <div className="flex items-center gap-2.5 cursor-pointer select-none">
             <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
-              style={{ background: "linear-gradient(135deg, #00c8c8 0%, #007c7c 100%)" }}>
+              style={{
+                background: "linear-gradient(135deg, #00c8c8 0%, #e91e8c 100%)",
+                boxShadow: "0 2px 12px rgba(0,200,200,0.35), 0 2px 12px rgba(233,30,140,0.2)",
+              }}>
               <Download className="w-4 h-4 text-white" strokeWidth={2.5} />
             </div>
             <span className="logo-text text-xl font-black tracking-tight" style={{ color: isLight ? "#1a1a2e" : "#ffffff" }}>

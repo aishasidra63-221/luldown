@@ -49,15 +49,15 @@ export default function HomePage() {
           </div>
 
           {/* Title */}
-          <h1 className="text-3xl sm:text-4xl font-black leading-tight mb-3 text-white">
-            Download{" "}
-            <span style={{ color: "#00e5e5" }}>TikTok</span>{" "}
-            Videos<br />Without Watermark
+          <h1 className="hero-title font-black leading-tight mb-3"
+            style={{ fontSize: "clamp(1.9rem, 7vw, 2.6rem)", letterSpacing: "-0.02em", fontFamily: "'Poppins', sans-serif" }}>
+            <span style={{ color: "#00e5e5" }}>TikTok</span> Video Download<br />
+            <span style={{ fontSize: "90%" }}>Without Watermark</span>
           </h1>
 
           {/* Subtitle */}
-          <p className="text-base font-medium mb-2" style={{ color: "rgba(200,210,230,0.6)" }}>
-            Fast. Free. High Quality.
+          <p className="hero-subtitle text-sm font-medium mb-2" style={{ fontFamily: "'Poppins', sans-serif" }}>
+            Download any TikTok video for free — no watermark,<br className="hidden sm:block" /> no login, no limits.
           </p>
         </div>
 
