@@ -195,16 +195,15 @@ export default function DownloaderBox({ highlightFormat }: Props) {
 
         {/* Input row */}
         <div className="p-4">
-          <div className={`flex items-center gap-2 rounded-xl border-2 transition-all duration-200 px-4
-            bg-black/20 dark:bg-white/[0.06]
+          <div className={`flex items-center gap-2 rounded-xl border-2 transition-all duration-200 px-4 bg-zinc-800
             ${urlError
               ? "border-red-500"
               : hasUrl && isValid
               ? "border-emerald-500"
-              : "border-white/20 dark:border-white/15 focus-within:border-primary"
+              : "border-zinc-600 focus-within:border-violet-500"
             }`}>
             {/* Link icon */}
-            <LinkIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            <LinkIcon className="w-4 h-4 text-zinc-400 flex-shrink-0" />
 
             {/* Input */}
             <input
@@ -213,14 +212,14 @@ export default function DownloaderBox({ highlightFormat }: Props) {
               onChange={(e) => handleChange(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleFetch()}
               placeholder="https://www.tiktok.com/@user/video/..."
-              className="flex-1 py-3.5 bg-transparent text-foreground placeholder:text-white/30 focus:outline-none text-sm min-w-0"
+              className="flex-1 py-3.5 bg-transparent text-white placeholder:text-zinc-500 focus:outline-none text-sm min-w-0"
             />
 
             {/* Valid check / clear */}
             {hasUrl && (
               isValid
-                ? <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                : <button onClick={reset} className="p-0.5 text-muted-foreground hover:text-foreground">
+                ? <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                : <button onClick={reset} className="p-0.5 text-zinc-400 hover:text-white">
                     <X className="w-4 h-4" />
                   </button>
             )}
@@ -229,7 +228,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
             {!hasUrl && (
               <button
                 onClick={handlePaste}
-                className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary/80 transition-colors flex-shrink-0 px-2.5 py-1 rounded-lg border border-primary/40 hover:border-primary"
+                className="flex items-center gap-1.5 text-xs font-semibold text-violet-400 hover:text-violet-300 transition-colors flex-shrink-0 px-2.5 py-1 rounded-lg border border-violet-500/50 hover:border-violet-400"
               >
                 <Copy className="w-3 h-3" />
                 Paste
