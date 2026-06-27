@@ -192,21 +192,21 @@ export default function HomePage() {
         </div>
 
         {/* ── Feature cards — mobile only ── */}
-        <div className="grid grid-cols-1 gap-2 mt-4 lg:hidden">
+        <div className="grid grid-cols-2 gap-3 mt-4 lg:hidden">
           {FEATURES.map(({ label, Icon, color }) => (
             <div
               key={label}
-              className="flex items-center gap-3.5 px-4 py-3 rounded-2xl"
-              style={{ background: `${color}10`, border: `1.5px solid ${color}30` }}
+              className="flex flex-col items-center gap-2.5 py-4 px-3 rounded-2xl relative overflow-hidden"
+              style={{ background: `${color}0d`, border: `1.5px solid ${color}35` }}
             >
+              <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse at 50% 0%, ${color}30 0%, transparent 65%)` }} />
               <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: `${color}20`, border: `1.5px solid ${color}45` }}
+                className="w-11 h-11 rounded-2xl flex items-center justify-center relative z-10"
+                style={{ background: `${color}22`, border: `2px solid ${color}55` }}
               >
                 <Icon className="w-5 h-5" style={{ color }} strokeWidth={1.8} />
               </div>
-              <span className="text-sm font-bold feature-label">{label}</span>
-              <div className="ml-auto w-2 h-2 rounded-full flex-shrink-0" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />
+              <span className="text-xs font-bold text-center feature-label relative z-10 leading-snug">{label}</span>
             </div>
           ))}
         </div>
