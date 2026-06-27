@@ -32,25 +32,28 @@
 }
 
 :root {
-  --background: 250 60% 12%;
-  --foreground: 0 0% 100%;
-  --border: 250 30% 30%;
-  --input: 250 30% 20%;
-  --ring: 258 90% 66%;
-  --card: 0 0% 100%;
-  --card-foreground: 250 50% 15%;
-  --primary: 258 90% 66%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 250 30% 25%;
-  --secondary-foreground: 0 0% 90%;
-  --muted: 250 25% 20%;
-  --muted-foreground: 250 15% 65%;
-  --accent: 220 90% 60%;
+  --background: 225 35% 6%;
+  --foreground: 0 0% 96%;
+  --border: 225 25% 14%;
+  --input: 225 25% 12%;
+  --ring: 183 100% 45%;
+  --card: 225 30% 9%;
+  --card-foreground: 0 0% 94%;
+  --primary: 183 100% 45%;
+  --primary-foreground: 225 35% 6%;
+  --secondary: 225 25% 12%;
+  --secondary-foreground: 0 0% 75%;
+  --muted: 225 25% 12%;
+  --muted-foreground: 225 15% 48%;
+  --accent: 328 90% 52%;
   --accent-foreground: 0 0% 100%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
   --app-font-sans: 'Inter', 'Poppins', sans-serif;
   --radius: 0.75rem;
+
+  --cyan: #00e5e5;
+  --pink: #e91e8c;
 }
 
 @layer base {
@@ -58,176 +61,197 @@
   html { color-scheme: dark; }
   body {
     @apply font-sans antialiased;
-    background: linear-gradient(160deg, #4c1d95 0%, #7c3aed 40%, #4338ca 70%, #1d4ed8 100%);
-    background-attachment: fixed;
+    background: #0a0d16;
     min-height: 100vh;
-    color: white;
+    color: #f0f0f8;
   }
 }
 
-/* ── Fixed gradient layer ── */
+/* ── Background ── */
 .hero-mesh {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: -1;
-  background: linear-gradient(160deg, #4c1d95 0%, #7c3aed 40%, #4338ca 70%, #1d4ed8 100%);
+  background: #0a0d16;
+}
+.hero-mesh::before {
+  content: '';
+  position: absolute;
+  top: -10%;
+  right: -5%;
+  width: 45%;
+  height: 45%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,180,180,0.07) 0%, transparent 65%);
 }
 .hero-mesh::after {
   content: '';
   position: absolute;
-  bottom: -10%;
-  right: -5%;
-  width: 50%;
-  height: 50%;
+  bottom: 20%;
+  left: -5%;
+  width: 35%;
+  height: 35%;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(59,130,246,0.25) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(233,30,140,0.06) 0%, transparent 65%);
 }
 .hero-mesh-purple { display: none; }
 
-/* ── Brand gradient text ── */
+/* ── Gradient text (TikTok accent) ── */
 .gradient-text {
-  background: linear-gradient(135deg, #c4b5fd 0%, #93c5fd 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #00e5e5;
+  -webkit-text-fill-color: #00e5e5;
 }
 .gradient-text-cyan {
-  background: linear-gradient(135deg, #93c5fd 0%, #c4b5fd 100%);
+  background: linear-gradient(135deg, #00e5e5 0%, #e91e8c 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* ── Main download button ── */
+/* ── Download button: cyan → pink gradient ── */
 .gradient-btn {
-  background: #ffffff;
-  color: #5b21b6 !important;
+  background: linear-gradient(90deg, #00c8c8 0%, #e91e8c 100%);
+  color: #ffffff !important;
   font-weight: 800;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 20px rgba(0,200,200,0.3), 0 4px 20px rgba(233,30,140,0.2);
   transition: all 0.2s ease;
   border: none;
 }
 .gradient-btn:hover:not(:disabled) {
-  background: #f5f3ff;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.28);
+  box-shadow: 0 6px 28px rgba(0,200,200,0.45), 0 6px 28px rgba(233,30,140,0.35);
   transform: translateY(-2px);
+  filter: brightness(1.08);
 }
 .gradient-btn:active { transform: translateY(0); }
-.gradient-btn:disabled { opacity: 0.5; box-shadow: none; transform: none; }
+.gradient-btn:disabled { opacity: 0.4; box-shadow: none; transform: none; }
 
-/* ── White solid card ── */
+/* ── Dark cards ── */
 .glass-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  background: #13162080;
+  border: 1px solid rgba(255,255,255,0.07);
+  backdrop-filter: blur(16px);
 }
 
-/* ── Feature/step cards (white, dark text) ── */
 .neon-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  background: #131620;
+  border: 1px solid rgba(255,255,255,0.06);
   transition: all 0.25s ease;
-  color: #1e1b4b;
 }
 .neon-card:hover {
-  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  border-color: rgba(0,229,229,0.25);
+  box-shadow: 0 0 0 1px rgba(0,229,229,0.1), 0 8px 28px rgba(0,0,0,0.4);
   transform: translateY(-2px);
 }
 
-/* ── Input box ── */
+/* ── Input ── */
 .neon-input {
-  background: #ffffff;
-  border: 2px solid #e5e7eb;
-  color: #1e1b4b;
-  font-weight: 500;
+  background: #131620;
+  border: 1.5px solid rgba(255,255,255,0.09);
+  color: #f0f0f8;
+  font-weight: 400;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
-.neon-input::placeholder { color: #9ca3af; }
+.neon-input::placeholder { color: rgba(200,200,220,0.38); }
 .neon-input:focus {
   outline: none;
-  border-color: #7c3aed;
-  box-shadow: 0 0 0 3px rgba(124,58,237,0.15);
+  border-color: rgba(0,229,229,0.5);
+  box-shadow: 0 0 0 3px rgba(0,229,229,0.1);
 }
 
 /* ── Downloader wrapper ── */
 .downloader-wrap {
-  background: #ffffff;
+  background: transparent;
   border: none;
-  box-shadow: 0 12px 48px rgba(0,0,0,0.25);
   position: relative;
 }
 
 /* ── Navbar ── */
 .navbar-glass {
-  background: rgba(30, 10, 80, 0.6);
-  border-bottom: 1px solid rgba(255,255,255,0.12);
+  background: rgba(10,13,22,0.92);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
 
 /* ── Hero badge ── */
 .hero-badge {
-  background: rgba(255,255,255,0.18);
-  border: 1px solid rgba(255,255,255,0.4);
-  color: #ffffff;
+  background: rgba(0,229,229,0.1);
+  border: 1px solid rgba(0,229,229,0.35);
+  color: #00e5e5;
 }
 
-/* ── Step cards (white) ── */
+/* ── Step / feature cards ── */
 .step-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  background: #131620;
+  border: 1px solid rgba(255,255,255,0.07);
   transition: all 0.25s ease;
-  color: #1e1b4b;
 }
 .step-card:hover {
-  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  border-color: rgba(0,229,229,0.2);
   transform: translateY(-3px);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.3);
 }
 
-/* ── Feature stat cards (white) ── */
 .stat-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  background: #131620;
+  border: 1px solid rgba(255,255,255,0.07);
   transition: all 0.25s ease;
-  color: #1e1b4b;
 }
 .stat-card:hover {
-  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  border-color: rgba(0,229,229,0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.3);
+}
+
+/* ── Feature icon cards ── */
+.feature-icon-card {
+  background: #131620;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.25rem 0.75rem;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+.feature-icon-card:hover {
+  border-color: rgba(0,229,229,0.25);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
   transform: translateY(-2px);
 }
 
 /* ── Format download buttons ── */
 .format-btn {
-  background: #f8f7ff;
-  border: 2px solid #e5e7eb;
-  color: #1e1b4b;
+  background: #131620;
+  border: 1.5px solid rgba(255,255,255,0.08);
+  color: #f0f0f8;
   transition: all 0.2s ease;
 }
 .format-btn:hover:not(:disabled) {
-  background: #ede9fe;
-  border-color: #7c3aed;
-  box-shadow: 0 4px 16px rgba(124,58,237,0.15);
+  background: rgba(0,229,229,0.06);
+  border-color: rgba(0,229,229,0.3);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
   transform: translateX(3px);
 }
 .format-btn-active {
-  background: #ede9fe;
-  border-color: #7c3aed !important;
+  background: rgba(0,229,229,0.1);
+  border-color: rgba(0,229,229,0.5) !important;
 }
 
-/* ── Download card button ── */
+/* ── Download/card button ── */
 .download-btn { transition: all 0.2s ease; }
-.download-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+.download-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
 .download-btn:active { transform: translateY(0); }
 
 /* ── Pulse ring ── */
 @keyframes pulse-ring {
-  0%   { box-shadow: 0 0 0 0   rgba(124,58,237,0.5); }
-  70%  { box-shadow: 0 0 0 12px rgba(124,58,237,0);  }
-  100% { box-shadow: 0 0 0 0   rgba(124,58,237,0);  }
+  0%   { box-shadow: 0 0 0 0   rgba(0,229,229,0.5); }
+  70%  { box-shadow: 0 0 0 12px rgba(0,229,229,0);  }
+  100% { box-shadow: 0 0 0 0   rgba(0,229,229,0);  }
 }
 .loading-pulse { animation: pulse-ring 1.5s infinite; }
 
@@ -238,11 +262,11 @@
 /* ── Divider ── */
 .neon-divider {
   height: 1px;
-  background: rgba(255,255,255,0.25);
+  background: linear-gradient(90deg, transparent, rgba(0,229,229,0.25) 30%, rgba(233,30,140,0.25) 70%, transparent);
 }
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: rgba(30,10,80,0.3); }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.45); }
+::-webkit-scrollbar-track { background: rgba(10,13,22,0.5); }
+::-webkit-scrollbar-thumb { background: rgba(0,229,229,0.25); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,229,229,0.45); }

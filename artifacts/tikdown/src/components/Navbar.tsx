@@ -1,43 +1,43 @@
 import { Link, useLocation } from "wouter";
-import { useTheme } from "@/App";
-import { Sun, Moon, Download, Home, Clock, Settings, Menu, X } from "lucide-react";
+import { Download, Menu, X, Home, Clock, Settings } from "lucide-react";
 import { useState } from "react";
 
 export default function Navbar() {
-  const { theme, toggle } = useTheme();
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navLinks = [
-    { href: "/",        label: "Home",     Icon: Home     },
-    { href: "/history", label: "History",  Icon: Clock    },
-    { href: "/settings",label: "Settings", Icon: Settings },
+    { href: "/",         label: "Home",     Icon: Home     },
+    { href: "/history",  label: "History",  Icon: Clock    },
+    { href: "/settings", label: "Settings", Icon: Settings },
   ];
 
   return (
     <nav className="navbar-glass sticky top-0 z-50">
-      <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="max-w-lg mx-auto px-4 h-16 flex items-center justify-between">
 
         {/* Logo */}
         <Link href="/">
           <div className="flex items-center gap-2.5 cursor-pointer select-none group">
-            <div className="w-9 h-9 rounded-xl gradient-btn flex items-center justify-center shadow-lg">
-              <Download className="w-4.5 h-4.5 text-white" strokeWidth={2.5} />
+            {/* Cyan circle icon */}
+            <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ background: "linear-gradient(135deg, #00c8c8 0%, #007c7c 100%)" }}>
+              <Download className="w-4 h-4 text-white" strokeWidth={2.5} />
             </div>
             <span className="text-xl font-black tracking-tight text-white">
-              Lul<span className="gradient-text">down</span>
+              LulDown
             </span>
           </div>
         </Link>
 
-        {/* Desktop Nav */}
+        {/* Desktop nav links */}
         <div className="hidden sm:flex items-center gap-1">
           {navLinks.map(({ href, label, Icon }) => (
             <Link key={href} href={href}>
               <div className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all duration-150 ${
                 location === href
-                  ? "bg-[rgba(255,45,120,0.15)] text-[#ff6aaa] border border-[rgba(255,45,120,0.25)]"
-                  : "text-white/50 hover:text-white hover:bg-white/6 border border-transparent"
+                  ? "text-[#00e5e5]"
+                  : "text-white/45 hover:text-white/80"
               }`}>
                 <Icon className="w-4 h-4" />
                 {label}
@@ -46,40 +46,29 @@ export default function Navbar() {
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Theme toggle */}
-          <button
-            onClick={toggle}
-            className="w-9 h-9 rounded-lg flex items-center justify-center bg-white/5 hover:bg-white/10 border border-white/8 transition-all"
-            aria-label="Toggle theme"
-          >
-            {theme === "dark"
-              ? <Sun  className="w-4 h-4 text-white/50" />
-              : <Moon className="w-4 h-4 text-white/50" />}
-          </button>
-
-          {/* Mobile hamburger */}
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="sm:hidden w-9 h-9 rounded-lg flex items-center justify-center bg-white/5 border border-white/8 text-white/60"
-          >
-            {mobileOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-          </button>
-        </div>
+        {/* Hamburger (mobile) */}
+        <button
+          onClick={() => setMobileOpen(!mobileOpen)}
+          className="w-9 h-9 rounded-lg flex items-center justify-center transition-all"
+          style={{ color: "rgba(200,215,235,0.7)" }}
+          aria-label="Menu"
+        >
+          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
       </div>
 
       {/* Mobile dropdown */}
       {mobileOpen && (
-        <div className="sm:hidden border-t border-[rgba(255,45,120,0.12)] px-4 py-3 space-y-1 bg-[rgba(8,6,20,0.96)] backdrop-blur-xl">
+        <div className="border-t px-4 py-3 space-y-1"
+          style={{ borderColor: "rgba(255,255,255,0.07)", background: "rgba(10,13,22,0.97)", backdropFilter: "blur(20px)" }}>
           {navLinks.map(({ href, label, Icon }) => (
             <Link key={href} href={href}>
               <div
                 onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all ${
-                  location === href
-                    ? "bg-[rgba(255,45,120,0.15)] text-[#ff6aaa]"
-                    : "text-white/50 hover:text-white hover:bg-white/6"
-                }`}
+                className="flex items-center gap-2.5 px-3 py-3 rounded-xl text-sm font-medium cursor-pointer transition-all"
+                style={location === href
+                  ? { color: "#00e5e5", background: "rgba(0,229,229,0.08)" }
+                  : { color: "rgba(200,215,235,0.55)" }}
               >
                 <Icon className="w-4 h-4" />
                 {label}

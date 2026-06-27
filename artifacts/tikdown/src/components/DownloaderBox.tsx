@@ -12,14 +12,13 @@ interface FormatOption {
   sublabel: string;
   Icon: React.ElementType;
   color: string;
-  bg: string;
 }
 
 const FORMAT_OPTIONS: FormatOption[] = [
-  { format: "mp4_1080", label: "MP4 — 1080p HD",  sublabel: "Best quality · No Watermark",   Icon: Video, color: "#7c3aed", bg: "#ede9fe" },
-  { format: "mp4_720",  label: "MP4 — 720p",       sublabel: "Standard HD · No Watermark",    Icon: Film,  color: "#4338ca", bg: "#e0e7ff" },
-  { format: "mp3",      label: "MP3 Audio",         sublabel: "192 kbps · Audio only",         Icon: Music, color: "#2563eb", bg: "#dbeafe" },
-  { format: "thumbnail",label: "Thumbnail",         sublabel: "Cover image · JPG",             Icon: Image, color: "#d97706", bg: "#fef3c7" },
+  { format: "mp4_1080", label: "MP4 — 1080p HD",  sublabel: "Best quality · No Watermark",   Icon: Video, color: "#00e5e5" },
+  { format: "mp4_720",  label: "MP4 — 720p",       sublabel: "Standard HD · No Watermark",    Icon: Film,  color: "#a855f7" },
+  { format: "mp3",      label: "MP3 Audio",         sublabel: "192 kbps · Audio only",         Icon: Music, color: "#e91e8c" },
+  { format: "thumbnail",label: "Thumbnail",         sublabel: "Cover image · JPG",             Icon: Image, color: "#f59e0b" },
 ];
 
 const DEMO_DATA: VideoInfo = {
@@ -135,48 +134,61 @@ export default function DownloaderBox({ highlightFormat }: Props) {
     : FORMAT_OPTIONS;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
 
-      {/* ── Input row ── */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex-1 relative">
-          <input
-            type="url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleFetch()}
-            placeholder="Paste TikTok link here…"
-            className="neon-input w-full pl-4 pr-16 py-4 rounded-2xl text-sm font-medium"
-          />
-          {url ? (
-            <button onClick={reset}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1.5 transition-colors">
-              <X className="w-4 h-4" />
-            </button>
-          ) : (
-            <button onClick={handlePaste}
-              className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs text-[#7c3aed] font-bold hover:text-[#5b21b6] transition-colors">
-              <Copy className="w-3.5 h-3.5" /> Paste
-            </button>
-          )}
-        </div>
-
-        <button
-          onClick={handleFetch}
-          disabled={!url.trim() || step === "loading-info"}
-          className="gradient-btn w-full sm:w-auto px-9 py-4 font-black rounded-2xl text-sm whitespace-nowrap flex items-center justify-center gap-2"
-        >
-          {step === "loading-info"
-            ? <><Loader2 className="w-4 h-4 animate-spin" /> Fetching…</>
-            : <><Download className="w-4 h-4" /> Download</>}
-        </button>
+      {/* ── Input box ── */}
+      <div className="flex items-center rounded-2xl overflow-hidden"
+        style={{ background: "#131620", border: "1.5px solid rgba(255,255,255,0.09)" }}>
+        <input
+          type="url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleFetch()}
+          placeholder="Paste TikTok link here..."
+          className="flex-1 bg-transparent pl-4 pr-2 py-4 text-sm outline-none"
+          style={{ color: "#f0f0f8" }}
+        />
+        {url ? (
+          <button onClick={reset}
+            className="px-4 py-4 transition-colors"
+            style={{ color: "rgba(200,215,235,0.4)" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "rgba(200,215,235,0.8)")}
+            onMouseLeave={e => (e.currentTarget.style.color = "rgba(200,215,235,0.4)")}>
+            <X className="w-4 h-4" />
+          </button>
+        ) : (
+          <button onClick={handlePaste}
+            className="flex items-center gap-1.5 mx-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all"
+            style={{ background: "rgba(0,229,229,0.12)", color: "#00e5e5", border: "1px solid rgba(0,229,229,0.25)" }}
+            onMouseEnter={e => (e.currentTarget.style.background = "rgba(0,229,229,0.2)")}
+            onMouseLeave={e => (e.currentTarget.style.background = "rgba(0,229,229,0.12)")}>
+            <Copy className="w-3.5 h-3.5" />
+            Paste
+          </button>
+        )}
       </div>
+
+      {/* ── Download Now button — full width ── */}
+      <button
+        onClick={handleFetch}
+        disabled={!url.trim() || step === "loading-info"}
+        className="gradient-btn w-full py-4 rounded-2xl text-base font-black flex items-center justify-center gap-2.5"
+      >
+        {step === "loading-info"
+          ? <><Loader2 className="w-5 h-5 animate-spin" /> Fetching…</>
+          : <><Download className="w-5 h-5" /> Download Now</>}
+      </button>
 
       {/* ── Demo button ── */}
       {step === "idle" && (
         <button
           onClick={handleDemo}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all border-2 border-dashed border-[#c4b5fd] text-[#7c3aed] hover:bg-[#ede9fe]"
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all"
+          style={{
+            background: "rgba(0,229,229,0.05)",
+            border: "1px dashed rgba(0,229,229,0.22)",
+            color: "rgba(0,229,229,0.7)",
+          }}
         >
           <FlaskConical className="w-3.5 h-3.5" />
           Preview Demo — dekho result card kaisa dikhega
@@ -185,7 +197,8 @@ export default function DownloaderBox({ highlightFormat }: Props) {
 
       {/* ── Error ── */}
       {step === "error" && (
-        <div className="flex items-start gap-2.5 p-4 rounded-2xl text-sm text-red-600 border-2 border-red-200 bg-red-50">
+        <div className="flex items-start gap-2.5 p-4 rounded-2xl text-sm border"
+          style={{ color: "#f87171", borderColor: "rgba(248,113,113,0.25)", background: "rgba(248,113,113,0.08)" }}>
           <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
           {error}
         </div>
@@ -193,12 +206,13 @@ export default function DownloaderBox({ highlightFormat }: Props) {
 
       {/* ── Result card ── */}
       {step === "info-ready" && info && (
-        <div className="rounded-2xl overflow-hidden border-2 border-[#e5e7eb] animate-in fade-in slide-in-from-bottom-3 duration-300 bg-white"
-          style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.12)" }}>
+        <div className="rounded-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-300"
+          style={{ background: "#131620", border: "1.5px solid rgba(255,255,255,0.08)", boxShadow: "0 8px 40px rgba(0,0,0,0.5)" }}>
 
           {/* Demo badge */}
           {isDemo && (
-            <div className="flex items-center justify-center gap-1.5 py-2 text-[10px] font-black uppercase tracking-widest bg-[#ede9fe] text-[#7c3aed] border-b-2 border-[#c4b5fd]">
+            <div className="flex items-center justify-center gap-1.5 py-2 text-[10px] font-black uppercase tracking-widest"
+              style={{ background: "rgba(0,229,229,0.08)", color: "#00e5e5", borderBottom: "1px solid rgba(0,229,229,0.15)" }}>
               <FlaskConical className="w-3 h-3" />
               DEMO MODE — Yeh sirf preview hai, download nahi hoga
             </div>
@@ -206,29 +220,32 @@ export default function DownloaderBox({ highlightFormat }: Props) {
 
           {/* Thumbnail */}
           {info.thumbnail ? (
-            <div className="relative h-44 sm:h-56 overflow-hidden">
-              <img src={info.thumbnail} alt={info.title} className="w-full h-full object-cover" />
+            <div className="relative h-44 sm:h-52 overflow-hidden">
+              <img src={info.thumbnail} alt={info.title} className="w-full h-full object-cover opacity-75" />
               <div className="absolute inset-0"
-                style={{ background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.3) 55%, transparent 100%)" }} />
+                style={{ background: "linear-gradient(to top, rgba(8,10,18,0.95) 0%, rgba(8,10,18,0.4) 55%, transparent 100%)" }} />
+              <div className="absolute top-0 left-0 right-0 h-0.5"
+                style={{ background: "linear-gradient(90deg, #00e5e5, #e91e8c)" }} />
 
               <div className="absolute bottom-0 left-0 right-0 p-4">
                 <p className="text-white font-bold text-sm line-clamp-2 mb-2">{info.title}</p>
                 <div className="flex items-center gap-3 flex-wrap">
-                  <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-white/20 text-white">
+                  <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full"
+                    style={{ background: "rgba(0,229,229,0.15)", color: "#00e5e5", border: "1px solid rgba(0,229,229,0.25)" }}>
                     <User className="w-3 h-3" /> {info.author}
                   </span>
                   {info.duration > 0 && (
-                    <span className="flex items-center gap-1 text-xs text-white/70">
+                    <span className="flex items-center gap-1 text-xs" style={{ color: "rgba(200,215,235,0.55)" }}>
                       <Clock className="w-3 h-3" /> {fmtDuration(info.duration)}
                     </span>
                   )}
                   {!!info.view_count && (
-                    <span className="flex items-center gap-1 text-xs text-white/70">
+                    <span className="flex items-center gap-1 text-xs" style={{ color: "rgba(200,215,235,0.55)" }}>
                       <Eye className="w-3 h-3" /> {fmtNum(info.view_count)}
                     </span>
                   )}
                   {!!info.like_count && (
-                    <span className="flex items-center gap-1 text-xs text-pink-300">
+                    <span className="flex items-center gap-1 text-xs" style={{ color: "#e91e8c" }}>
                       <Heart className="w-3 h-3 fill-current" /> {fmtNum(info.like_count)}
                     </span>
                   )}
@@ -236,23 +253,23 @@ export default function DownloaderBox({ highlightFormat }: Props) {
               </div>
             </div>
           ) : (
-            <div className="p-5 border-b-2 border-gray-100">
-              <p className="font-bold text-[#1e1b4b]">{info.title || "TikTok Video"}</p>
-              <p className="text-sm text-gray-500 mt-1">{info.author}</p>
+            <div className="p-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+              <p className="font-bold text-white">{info.title || "TikTok Video"}</p>
+              <p className="text-sm mt-1" style={{ color: "rgba(200,215,235,0.5)" }}>{info.author}</p>
             </div>
           )}
 
           {/* Photo post */}
           {isPhoto ? (
             <div className="p-5 space-y-3">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "rgba(200,215,235,0.35)" }}>
                 📸 Photo Post — {info.images!.length} image{info.images!.length > 1 ? "s" : ""}
               </p>
               {info.images!.length > 1 && (
                 <button
                   onClick={() => info.images!.forEach((u, i) => setTimeout(() => handlePhotoDownload(u, i), i * 400))}
                   disabled={photoDownloading !== null || isDemo}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm bg-[#7c3aed] text-white hover:bg-[#6d28d9] transition-colors disabled:opacity-50"
+                  className="gradient-btn w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm disabled:opacity-50"
                 >
                   <Download className="w-4 h-4" />
                   Save All {info.images!.length} Photos
@@ -260,7 +277,8 @@ export default function DownloaderBox({ highlightFormat }: Props) {
               )}
               <div className={`grid gap-3 ${info.images!.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
                 {info.images!.map((imgUrl, i) => (
-                  <div key={i} className="rounded-xl overflow-hidden border-2 border-gray-100 flex flex-col">
+                  <div key={i} className="rounded-xl overflow-hidden flex flex-col"
+                    style={{ border: "1px solid rgba(255,255,255,0.07)", background: "rgba(10,13,22,0.8)" }}>
                     <div className="relative aspect-[3/4] overflow-hidden">
                       <img src={imgUrl} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
                       <div className="absolute top-2 right-2 bg-black/70 text-white text-xs rounded-md px-1.5 py-0.5 font-bold">
@@ -270,7 +288,8 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                     <button
                       onClick={() => handlePhotoDownload(imgUrl, i)}
                       disabled={photoDownloading !== null || isDemo}
-                      className="flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold text-[#7c3aed] hover:bg-[#ede9fe] transition-colors disabled:opacity-50 border-t-2 border-gray-100"
+                      className="flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold transition-colors disabled:opacity-50"
+                      style={{ color: "#00e5e5", borderTop: "1px solid rgba(255,255,255,0.07)" }}
                     >
                       {photoDownloading === i
                         ? <><Loader2 className="w-3 h-3 animate-spin" /> Saving…</>
@@ -282,9 +301,10 @@ export default function DownloaderBox({ highlightFormat }: Props) {
             </div>
           ) : (
             /* Format buttons */
-            <div className="p-5 space-y-2.5">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Choose Format</p>
-              {formats.map(({ format, label, sublabel, Icon, color, bg }) => {
+            <div className="p-4 space-y-2">
+              <p className="text-[10px] font-black uppercase tracking-widest mb-3"
+                style={{ color: "rgba(200,215,235,0.3)" }}>Choose Format</p>
+              {formats.map(({ format, label, sublabel, Icon, color }) => {
                 const isActive      = activeDownload === format;
                 const isHighlighted = highlightFormat === format;
                 return (
@@ -292,24 +312,24 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                     key={format}
                     onClick={() => handleDownload(format)}
                     disabled={!!activeDownload || isDemo}
-                    className="format-btn w-full flex items-center gap-4 p-4 rounded-xl disabled:cursor-not-allowed"
-                    style={isHighlighted ? { background: bg, borderColor: color } : {}}
+                    className="format-btn w-full flex items-center gap-3.5 p-3.5 rounded-xl disabled:cursor-not-allowed"
+                    style={isHighlighted ? { borderColor: `${color}50`, background: `${color}08` } : {}}
                   >
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{ background: bg, border: `2px solid ${color}30` }}>
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ background: `${color}14`, border: `1.5px solid ${color}28` }}>
                       {isActive
                         ? <Loader2 className="w-4 h-4 animate-spin" style={{ color }} />
                         : <Icon className="w-4 h-4" style={{ color }} />}
                     </div>
 
                     <div className="text-left flex-1">
-                      <div className="font-bold text-sm text-[#1e1b4b]">
+                      <div className="font-bold text-sm text-white">
                         {isActive ? "Downloading…" : label}
                       </div>
-                      <div className="text-xs text-gray-400">{sublabel}</div>
+                      <div className="text-xs" style={{ color: "rgba(200,215,235,0.38)" }}>{sublabel}</div>
                     </div>
 
-                    <Download className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                    <Download className="w-4 h-4 flex-shrink-0" style={{ color: "rgba(200,215,235,0.2)" }} />
                   </button>
                 );
               })}
