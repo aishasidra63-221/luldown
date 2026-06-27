@@ -3,7 +3,7 @@ import { fetchVideoInfo, downloadVideo, downloadPhoto, VideoInfo, DownloadFormat
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import {
   Video, Music, Film, Copy, Download, Image,
-  AlertCircle, Clock, User, Eye, Heart, Loader2, X, FlaskConical,
+  AlertCircle, Loader2, X, FlaskConical,
 } from "lucide-react";
 
 interface FormatOption {
@@ -35,18 +35,6 @@ const DEMO_DATA: VideoInfo = {
   download_urls: { mp4_1080: "", mp4_720: "", mp3: "" },
 };
 
-function fmtNum(n?: number) {
-  if (!n) return null;
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
-  if (n >= 1_000)     return (n / 1_000).toFixed(1) + "K";
-  return String(n);
-}
-
-function fmtDuration(sec: number) {
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
 
 type Step = "idle" | "loading-info" | "info-ready" | "downloading" | "error";
 
@@ -199,144 +187,150 @@ export default function DownloaderBox({ highlightFormat }: Props) {
       )}
 
       {/* ── Result card ── */}
-      {step === "info-ready" && info && (
-        <div className="result-card rounded-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-300">
+      {step === "info-ready" && info && (() => {
+        const tags = (info.title || "").match(/#\w+/g) ?? [];
+        const cleanTitle = (info.title || "").replace(/#\w+/g, "").trim();
+        return (
+          <div className="result-card rounded-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-300">
 
-          {/* Top gradient line */}
-          <div className="h-0.5 w-full" style={{ background: "linear-gradient(90deg, #00e5e5, #a855f7, #e91e8c)" }} />
+            {/* ── Hero: blurred thumbnail bg + info on top ── */}
+            <div className="relative">
+              {/* Blurred background thumbnail */}
+              {info.thumbnail && (
+                <>
+                  <img
+                    src={info.thumbnail}
+                    alt=""
+                    aria-hidden
+                    className="absolute inset-0 w-full h-full object-cover"
+                    style={{ filter: "blur(18px) brightness(0.35) saturate(1.4)", transform: "scale(1.1)" }}
+                  />
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgba(8,10,18,0.45) 0%, rgba(8,10,18,0.82) 100%)" }} />
+                </>
+              )}
 
-          {/* Demo badge */}
-          {isDemo && (
-            <div className="flex items-center justify-center gap-1.5 py-2 text-[10px] font-black uppercase tracking-widest"
-              style={{ background: "rgba(0,229,229,0.08)", color: "#00e5e5", borderBottom: "1px solid rgba(0,229,229,0.15)" }}>
-              <FlaskConical className="w-3 h-3" />
-              DEMO MODE — Yeh sirf preview hai, download nahi hoga
-            </div>
-          )}
+              {/* Content overlay */}
+              <div className="relative px-4 pt-4 pb-4 space-y-3">
 
-          {/* ── Creator info row ── */}
-          <div className="flex items-center gap-3 px-4 pt-4 pb-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-            {/* Avatar circle */}
-            <div className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center font-black text-base text-white"
-              style={{ background: "linear-gradient(135deg, #00c8c8, #e91e8c)" }}>
-              {info.author ? info.author.replace("@","").charAt(0).toUpperCase() : "T"}
-            </div>
-            <div className="flex-1 min-w-0">
-              {info.author && (
-                <p className="font-black text-sm truncate" style={{ color: "#00e5e5" }}>{info.author}</p>
-              )}
-              {info.title && (
-                <p className="text-xs leading-snug line-clamp-2 mt-0.5" style={{ color: "rgba(200,215,235,0.7)" }}>
-                  {info.title}
-                </p>
-              )}
-            </div>
-            {/* Stats */}
-            <div className="flex flex-col items-end gap-1 flex-shrink-0 text-[10px]" style={{ color: "rgba(200,215,235,0.45)" }}>
-              {!!info.like_count && (
-                <span className="flex items-center gap-1"><Heart className="w-3 h-3 fill-current" style={{ color: "#e91e8c" }} />{fmtNum(info.like_count)}</span>
-              )}
-              {!!info.view_count && (
-                <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{fmtNum(info.view_count)}</span>
-              )}
-              {info.duration > 0 && (
-                <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{fmtDuration(info.duration)}</span>
-              )}
-            </div>
-          </div>
-
-          {/* ── Thumbnail strip (if available) ── */}
-          {info.thumbnail && (
-            <div className="relative h-36 overflow-hidden">
-              <img src={info.thumbnail} alt={info.title} className="w-full h-full object-cover opacity-75" />
-              <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(8,10,18,0.7) 0%, transparent 60%)" }} />
-            </div>
-          )}
-
-          {/* ── Photo post ── */}
-          {isPhoto ? (
-            <div className="p-4 space-y-3">
-              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "rgba(200,215,235,0.35)" }}>
-                📸 Photo Post — {info.images!.length} image{info.images!.length > 1 ? "s" : ""}
-              </p>
-              {info.images!.length > 1 && (
-                <button
-                  onClick={() => info.images!.forEach((u, i) => setTimeout(() => handlePhotoDownload(u, i), i * 400))}
-                  disabled={photoDownloading !== null || isDemo}
-                  className="gradient-btn w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-sm disabled:opacity-50"
-                >
-                  <Download className="w-4 h-4" /> Save All {info.images!.length} Photos
-                </button>
-              )}
-              <div className={`grid gap-3 ${info.images!.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
-                {info.images!.map((imgUrl, i) => (
-                  <div key={i} className="rounded-xl overflow-hidden flex flex-col"
-                    style={{ border: "1px solid rgba(255,255,255,0.07)", background: "rgba(10,13,22,0.6)" }}>
-                    <div className="relative aspect-[3/4] overflow-hidden">
-                      <img src={imgUrl} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
-                      <div className="absolute top-2 right-2 bg-black/70 text-white text-xs rounded-md px-1.5 py-0.5 font-bold">
-                        {i + 1}/{info.images!.length}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handlePhotoDownload(imgUrl, i)}
-                      disabled={photoDownloading !== null || isDemo}
-                      className="flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold transition-colors disabled:opacity-50"
-                      style={{ color: "#00e5e5", borderTop: "1px solid rgba(255,255,255,0.07)" }}
-                    >
-                      {photoDownloading === i
-                        ? <><Loader2 className="w-3 h-3 animate-spin" /> Saving…</>
-                        : <><Download className="w-3 h-3" /> Save Photo</>}
-                    </button>
+                {/* Demo badge */}
+                {isDemo && (
+                  <div className="flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest w-full"
+                    style={{ background: "rgba(0,229,229,0.12)", color: "#00e5e5", border: "1px solid rgba(0,229,229,0.2)" }}>
+                    <FlaskConical className="w-3 h-3" />
+                    DEMO — Yeh sirf preview hai
                   </div>
-                ))}
+                )}
+
+                {/* Avatar + username + title */}
+                <div className="flex items-start gap-3">
+                  <div className="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center font-black text-lg text-white shadow-lg"
+                    style={{ background: "linear-gradient(135deg, #00c8c8, #e91e8c)", boxShadow: "0 2px 12px rgba(0,200,200,0.3)" }}>
+                    {info.author ? info.author.replace("@","").charAt(0).toUpperCase() : "T"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    {info.author && (
+                      <p className="font-black text-sm" style={{ color: "#00e5e5" }}>{info.author}</p>
+                    )}
+                    {cleanTitle && (
+                      <p className="text-xs leading-snug line-clamp-3 mt-1" style={{ color: "rgba(230,235,255,0.85)" }}>
+                        {cleanTitle}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Tags */}
+                {tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {tags.slice(0, 6).map((tag) => (
+                      <span key={tag} className="text-[11px] font-bold px-2.5 py-0.5 rounded-full"
+                        style={{ background: "rgba(168,85,247,0.18)", color: "#c084fc", border: "1px solid rgba(168,85,247,0.3)" }}>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
-          ) : (
-            /* ── Wide download buttons ── */
-            <div className="p-4 space-y-3">
-              {formats.map(({ format, label, sublabel, Icon, color }) => {
-                const isActive = activeDownload === format;
-                return (
+
+            {/* ── Photo post ── */}
+            {isPhoto ? (
+              <div className="p-4 space-y-3">
+                <p className="text-xs font-bold uppercase tracking-widest text-center" style={{ color: "rgba(200,215,235,0.35)" }}>
+                  📸 Photo Post — {info.images!.length} image{info.images!.length > 1 ? "s" : ""}
+                </p>
+                {info.images!.length > 1 && (
                   <button
-                    key={format}
-                    onClick={() => handleDownload(format)}
-                    disabled={!!activeDownload || isDemo}
-                    className="w-full flex items-center justify-between gap-4 px-5 py-4 rounded-2xl transition-all active:scale-[0.99] disabled:opacity-50"
-                    style={{
-                      background: `${color}14`,
-                      border: `2px solid ${color}50`,
-                    }}
+                    onClick={() => info.images!.forEach((u, i) => setTimeout(() => handlePhotoDownload(u, i), i * 400))}
+                    disabled={photoDownloading !== null || isDemo}
+                    className="gradient-btn w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-sm disabled:opacity-50"
                   >
-                    {/* Left: icon + labels */}
-                    <div className="flex items-center gap-3.5">
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                        style={{ background: `${color}22`, border: `1.5px solid ${color}40` }}>
-                        {isActive
-                          ? <Loader2 className="w-5 h-5 animate-spin" style={{ color }} />
-                          : <Icon className="w-5 h-5" style={{ color }} />}
-                      </div>
-                      <div className="text-left">
-                        <div className="font-black text-sm leading-tight" style={{ color }}>
-                          {isActive ? "Downloading…" : label}
-                        </div>
-                        <div className="text-[11px] font-medium mt-0.5" style={{ color: "rgba(200,215,235,0.45)" }}>
-                          {sublabel}
-                        </div>
-                      </div>
-                    </div>
-                    {/* Right: download arrow */}
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                      style={{ background: `${color}22` }}>
-                      <Download className="w-4 h-4" style={{ color }} />
-                    </div>
+                    <Download className="w-5 h-5" /> Save All {info.images!.length} Photos
                   </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+                )}
+                <div className={`grid gap-3 ${info.images!.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                  {info.images!.map((imgUrl, i) => (
+                    <div key={i} className="rounded-xl overflow-hidden flex flex-col"
+                      style={{ border: "1px solid rgba(255,255,255,0.07)", background: "rgba(10,13,22,0.6)" }}>
+                      <div className="relative aspect-[3/4] overflow-hidden">
+                        <img src={imgUrl} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                        <div className="absolute top-2 right-2 bg-black/70 text-white text-xs rounded-md px-1.5 py-0.5 font-bold">
+                          {i + 1}/{info.images!.length}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handlePhotoDownload(imgUrl, i)}
+                        disabled={photoDownloading !== null || isDemo}
+                        className="flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold disabled:opacity-50"
+                        style={{ color: "#00e5e5", borderTop: "1px solid rgba(255,255,255,0.07)" }}
+                      >
+                        {photoDownloading === i
+                          ? <><Loader2 className="w-3 h-3 animate-spin" /> Saving…</>
+                          : <><Download className="w-3 h-3" /> Save Photo</>}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              /* ── Big download buttons ── */
+              <div className="p-3 space-y-2">
+                {formats.map(({ format, label, Icon, color }) => {
+                  const isActive = activeDownload === format;
+                  return (
+                    <button
+                      key={format}
+                      onClick={() => handleDownload(format)}
+                      disabled={!!activeDownload || isDemo}
+                      className="w-full flex items-center justify-between gap-3 px-5 py-4 rounded-2xl font-black text-sm transition-all active:scale-[0.99] disabled:opacity-40"
+                      style={{
+                        background: `linear-gradient(90deg, ${color}22 0%, ${color}0a 100%)`,
+                        border: `2px solid ${color}55`,
+                        color,
+                      }}
+                    >
+                      {/* Left: icon + label */}
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                          style={{ background: `${color}25`, border: `1.5px solid ${color}45` }}>
+                          {isActive
+                            ? <Loader2 className="w-5 h-5 animate-spin" style={{ color }} />
+                            : <Icon className="w-5 h-5" style={{ color }} />}
+                        </div>
+                        <span style={{ color }}>
+                          {isActive ? "Downloading…" : label}
+                        </span>
+                      </div>
+                      {/* Right: download icon */}
+                      <Download className="w-5 h-5 flex-shrink-0" style={{ color }} />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
