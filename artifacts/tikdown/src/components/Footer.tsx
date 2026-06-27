@@ -59,10 +59,8 @@ export default function Footer() {
             <h4 className="font-semibold text-[10px] text-[#00f2ea]/70 uppercase tracking-widest mb-4">Info</h4>
             <ul className="space-y-2.5">
               {[
-                { href: "/how-it-works", label: "How it Works" },
-                { href: "/faq",          label: "FAQ"          },
-                { href: "/about",        label: "About Us"     },
-                { href: "/contact",      label: "Contact"      },
+                { href: "/faq",     label: "FAQ"     },
+                { href: "/contact", label: "Contact" },
               ].map((l) => (
                 <li key={l.label}>
                   <Link href={l.href}>
@@ -78,10 +76,9 @@ export default function Footer() {
             <h4 className="font-semibold text-[10px] text-white/30 uppercase tracking-widest mb-4">Legal</h4>
             <ul className="space-y-2.5">
               {[
-                { href: "/privacy",    label: "Privacy Policy"    },
-                { href: "/terms",      label: "Terms of Service"  },
-                { href: "/dmca",       label: "DMCA"              },
-                { href: "/disclaimer", label: "Disclaimer"        },
+                { href: "/privacy",    label: "Privacy Policy" },
+                { href: "/dmca",       label: "DMCA"           },
+                { href: "/disclaimer", label: "Disclaimer"     },
               ].map((l) => (
                 <li key={l.label}>
                   <Link href={l.href}>

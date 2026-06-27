@@ -159,36 +159,6 @@ export default function HomePage() {
           <DownloaderBox />
         </div>
 
-        {/* ── How it works ── */}
-        <div className="space-y-7">
-          <div className="text-center">
-            <h2 className="text-2xl font-black text-white tracking-tight">How It Works</h2>
-            <p className="text-white/35 text-sm mt-1">Three steps. Done in seconds.</p>
-          </div>
-
-          <div className="grid sm:grid-cols-3 gap-4">
-            {STEPS.map(({ Icon, num, title, desc, color }) => (
-              <div key={title} className="step-card rounded-2xl p-6 flex flex-col items-center text-center gap-4">
-                {/* Step number ring */}
-                <div className="relative">
-                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                    style={{ background: `${color}18`, border: `1.5px solid ${color}35` }}>
-                    <Icon className="w-6 h-6" style={{ color }} />
-                  </div>
-                  <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full text-[10px] font-black text-white flex items-center justify-center shadow-lg"
-                    style={{ background: color, boxShadow: `0 0 10px ${color}80` }}>
-                    {num}
-                  </div>
-                </div>
-                <div>
-                  <div className="font-bold text-white mb-1">{title}</div>
-                  <div className="text-xs text-white/40">{desc}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* ── Features ── */}
         <div className="space-y-5">
           <div className="text-center">
