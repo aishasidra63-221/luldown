@@ -59,6 +59,7 @@ export default function Footer() {
             <h4 className="font-semibold text-[10px] text-[#00f2ea]/70 uppercase tracking-widest mb-4">Info</h4>
             <ul className="space-y-2.5">
               {[
+                { href: "/blog",    label: "Blog"    },
                 { href: "/faq",     label: "FAQ"     },
                 { href: "/contact", label: "Contact" },
               ].map((l) => (

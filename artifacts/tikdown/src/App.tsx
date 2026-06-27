@@ -11,6 +11,8 @@ import PrivacyPage from "@/pages/PrivacyPage";
 import FAQPage from "@/pages/FAQPage";
 import TermsPage from "@/pages/TermsPage";
 import DisclaimerPage from "@/pages/DisclaimerPage";
+import BlogIndexPage from "@/pages/BlogIndexPage";
+import BlogPostPage from "@/pages/BlogPostPage";
 
 declare const __RECAPTCHA_SITE_KEY__: string;
 
@@ -43,6 +45,8 @@ function Router() {
       <Route path="/faq" component={FAQPage} />
       <Route path="/terms" component={TermsPage} />
       <Route path="/disclaimer" component={DisclaimerPage} />
+      <Route path="/blog" component={BlogIndexPage} />
+      <Route path="/blog/:slug" component={BlogPostPage} />
       <Route component={NotFound} />
     </Switch>
   );
