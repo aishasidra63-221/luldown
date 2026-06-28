@@ -72,25 +72,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ══ FEATURES ══════════════════════════════════════ */}
-      <section style={{ padding: "0 20px 72px", maxWidth: 960, margin: "0 auto" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
-          {FEATURES.map(({ Icon, title, desc }) => (
-            <div key={title} className="feature-card">
-              <div className="feature-icon">
-                <Icon size={20} />
-              </div>
-              <h3 style={{ fontWeight: 700, fontSize: 15, color: "#f4f4f6", marginBottom: 6 }}>{title}</h3>
-              <p style={{ fontSize: 13, color: "rgba(180,185,210,0.55)", lineHeight: 1.55 }}>{desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <div className="section-divider" style={{ maxWidth: 960, margin: "0 auto" }} />
-
       {/* ══ HOW IT WORKS ══════════════════════════════════ */}
-      <section style={{ padding: "64px 20px", maxWidth: 860, margin: "0 auto", textAlign: "center" }}>
+      <section style={{ padding: "0 20px 64px", maxWidth: 860, margin: "0 auto", textAlign: "center" }}>
         <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#22d3ee", marginBottom: 10 }}>
           Simple Process
         </p>
@@ -119,6 +102,23 @@ export default function HomePage() {
                   <ChevronRight size={20} />
                 </div>
               )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div className="section-divider" style={{ maxWidth: 960, margin: "0 auto" }} />
+
+      {/* ══ FEATURES ══════════════════════════════════════ */}
+      <section style={{ padding: "64px 20px 72px", maxWidth: 960, margin: "0 auto" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+          {FEATURES.map(({ Icon, title, desc }) => (
+            <div key={title} className="feature-card">
+              <div className="feature-icon">
+                <Icon size={20} />
+              </div>
+              <h3 style={{ fontWeight: 700, fontSize: 15, color: "#f4f4f6", marginBottom: 6 }}>{title}</h3>
+              <p style={{ fontSize: 13, color: "rgba(180,185,210,0.55)", lineHeight: 1.55 }}>{desc}</p>
             </div>
           ))}
         </div>
