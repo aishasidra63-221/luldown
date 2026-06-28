@@ -16,9 +16,9 @@ export default function Footer() {
     {
       heading: "Info",
       links: [
-        { href: "/faq",     label: "FAQ"            },
-        { href: "/blog",    label: "Blog"           },
-        { href: "/contact", label: "Contact"        },
+        { href: "/faq",     label: "FAQ"     },
+        { href: "/blog",    label: "Blog"    },
+        { href: "/contact", label: "Contact" },
       ],
     },
     {
@@ -33,9 +33,9 @@ export default function Footer() {
 
   return (
     <footer style={{
-      marginTop: 0,
-      borderTop: "1px solid rgba(255,255,255,0.06)",
-      background: "rgba(6,6,10,0.98)",
+      background: "var(--footer-bg)",
+      borderTop: "1px solid var(--footer-border)",
+      transition: "background 0.25s ease",
     }}>
       <div style={{ maxWidth: 960, margin: "0 auto", padding: "48px 20px 32px" }}>
 
@@ -46,16 +46,16 @@ export default function Footer() {
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
               <div style={{
                 width: 32, height: 32, borderRadius: 10, flexShrink: 0,
-                background: "linear-gradient(135deg, #22d3ee 0%, #0891b2 100%)",
+                background: "linear-gradient(135deg, var(--cyan) 0%, var(--cyan-dark) 100%)",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
-                <Download size={15} color="#050a0b" strokeWidth={2.5} />
+                <Download size={15} color="#fff" strokeWidth={2.5} />
               </div>
-              <span style={{ fontWeight: 800, fontSize: 16, color: "#f4f4f6" }}>
-                Lul<span style={{ color: "#22d3ee" }}>Down</span>
+              <span style={{ fontWeight: 800, fontSize: 16, color: "var(--text-primary)" }}>
+                Lul<span style={{ color: "var(--cyan)" }}>Down</span>
               </span>
             </div>
-            <p style={{ fontSize: 12, color: "rgba(180,185,210,0.38)", lineHeight: 1.65, maxWidth: 220 }}>
+            <p style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.65, maxWidth: 220 }}>
               The fastest free TikTok downloader. No watermark. No login. No limits.
             </p>
           </div>
@@ -65,7 +65,7 @@ export default function Footer() {
             <div key={heading}>
               <h4 style={{
                 fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
-                textTransform: "uppercase", color: "#22d3ee", marginBottom: 16,
+                textTransform: "uppercase", color: "var(--cyan)", marginBottom: 16,
               }}>
                 {heading}
               </h4>
@@ -73,9 +73,12 @@ export default function Footer() {
                 {links.map(({ href, label }) => (
                   <li key={label}>
                     <Link href={href}>
-                      <span style={{ fontSize: 13, color: "rgba(180,185,210,0.38)", cursor: "pointer", transition: "color 0.15s" }}
-                        onMouseEnter={e => (e.currentTarget.style.color = "#f4f4f6")}
-                        onMouseLeave={e => (e.currentTarget.style.color = "rgba(180,185,210,0.38)")}>
+                      <span style={{
+                        fontSize: 13, color: "var(--text-muted)", cursor: "pointer",
+                        transition: "color 0.15s",
+                      }}
+                        onMouseEnter={e => (e.currentTarget.style.color = "var(--text-primary)")}
+                        onMouseLeave={e => (e.currentTarget.style.color = "var(--text-muted)")}>
                         {label}
                       </span>
                     </Link>
@@ -88,13 +91,13 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div style={{
-          borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 24,
+          borderTop: "1px solid var(--border-subtle)", paddingTop: 24,
           display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 8,
         }}>
-          <p style={{ fontSize: 12, color: "rgba(180,185,210,0.28)" }}>
+          <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
             © {year} LulDown. All rights reserved.
           </p>
-          <p style={{ fontSize: 12, color: "rgba(180,185,210,0.28)" }}>
+          <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
             Not affiliated with TikTok or ByteDance.
           </p>
         </div>

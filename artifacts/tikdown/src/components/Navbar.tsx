@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
-import { Download, Menu, X } from "lucide-react";
+import { Download, Menu, X, Sun, Moon } from "lucide-react";
 import { useState } from "react";
+import { useTheme } from "@/App";
 
 const LINKS = [
   { href: "/",        label: "Home"    },
@@ -11,58 +12,77 @@ const LINKS = [
 export default function Navbar() {
   const [loc] = useLocation();
   const [open, setOpen] = useState(false);
+  const { theme, toggle } = useTheme();
 
   return (
     <header className="navbar">
-      <div className="max-w-5xl mx-auto px-5 h-16 flex items-center justify-between">
+      <div style={{ maxWidth: 960, margin: "0 auto", padding: "0 20px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
 
         {/* Logo */}
         <Link href="/">
-          <div className="flex items-center gap-2.5 cursor-pointer select-none">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: "linear-gradient(135deg, #22d3ee 0%, #0891b2 100%)", boxShadow: "0 2px 12px rgba(34,211,238,0.3)" }}>
-              <Download className="w-4 h-4" style={{ color: "#050a0b" }} strokeWidth={2.5} />
+          <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", userSelect: "none" }}>
+            <div style={{
+              width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+              background: "linear-gradient(135deg, var(--cyan) 0%, var(--cyan-dark) 100%)",
+              boxShadow: "0 2px 12px var(--cyan-glow)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <Download size={16} color="#fff" strokeWidth={2.5} />
             </div>
-            <span className="font-bold text-lg tracking-tight" style={{ color: "#f4f4f6" }}>
-              Lul<span style={{ color: "#22d3ee" }}>Down</span>
+            <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: "-0.02em", color: "var(--text-primary)" }}>
+              Lul<span style={{ color: "var(--cyan)" }}>Down</span>
             </span>
           </div>
         </Link>
 
-        {/* Desktop nav */}
-        <nav className="hidden sm:flex items-center gap-1">
+        {/* Desktop nav (≥640px) */}
+        <nav className="nav-desktop">
           {LINKS.map(({ href, label }) => {
             const active = loc === href;
             return (
               <Link key={href} href={href}>
-                <div className="px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors"
-                  style={{ color: active ? "#22d3ee" : "rgba(180,185,210,0.6)" }}>
+                <div style={{
+                  padding: "7px 14px", borderRadius: 8, fontSize: 14, fontWeight: 500,
+                  cursor: "pointer", transition: "color 0.15s, background 0.15s",
+                  color: active ? "var(--cyan)" : "var(--text-muted)",
+                  background: active ? "var(--tag-bg)" : "transparent",
+                }}>
                   {label}
                 </div>
               </Link>
             );
           })}
+          <button onClick={toggle} className="theme-toggle" style={{ marginLeft: 8 }} aria-label="Toggle theme">
+            {theme === "dark" ? <Sun size={16} strokeWidth={2} /> : <Moon size={16} strokeWidth={2} />}
+          </button>
         </nav>
 
-        {/* Mobile hamburger */}
-        <button
-          onClick={() => setOpen(!open)}
-          className="sm:hidden w-9 h-9 flex items-center justify-center rounded-lg btn-ghost"
-          aria-label="Menu"
-        >
-          {open ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-        </button>
+        {/* Mobile controls (< 640px) */}
+        <div className="nav-mobile">
+          <button onClick={toggle} className="theme-toggle" aria-label="Toggle theme">
+            {theme === "dark" ? <Sun size={16} strokeWidth={2} /> : <Moon size={16} strokeWidth={2} />}
+          </button>
+          <button onClick={() => setOpen(!open)} className="theme-toggle" aria-label="Menu">
+            {open ? <X size={16} /> : <Menu size={16} />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile dropdown */}
       {open && (
-        <div className="sm:hidden border-t px-4 py-3 space-y-1"
-          style={{ borderColor: "rgba(255,255,255,0.06)", background: "rgba(10,10,15,0.98)" }}>
+        <div style={{
+          borderTop: "1px solid var(--border-subtle)",
+          padding: "12px 16px",
+          display: "flex", flexDirection: "column", gap: 4,
+          background: "var(--navbar-bg)",
+        }}>
           {LINKS.map(({ href, label }) => (
             <Link key={href} href={href}>
-              <div onClick={() => setOpen(false)}
-                className="px-3 py-3 rounded-xl text-sm font-medium cursor-pointer transition-colors"
-                style={{ color: loc === href ? "#22d3ee" : "rgba(180,185,210,0.55)" }}>
+              <div onClick={() => setOpen(false)} style={{
+                padding: "12px 14px", borderRadius: 10, fontSize: 14, fontWeight: 500,
+                cursor: "pointer", color: loc === href ? "var(--cyan)" : "var(--text-secondary)",
+                background: loc === href ? "var(--tag-bg)" : "transparent",
+              }}>
                 {label}
               </div>
             </Link>

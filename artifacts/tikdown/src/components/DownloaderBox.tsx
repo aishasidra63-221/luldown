@@ -7,10 +7,10 @@ import {
 } from "lucide-react";
 
 const FORMAT_OPTIONS: { format: DownloadFormat; label: string; Icon: React.ElementType }[] = [
-  { format: "mp4_1080", label: "Download HD 1080p — No Watermark", Icon: Video },
-  { format: "mp4_720",  label: "Download 720p — No Watermark",     Icon: Film  },
-  { format: "mp3",      label: "Download MP3 Audio — 192kbps",     Icon: Music },
-  { format: "thumbnail",label: "Download Thumbnail",               Icon: Image },
+  { format: "mp4_1080",  label: "Download HD 1080p — No Watermark", Icon: Video },
+  { format: "mp4_720",   label: "Download 720p — No Watermark",     Icon: Film  },
+  { format: "mp3",       label: "Download MP3 Audio — 192kbps",     Icon: Music },
+  { format: "thumbnail", label: "Download Thumbnail",               Icon: Image },
 ];
 
 const DEMO_DATA: VideoInfo = {
@@ -98,11 +98,11 @@ export default function DownloaderBox({ highlightFormat }: Props) {
     : FORMAT_OPTIONS;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
 
-      {/* Input row — full width, no button inside */}
+      {/* Input row */}
       <div className="input-box">
-        <div style={{ padding: "0 14px", color: "rgba(34,211,238,0.5)", flexShrink: 0 }}>
+        <div style={{ padding: "0 14px", color: "var(--cyan)", opacity: 0.6, flexShrink: 0 }}>
           <LinkIcon size={18} />
         </div>
         <input
@@ -115,7 +115,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
           style={{
             flex: 1, minWidth: 0, background: "transparent",
             padding: "18px 8px", fontSize: 15, outline: "none",
-            color: "#f4f4f6",
+            color: "var(--text-primary)",
           }}
         />
         {url ? (
@@ -129,7 +129,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
         )}
       </div>
 
-      {/* Download button — full width below input */}
+      {/* Download button — full width */}
       <button
         onClick={handleFetch}
         disabled={!url.trim() || step === "loading-info"}
@@ -168,8 +168,8 @@ export default function DownloaderBox({ highlightFormat }: Props) {
               <div style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                 padding: "8px 0", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
-                textTransform: "uppercase", color: "rgba(34,211,238,0.7)",
-                background: "rgba(34,211,238,0.06)", borderBottom: "1px solid rgba(34,211,238,0.1)",
+                textTransform: "uppercase", color: "var(--cyan)",
+                background: "var(--result-header-bg)", borderBottom: "1px solid var(--result-header-border)",
               }}>
                 <FlaskConical size={12} /> Demo preview
               </div>
@@ -185,15 +185,26 @@ export default function DownloaderBox({ highlightFormat }: Props) {
               <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
                 <div style={{
                   width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
-                  background: "linear-gradient(135deg, #22d3ee, #0891b2)",
+                  background: "linear-gradient(135deg, var(--cyan) 0%, var(--cyan-dark) 100%)",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontWeight: 800, fontSize: 15, color: "#050a0b",
+                  fontWeight: 800, fontSize: 15, color: "#fff",
                 }}>
                   {(info.author || "T").replace("@", "").charAt(0).toUpperCase()}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  {info.author && <p style={{ fontWeight: 700, fontSize: 13, color: "#22d3ee", marginBottom: 3 }}>{info.author}</p>}
-                  {cleanTitle && <p style={{ fontSize: 12, color: "rgba(180,185,210,0.7)", lineHeight: 1.45, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{cleanTitle}</p>}
+                  {info.author && (
+                    <p style={{ fontWeight: 700, fontSize: 13, color: "var(--cyan)", marginBottom: 3 }}>
+                      {info.author}
+                    </p>
+                  )}
+                  {cleanTitle && (
+                    <p style={{
+                      fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.45,
+                      display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden",
+                    }}>
+                      {cleanTitle}
+                    </p>
+                  )}
                 </div>
               </div>
               {tags.length > 0 && (
@@ -201,7 +212,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                   {tags.slice(0, 5).map(tag => (
                     <span key={tag} style={{
                       fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999,
-                      background: "rgba(34,211,238,0.1)", border: "1px solid rgba(34,211,238,0.2)", color: "#67e8f9",
+                      background: "var(--tag-bg)", border: "1px solid var(--tag-border)", color: "var(--tag-color)",
                     }}>{tag}</span>
                   ))}
                 </div>
@@ -210,29 +221,46 @@ export default function DownloaderBox({ highlightFormat }: Props) {
 
             {isPhoto ? (
               <div style={{ padding: "0 12px 12px" }}>
-                <p style={{ textAlign: "center", fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", color: "rgba(180,185,210,0.4)", marginBottom: 10 }}>
+                <p style={{
+                  textAlign: "center", fontSize: 11, fontWeight: 700, letterSpacing: "0.06em",
+                  color: "var(--text-muted)", marginBottom: 10,
+                }}>
                   📸 Photo Post — {info.images!.length} images
                 </p>
                 {info.images!.length > 1 && (
-                  <button onClick={() => info.images!.forEach((u, i) => setTimeout(() => handlePhotoDownload(u, i), i * 400))}
+                  <button
+                    onClick={() => info.images!.forEach((u, i) => setTimeout(() => handlePhotoDownload(u, i), i * 400))}
                     disabled={photoDownloading !== null || isDemo}
-                    className="gradient-btn" style={{ width: "100%", padding: "12px", borderRadius: 10, marginBottom: 10, fontSize: 14 }}>
+                    className="gradient-btn"
+                    style={{ width: "100%", padding: "12px", borderRadius: 10, marginBottom: 10, fontSize: 14 }}>
                     <Download size={15} /> Save All {info.images!.length} Photos
                   </button>
                 )}
                 <div style={{ display: "grid", gridTemplateColumns: info.images!.length === 1 ? "1fr" : "1fr 1fr", gap: 8 }}>
                   {info.images!.map((imgUrl, i) => (
-                    <div key={i} style={{ borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255,255,255,0.07)" }}>
+                    <div key={i} style={{ borderRadius: 10, overflow: "hidden", border: "1px solid var(--photo-btn-border)" }}>
                       <div style={{ position: "relative", aspectRatio: "3/4", overflow: "hidden" }}>
                         <img src={imgUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
-                        <div style={{ position: "absolute", top: 6, right: 6, background: "rgba(0,0,0,0.7)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6 }}>
+                        <div style={{
+                          position: "absolute", top: 6, right: 6,
+                          background: "rgba(0,0,0,0.65)", color: "#fff",
+                          fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6,
+                        }}>
                           {i + 1}/{info.images!.length}
                         </div>
                       </div>
-                      <button onClick={() => handlePhotoDownload(imgUrl, i)}
+                      <button
+                        onClick={() => handlePhotoDownload(imgUrl, i)}
                         disabled={photoDownloading !== null || isDemo}
-                        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "9px 0", fontSize: 12, fontWeight: 600, color: "#22d3ee", background: "transparent", border: "none", borderTop: "1px solid rgba(255,255,255,0.07)", cursor: "pointer" }}>
-                        {photoDownloading === i ? <><Loader2 size={12} className="animate-spin" /> Saving…</> : <><Download size={12} /> Save</>}
+                        style={{
+                          width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+                          gap: 5, padding: "9px 0", fontSize: 12, fontWeight: 600,
+                          color: "var(--cyan)", background: "transparent", border: "none",
+                          borderTop: "1px solid var(--photo-btn-border)", cursor: "pointer",
+                        }}>
+                        {photoDownloading === i
+                          ? <><Loader2 size={12} className="animate-spin" /> Saving…</>
+                          : <><Download size={12} /> Save</>}
                       </button>
                     </div>
                   ))}
@@ -243,7 +271,8 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                 {formats.map(({ format, label, Icon }) => {
                   const isActive = activeDownload === format;
                   return (
-                    <button key={format}
+                    <button
+                      key={format}
                       onClick={() => handleDownload(format)}
                       disabled={!!activeDownload || isDemo}
                       className="gradient-btn"
