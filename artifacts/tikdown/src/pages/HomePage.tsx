@@ -3,10 +3,38 @@ import DownloaderBox from "@/components/DownloaderBox";
 import { Shield, Zap, MonitorSmartphone, Download, ChevronRight } from "lucide-react";
 
 const FEATURES = [
-  { Icon: Shield,            title: "No Watermark",     desc: "Download clean HD videos — no TikTok logo, no watermark."      },
-  { Icon: Zap,               title: "Lightning Fast",   desc: "Direct links mean instant downloads at full speed."            },
-  { Icon: MonitorSmartphone, title: "All Devices",      desc: "Works perfectly on iPhone, Android, PC and tablet."           },
-  { Icon: Download,          title: "Multiple Formats", desc: "1080p, 720p, MP3 audio, or photo albums — your choice."       },
+  {
+    Icon: Shield,
+    title: "No Watermark",
+    desc: "Download crystal-clear HD videos with zero TikTok branding — exactly as the creator made it.",
+    accentA: "#0891b2", accentB: "#06b6d4",
+    iconColor: "#0891b2",
+    tag: "Clean Output",
+  },
+  {
+    Icon: Zap,
+    title: "Lightning Fast",
+    desc: "Get your file in seconds. Direct server links skip the queue — no waiting, no compression.",
+    accentA: "#d97706", accentB: "#f59e0b",
+    iconColor: "#d97706",
+    tag: "Instant",
+  },
+  {
+    Icon: MonitorSmartphone,
+    title: "All Devices",
+    desc: "iPhone, Android, PC, tablet — works perfectly on any screen, any browser, anywhere.",
+    accentA: "#7c3aed", accentB: "#a78bfa",
+    iconColor: "#7c3aed",
+    tag: "Universal",
+  },
+  {
+    Icon: Download,
+    title: "Multiple Formats",
+    desc: "Choose 1080p, 720p, or MP3 audio. Photo slideshows saved as full-res images too.",
+    accentA: "#059669", accentB: "#34d399",
+    iconColor: "#059669",
+    tag: "Flexible",
+  },
 ];
 
 const STEPS = [
@@ -92,12 +120,37 @@ export default function HomePage() {
 
       {/* ══ FEATURES ══════════════════════════════════════ */}
       <section style={{ padding: "64px 20px 72px", maxWidth: 960, margin: "0 auto" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
-          {FEATURES.map(({ Icon, title, desc }) => (
-            <div key={title} className="feature-card">
-              <div className="feature-icon"><Icon size={20} /></div>
-              <h3 style={{ fontWeight: 700, fontSize: 15, color: "var(--text-primary)", marginBottom: 6 }}>{title}</h3>
-              <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.55 }}>{desc}</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 18 }}>
+          {FEATURES.map(({ Icon, title, desc, accentA, accentB, iconColor, tag }) => (
+            <div
+              key={title}
+              className="feature-card"
+              style={{ "--card-accent-a": accentA, "--card-accent-b": accentB } as React.CSSProperties}
+            >
+              {/* Icon */}
+              <div className="feature-icon">
+                <div className="feature-icon-inner" />
+                <Icon size={22} style={{ color: iconColor }} strokeWidth={2} />
+              </div>
+
+              {/* Tag pill */}
+              <span style={{
+                display: "inline-block", marginBottom: 10,
+                fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase",
+                padding: "3px 8px", borderRadius: 999,
+                background: `${accentA}18`,
+                border: `1px solid ${accentA}35`,
+                color: accentA,
+              }}>
+                {tag}
+              </span>
+
+              <h3 style={{ fontWeight: 800, fontSize: 16, color: "var(--text-primary)", marginBottom: 8, lineHeight: 1.2 }}>
+                {title}
+              </h3>
+              <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+                {desc}
+              </p>
             </div>
           ))}
         </div>
