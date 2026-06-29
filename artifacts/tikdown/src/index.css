@@ -246,24 +246,41 @@
 
 /* ─── Primary CTA button — gradient ─────── */
 .btn-primary {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
   background: linear-gradient(90deg, #4f6ef7 0%, #a855f7 50%, #ec4899 100%);
+  background-size: 200% auto;
   color: #fff !important;
-  font-weight: 700;
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: 0.01em;
   border: none;
-  border-radius: 12px;
-  padding: 14px 20px;
+  border-radius: 14px;
+  padding: 18px 24px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 20px rgba(168,85,247,0.35);
+  transition: background-position 0.4s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  box-shadow: 0 6px 28px rgba(168,85,247,0.45), 0 2px 8px rgba(79,110,247,0.3);
   white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.5s ease;
+}
+.btn-primary:hover:not(:disabled)::after {
+  left: 160%;
 }
 .btn-primary:hover:not(:disabled) {
-  opacity: 0.90;
-  box-shadow: 0 6px 32px rgba(168,85,247,0.5);
-  transform: translateY(-1px);
+  background-position: right center;
+  box-shadow: 0 8px 36px rgba(168,85,247,0.6), 0 2px 12px rgba(79,110,247,0.4);
+  transform: translateY(-2px);
 }
-.btn-primary:active { transform: translateY(0); }
+.btn-primary:active { transform: translateY(0); box-shadow: 0 4px 16px rgba(168,85,247,0.4); }
 .btn-primary:disabled { opacity: 0.4; pointer-events: none; }
 
 /* ─── Gradient btn (download options) ────── */

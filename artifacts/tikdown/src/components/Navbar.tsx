@@ -25,14 +25,14 @@ export default function Navbar() {
           <div style={{ display: "flex", alignItems: "center", gap: 9, cursor: "pointer", userSelect: "none" }}>
             <div style={{
               width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-              background: "linear-gradient(135deg, #4f6ef7 0%, #a855f7 100%)",
+              background: "linear-gradient(90deg, #4f6ef7 0%, #a855f7 50%, #ec4899 100%)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 2px 12px rgba(79,110,247,0.35)",
+              boxShadow: "0 2px 14px rgba(168,85,247,0.45)",
             }}>
               <BsDownload size={16} color="#fff" />
             </div>
             <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: "-0.02em", color: "var(--text-primary)" }}>
-              Lul<span style={{ background: "linear-gradient(90deg,#4f6ef7,#a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Down</span>
+              Lul<span style={{ background: "linear-gradient(90deg,#4f6ef7,#a855f7,#ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Down</span>
             </span>
           </div>
         </Link>
