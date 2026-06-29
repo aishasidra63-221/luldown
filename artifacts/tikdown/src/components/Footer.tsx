@@ -44,20 +44,19 @@ export default function Footer() {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 12 }}>
               <div style={{
-                width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                background: "linear-gradient(90deg, #4f6ef7 0%, #a855f7 50%, #ec4899 100%)",
+                width: 32, height: 32, borderRadius: 10, flexShrink: 0,
+                background: "linear-gradient(135deg, #4f6ef7 0%, #a855f7 100%)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                boxShadow: "0 2px 14px rgba(168,85,247,0.45)",
               }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 3v13" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/>
-                  <path d="M7 12l5 5 5-5" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M5 20h14" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
                 </svg>
               </div>
-              <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: "-0.02em", color: "var(--text-primary)" }}>
+              <span style={{ fontWeight: 800, fontSize: 16, color: "var(--text-primary)" }}>
                 Lul<span style={{
-                  background: "linear-gradient(90deg,#4f6ef7,#a855f7,#ec4899)",
+                  background: "linear-gradient(90deg,#4f6ef7,#a855f7)",
                   WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text"
                 }}>Down</span>
               </span>
@@ -72,10 +71,7 @@ export default function Footer() {
             <div key={heading}>
               <h4 style={{
                 fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
-                textTransform: "uppercase", marginBottom: 14,
-                background: "linear-gradient(90deg, #4f6ef7 0%, #a855f7 50%, #ec4899 100%)",
-                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
-                display: "inline-block",
+                textTransform: "uppercase", color: "#4f6ef7", marginBottom: 14,
               }}>
                 {heading}
               </h4>
