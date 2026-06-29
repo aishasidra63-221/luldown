@@ -135,7 +135,7 @@
   --text-secondary: rgba(200,210,240,0.72);
   --text-muted: rgba(160,170,200,0.5);
   --input-bg: #161b22;
-  --input-border: rgba(255,255,255,0.1);
+  --input-border: rgba(255,255,255,0.18);
   --input-border-focus: #4f6ef7;
   --badge-bg: rgba(255,255,255,0.06);
   --badge-border: rgba(255,255,255,0.12);
@@ -242,8 +242,8 @@
   box-shadow: var(--shadow-card);
 }
 .input-box:focus-within {
-  border-color: var(--input-border-focus);
-  box-shadow: 0 0 0 3px rgba(79,110,247,0.15);
+  border-color: var(--input-border);
+  box-shadow: var(--shadow-card);
 }
 
 /* ─── Primary CTA button — gradient ─────── */
