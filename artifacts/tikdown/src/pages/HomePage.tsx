@@ -94,7 +94,7 @@ export default function HomePage() {
   });
 
   return (
-    <div style={{ position: "relative", minHeight: "100vh", background: "var(--page-bg)", overflowX: "hidden" }}>
+    <div style={{ position: "relative", background: "var(--page-bg)", overflowX: "hidden" }}>
 
       {/* ── HERO ─────────────────────────────────── */}
       <section style={{ padding: "32px 20px 8px", textAlign: "center", maxWidth: 700, margin: "0 auto", position: "relative" }}>
