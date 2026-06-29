@@ -241,6 +241,41 @@
   background-clip: text;
 }
 
+/* ─── Input action row (URL + button) ───── */
+.input-action-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+@media (min-width: 640px) {
+  .input-action-row {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .input-action-row .input-box {
+    flex: 1;
+  }
+  .dl-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 16px 24px !important;
+    border-radius: 14px !important;
+    font-size: 15px !important;
+  }
+}
+.dl-btn {
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+}
+@media (min-width: 640px) {
+  .dl-btn { width: auto; }
+}
+
 /* ─── Input box ──────────────────────────── */
 .input-box {
   display: flex; align-items: center;
@@ -254,6 +289,23 @@
   border-color: var(--input-border);
   box-shadow: var(--shadow-card);
   outline: none;
+}
+
+/* ─── Steps responsive ───────────────────── */
+.steps-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+@media (max-width: 639px) {
+  .steps-row {
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+  }
+  .steps-row .step-connector-h { display: none; }
+  .steps-row .step-col { flex: unset; width: 100%; flex-direction: row; gap: 16px; align-items: center; }
+  .steps-row .step-col p { text-align: left; max-width: unset; }
 }
 
 /* ─── Primary CTA button — gradient ─────── */

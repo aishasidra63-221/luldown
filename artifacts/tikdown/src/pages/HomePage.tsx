@@ -195,15 +195,15 @@ export default function HomePage() {
             How it works?
           </h2>
 
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center" }}>
+          <div className="steps-row">
             {STEPS.map(({ n, title, icon, bg, color }, i) => (
               <div key={n} style={{ display: "flex", alignItems: "flex-start", flex: 1 }}>
 
                 {/* Step column */}
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, flex: 1 }}>
+                <div className="step-col" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, flex: 1 }}>
 
                   {/* Circle + badge */}
-                  <div style={{ position: "relative" }}>
+                  <div style={{ position: "relative", flexShrink: 0 }}>
                     <div style={{
                       width: 76, height: 76, borderRadius: "50%",
                       background: bg,
@@ -211,7 +211,6 @@ export default function HomePage() {
                     }}>
                       {icon}
                     </div>
-                    {/* Number badge */}
                     <div style={{
                       position: "absolute", bottom: -2, right: -2,
                       width: 22, height: 22, borderRadius: "50%",
@@ -227,21 +226,20 @@ export default function HomePage() {
 
                   {/* Label */}
                   <p style={{
-                    fontSize: 12, fontWeight: 700, textAlign: "center",
+                    fontSize: 13, fontWeight: 700, textAlign: "center",
                     color: "var(--text-primary)", lineHeight: 1.4,
-                    maxWidth: 100,
+                    maxWidth: 110,
                   }}>
                     {title}
                   </p>
                 </div>
 
-                {/* Dotted arrow connector */}
+                {/* Dotted arrow connector — hidden on mobile via CSS */}
                 {i < STEPS.length - 1 && (
-                  <div style={{
+                  <div className="step-connector-h" style={{
                     display: "flex", alignItems: "center",
                     paddingTop: 27, flexShrink: 0, gap: 2,
                   }}>
-                    {/* Dots */}
                     {[0,1,2,3,4].map(d => (
                       <div key={d} style={{
                         width: 4, height: 4, borderRadius: "50%",
@@ -249,7 +247,6 @@ export default function HomePage() {
                         margin: "0 1.5px",
                       }} />
                     ))}
-                    {/* Arrow head */}
                     <svg width="8" height="12" viewBox="0 0 8 12" fill="none" style={{ marginLeft: 2 }}>
                       <path d="M1.5 1.5L6.5 6L1.5 10.5" stroke="var(--step-dot)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.5"/>
                     </svg>

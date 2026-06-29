@@ -100,46 +100,46 @@ export default function DownloaderBox({ highlightFormat }: Props) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
 
-      {/* Input row */}
-      <div className="input-box">
-        <div style={{ padding: "0 14px", color: "var(--cyan)", opacity: 0.6, flexShrink: 0 }}>
-          <LinkIcon size={18} />
+      {/* Input + button row — side by side on desktop, stacked on mobile */}
+      <div className="input-action-row">
+        <div className="input-box" style={{ flex: 1 }}>
+          <div style={{ padding: "0 14px", color: "var(--cyan)", opacity: 0.6, flexShrink: 0 }}>
+            <LinkIcon size={18} />
+          </div>
+          <input
+            type="text"
+            inputMode="url"
+            value={url}
+            onChange={e => setUrl(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleFetch()}
+            placeholder="Paste TikTok link here..."
+            style={{
+              flex: 1, minWidth: 0, background: "transparent",
+              padding: "18px 8px", fontSize: 15, outline: "none",
+              color: "var(--text-primary)",
+            }}
+          />
+          {url ? (
+            <button onClick={reset} className="btn-ghost" style={{ margin: "0 10px", padding: "7px 14px", fontSize: 13 }}>
+              <X size={14} /> Clear
+            </button>
+          ) : (
+            <button onClick={handlePaste} className="btn-ghost" style={{ margin: "0 10px", padding: "7px 14px", fontSize: 13 }}>
+              <Clipboard size={14} /> Paste
+            </button>
+          )}
         </div>
-        <input
-          type="text"
-          inputMode="url"
-          value={url}
-          onChange={e => setUrl(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && handleFetch()}
-          placeholder="Paste TikTok link here..."
-          style={{
-            flex: 1, minWidth: 0, background: "transparent",
-            padding: "18px 8px", fontSize: 15, outline: "none",
-            color: "var(--text-primary)",
-          }}
-        />
-        {url ? (
-          <button onClick={reset} className="btn-ghost" style={{ margin: "0 10px", padding: "7px 14px", fontSize: 13 }}>
-            <X size={14} /> Clear
-          </button>
-        ) : (
-          <button onClick={handlePaste} className="btn-ghost" style={{ margin: "0 10px", padding: "7px 14px", fontSize: 13 }}>
-            <Clipboard size={14} /> Paste
-          </button>
-        )}
-      </div>
 
-      {/* Download button — full width */}
-      <button
-        onClick={handleFetch}
-        disabled={!url.trim() || step === "loading-info"}
-        className="btn-primary"
-        style={{ width: "100%", padding: "16px", borderRadius: 12, fontSize: 16, fontWeight: 700 }}
-      >
-        {step === "loading-info"
-          ? <><Loader2 size={18} className="animate-spin" /> Fetching…</>
-          : <><Download size={18} /> Download Now</>}
-      </button>
+        <button
+          onClick={handleFetch}
+          disabled={!url.trim() || step === "loading-info"}
+          className="btn-primary dl-btn"
+        >
+          {step === "loading-info"
+            ? <><Loader2 size={18} className="animate-spin" /> Fetching…</>
+            : <><Download size={18} /> Download Now</>}
+        </button>
+      </div>
 
       {/* Demo button */}
       {step === "idle" && (
