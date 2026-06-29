@@ -103,7 +103,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
       {/* Input + button row — side by side on desktop, stacked on mobile */}
       <div className="input-action-row">
         <div className="input-box" style={{ flex: 1 }}>
-          <div style={{ padding: "0 14px", color: "var(--cyan)", opacity: 0.6, flexShrink: 0 }}>
+          <div style={{ padding: "0 14px", color: "var(--text-muted)", flexShrink: 0 }}>
             <LinkIcon size={18} />
           </div>
           <input

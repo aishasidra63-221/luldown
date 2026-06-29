@@ -299,8 +299,6 @@
   border-color: rgba(255,255,255,0.38);
 }
 .input-box:focus-within {
-  border-color: var(--input-border);
-  box-shadow: var(--shadow-card);
   outline: none;
 }
 
@@ -348,7 +346,7 @@
   border: none;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 16px rgba(168,85,247,0.3);
+  box-shadow: none;
 }
 .gradient-btn:hover:not(:disabled) {
   opacity: 0.90;
