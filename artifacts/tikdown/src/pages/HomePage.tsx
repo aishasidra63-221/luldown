@@ -182,7 +182,7 @@ export default function HomePage() {
       </section>
 
       {/* ── HOW IT WORKS ──────────────────────────── */}
-      <section style={{ padding: "16px 16px 0", maxWidth: 640, margin: "0 auto" }}>
+      <section style={{ padding: "16px 16px 0", maxWidth: 700, margin: "0 auto" }}>
         <h2 style={{
           textAlign: "center", fontWeight: 800, fontSize: 18,
           color: "var(--text-primary)", marginBottom: 14,
@@ -190,19 +190,21 @@ export default function HomePage() {
           How it works?
         </h2>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="steps-grid">
           {STEPS.map(({ n, title, icon, bg, color }) => (
             <div key={n} style={{
               background: "var(--card-bg)",
               borderRadius: 16,
               border: "1px solid var(--card-border)",
-              padding: "18px 20px",
-              display: "flex", alignItems: "center", gap: 16,
+              padding: "28px 20px 24px",
+              display: "flex", flexDirection: "column",
+              alignItems: "center", textAlign: "center", gap: 14,
+              flex: 1,
             }}>
               {/* Icon circle */}
               <div style={{ position: "relative", flexShrink: 0 }}>
                 <div style={{
-                  width: 64, height: 64, borderRadius: "50%",
+                  width: 72, height: 72, borderRadius: "50%",
                   background: bg,
                   display: "flex", alignItems: "center", justifyContent: "center",
                 }}>
@@ -210,9 +212,9 @@ export default function HomePage() {
                 </div>
                 <div style={{
                   position: "absolute", bottom: -2, right: -2,
-                  width: 20, height: 20, borderRadius: "50%",
+                  width: 22, height: 22, borderRadius: "50%",
                   background: color,
-                  color: "#fff", fontSize: 10, fontWeight: 900,
+                  color: "#fff", fontSize: 11, fontWeight: 900,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   border: "2px solid var(--card-bg)",
                   boxShadow: `0 2px 8px ${color}55`,
@@ -224,13 +226,13 @@ export default function HomePage() {
               {/* Text */}
               <div>
                 <p style={{
-                  fontSize: 15, fontWeight: 700,
+                  fontSize: 14, fontWeight: 700,
                   color: "var(--text-primary)", lineHeight: 1.4,
-                  marginBottom: 2,
+                  marginBottom: 4,
                 }}>
                   {title}
                 </p>
-                <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                <p style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>
                   {n === "1" && "Open TikTok and copy the video link"}
                   {n === "2" && "Paste the link into the box above"}
                   {n === "3" && "Choose your format and download"}

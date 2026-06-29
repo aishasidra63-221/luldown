@@ -291,21 +291,18 @@
   outline: none;
 }
 
-/* ─── Steps responsive ───────────────────── */
-.steps-row {
+/* ─── Steps grid ─────────────────────────── */
+.steps-grid {
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
 }
-@media (max-width: 639px) {
-  .steps-row {
-    flex-direction: column;
-    align-items: center;
-    gap: 24px;
+@media (min-width: 640px) {
+  .steps-grid {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 12px;
   }
-  .steps-row .step-connector-h { display: none; }
-  .steps-row .step-col { flex: unset; width: 100%; flex-direction: row; gap: 16px; align-items: center; }
-  .steps-row .step-col p { text-align: left; max-width: unset; }
 }
 
 /* ─── Primary CTA button — gradient ─────── */
