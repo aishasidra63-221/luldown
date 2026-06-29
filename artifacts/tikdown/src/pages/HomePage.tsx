@@ -121,16 +121,7 @@ export default function HomePage() {
           color: "var(--text-primary)",
           marginBottom: 14,
         }}>
-          TikTok Video{" "}
-          <span style={{
-            background: "linear-gradient(90deg, #4f6ef7, #a855f7, #ec4899)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-          }}>
-            Downloader
-          </span>{" "}
-          <br />No Watermark
+          TikTok Video Downloader<br />No Watermark
         </h1>
 
         <p style={{
