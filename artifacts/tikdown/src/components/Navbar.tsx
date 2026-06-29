@@ -18,7 +18,7 @@ export default function Navbar() {
 
   return (
     <header className="navbar">
-      <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 20px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ width: "100%", padding: "0 24px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
 
         {/* Logo */}
         <Link href="/">
@@ -82,7 +82,6 @@ export default function Navbar() {
           padding: "12px 16px",
           display: "flex", flexDirection: "column", gap: 4,
           background: "var(--navbar-bg)",
-          maxWidth: 680, margin: "0 auto",
         }}>
           {LINKS.map(({ href, label }) => (
             <Link key={href} href={href}>

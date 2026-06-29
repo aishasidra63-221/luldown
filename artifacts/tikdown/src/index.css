@@ -504,3 +504,12 @@
 
 /* ─── Legacy bg-mesh (for other pages) ───── */
 .bg-mesh { display: none; }
+
+/* ─── Desktop wide sections ──────────────── */
+@media (min-width: 900px) {
+  .section-wide {
+    max-width: 920px !important;
+    padding-left: 32px !important;
+    padding-right: 32px !important;
+  }
+}

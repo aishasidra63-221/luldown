@@ -97,7 +97,7 @@ export default function HomePage() {
     <div style={{ position: "relative", background: "var(--page-bg)", overflowX: "hidden" }}>
 
       {/* ── HERO ─────────────────────────────────── */}
-      <section style={{ padding: "40px 24px 24px", textAlign: "center", maxWidth: 620, margin: "0 auto", position: "relative" }}>
+      <section className="section-wide" style={{ padding: "40px 24px 24px", textAlign: "center", maxWidth: 620, margin: "0 auto", position: "relative" }}>
 
         {/* TikTok watermark — very faint background */}
         <div style={{
@@ -132,7 +132,7 @@ export default function HomePage() {
       </section>
 
       {/* ── FEATURES ──────────────────────────────── */}
-      <section style={{ padding: "36px 24px 0", maxWidth: 600, margin: "0 auto" }}>
+      <section className="section-wide" style={{ padding: "36px 24px 0", maxWidth: 600, margin: "0 auto" }}>
         <div style={{
           display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8,
           background: "var(--card-bg)", borderRadius: 18,
@@ -158,7 +158,7 @@ export default function HomePage() {
       </section>
 
       {/* ── HOW IT WORKS ──────────────────────────── */}
-      <section style={{ padding: "36px 24px 0", maxWidth: 640, margin: "0 auto" }}>
+      <section className="section-wide" style={{ padding: "36px 24px 0", maxWidth: 640, margin: "0 auto" }}>
         <h2 style={{
           textAlign: "center", fontWeight: 800, fontSize: 17,
           color: "var(--text-primary)", marginBottom: 18,
@@ -220,7 +220,7 @@ export default function HomePage() {
       </section>
 
       {/* ── SAFE & SECURE ─────────────────────────── */}
-      <section style={{ padding: "36px 24px 0", maxWidth: 600, margin: "0 auto" }}>
+      <section className="section-wide" style={{ padding: "36px 24px 0", maxWidth: 600, margin: "0 auto" }}>
         <div style={{
           background: "var(--safe-card-bg)",
           borderRadius: 18,
@@ -283,7 +283,7 @@ export default function HomePage() {
       </section>
 
       {/* ── FOOTER BAR ────────────────────────────── */}
-      <section style={{ padding: "20px 24px 48px", maxWidth: 600, margin: "0 auto" }}>
+      <section className="section-wide" style={{ padding: "20px 24px 48px", maxWidth: 600, margin: "0 auto" }}>
         <div style={{
           background: "var(--card-bg)",
           borderRadius: 18,
