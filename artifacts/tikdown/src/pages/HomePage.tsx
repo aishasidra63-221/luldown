@@ -4,7 +4,7 @@ import { FaTiktok } from "react-icons/fa";
 import { FiGift, FiUser, FiShield, FiHeadphones, FiLock } from "react-icons/fi";
 import { MdHd } from "react-icons/md";
 import { RiShieldCheckLine } from "react-icons/ri";
-import { BsLightningChargeFill } from "react-icons/bs";
+import { BsLightningChargeFill, BsClipboard, BsDownload, BsCheck2Circle } from "react-icons/bs";
 
 const FEATURES = [
   {
@@ -12,21 +12,21 @@ const FEATURES = [
     sub: "Clean videos",
     color: "#4f6ef7",
     bg: "rgba(79,110,247,0.12)",
-    icon: <RiShieldCheckLine size={28} color="#4f6ef7" />,
+    icon: <RiShieldCheckLine size={24} color="#4f6ef7" />,
   },
   {
     label: "HD Quality",
     sub: "High Quality",
     color: "#e63f7a",
     bg: "rgba(230,63,122,0.12)",
-    icon: <MdHd size={30} color="#e63f7a" />,
+    icon: <MdHd size={26} color="#e63f7a" />,
   },
   {
     label: "Fast Download",
     sub: "In seconds",
     color: "#8b5cf6",
     bg: "rgba(139,92,246,0.12)",
-    icon: <BsLightningChargeFill size={23} color="#8b5cf6" />,
+    icon: <BsLightningChargeFill size={20} color="#8b5cf6" />,
   },
   {
     label: "All Devices",
@@ -34,7 +34,7 @@ const FEATURES = [
     color: "#10b981",
     bg: "rgba(16,185,129,0.12)",
     icon: (
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
         <rect x="2" y="3" width="13" height="10" rx="2" stroke="#10b981" strokeWidth="2"/>
         <rect x="16" y="8" width="6" height="9" rx="1.5" stroke="#10b981" strokeWidth="2"/>
         <path d="M2 19h13M8 19v2M8.5 21h5" stroke="#10b981" strokeWidth="2" strokeLinecap="round"/>
@@ -97,62 +97,54 @@ export default function HomePage() {
     <div style={{ position: "relative", background: "var(--page-bg)", overflowX: "hidden" }}>
 
       {/* ── HERO ─────────────────────────────────── */}
-      <section
-        className="section-wide hero-section"
-        style={{
-          padding: "32px 24px 20px",
-          textAlign: "center",
-          maxWidth: 530,
-          margin: "0 auto",
-          position: "relative",
-        }}
-      >
+      <section className="section-wide" style={{ padding: "40px 24px 24px", textAlign: "center", maxWidth: 620, margin: "0 auto", position: "relative" }}>
+
         {/* TikTok watermark — very faint background */}
         <div style={{
-          position: "absolute", top: 0, right: "-10px",
-          opacity: 0.06, pointerEvents: "none", overflow: "hidden",
+          position: "absolute", top: 0, right: 0,
+          opacity: 0.03, pointerEvents: "none", overflow: "hidden",
           width: 160, height: 200,
         }}>
           <FaTiktok size={160} style={{ color: "var(--tiktok-mark)" }} />
         </div>
 
         {/* Headline */}
-        <h1 className="hero-main-title">
+        <h1 style={{
+          fontSize: "clamp(1.75rem, 4.8vw, 2.6rem)",
+          fontWeight: 800, lineHeight: 1.18,
+          color: "var(--text-primary)",
+          marginBottom: 18,
+        }}>
           TikTok Video Downloader<br />No Watermark
         </h1>
 
         <p style={{
-          fontSize: 14, color: "var(--text-muted)",
-          marginBottom: 22, fontWeight: 400, lineHeight: 1.6,
+          fontSize: 14.5, color: "var(--text-muted)",
+          marginBottom: 32, fontWeight: 400, lineHeight: 1.6,
         }}>
           Fast. Free. High Quality.
         </p>
 
         {/* Downloader */}
-        <div style={{ maxWidth: 530, margin: "0 auto" }}>
+        <div style={{ maxWidth: 680, margin: "0 auto" }}>
           <DownloaderBox />
         </div>
       </section>
 
       {/* ── FEATURES ──────────────────────────────── */}
-      <section className="section-wide" style={{ padding: "28px 24px 0", maxWidth: 530, margin: "0 auto" }}>
+      <section className="section-wide" style={{ padding: "36px 24px 0", maxWidth: 600, margin: "0 auto" }}>
         <div style={{
           display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8,
           background: "var(--card-bg)", borderRadius: 18,
           border: "1px solid var(--card-border)",
-          padding: "18px 10px",
+          padding: "22px 12px",
         }}>
           {FEATURES.map(({ label, sub, color, bg, icon }) => (
-            <div
-              key={label}
-              className="feature-mini-card"
-              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}
-            >
+            <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 9 }}>
               <div style={{
-                width: 53, height: 53, borderRadius: "50%",
+                width: 46, height: 46, borderRadius: "50%",
                 background: bg,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                transition: "transform 0.2s ease, box-shadow 0.2s ease",
               }}>
                 {icon}
               </div>
@@ -166,10 +158,10 @@ export default function HomePage() {
       </section>
 
       {/* ── HOW IT WORKS ──────────────────────────── */}
-      <section className="section-wide" style={{ padding: "28px 24px 0", maxWidth: 580, margin: "0 auto" }}>
+      <section className="section-wide" style={{ padding: "36px 24px 0", maxWidth: 640, margin: "0 auto" }}>
         <h2 style={{
           textAlign: "center", fontWeight: 800, fontSize: 17,
-          color: "var(--text-primary)", marginBottom: 16,
+          color: "var(--text-primary)", marginBottom: 18,
         }}>
           How it works?
         </h2>
@@ -180,21 +172,12 @@ export default function HomePage() {
               background: "var(--card-bg)",
               borderRadius: 16,
               border: "1px solid var(--card-border)",
-              padding: "24px 16px 20px",
+              padding: "32px 20px 28px",
               display: "flex", flexDirection: "column",
-              alignItems: "center", textAlign: "center", gap: 12,
+              alignItems: "center", textAlign: "center", gap: 14,
               flex: 1,
-              transition: "transform 0.2s ease, box-shadow 0.2s ease",
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLDivElement).style.transform = "translateY(-3px)";
-              (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 28px rgba(0,0,0,0.12)";
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
-              (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
-            }}
-            >
+            }}>
+              {/* Icon circle */}
               <div style={{ position: "relative", flexShrink: 0 }}>
                 <div style={{
                   width: 72, height: 72, borderRadius: "50%",
@@ -216,6 +199,7 @@ export default function HomePage() {
                 </div>
               </div>
 
+              {/* Text */}
               <div>
                 <p style={{
                   fontSize: 14, fontWeight: 700,
@@ -236,21 +220,23 @@ export default function HomePage() {
       </section>
 
       {/* ── SAFE & SECURE ─────────────────────────── */}
-      <section className="section-wide" style={{ padding: "28px 24px 0", maxWidth: 530, margin: "0 auto" }}>
+      <section className="section-wide" style={{ padding: "36px 24px 0", maxWidth: 600, margin: "0 auto" }}>
         <div style={{
           background: "var(--safe-card-bg)",
           borderRadius: 18,
           border: "1px solid rgba(16,185,129,0.18)",
-          padding: "20px 22px",
+          padding: "22px 24px",
           display: "flex", alignItems: "center", justifyContent: "space-between",
           overflow: "hidden", position: "relative",
         }}>
+          {/* Subtle green glow in background */}
           <div style={{
             position: "absolute", inset: 0,
             background: "radial-gradient(ellipse at 30% 50%, rgba(16,185,129,0.07) 0%, transparent 70%)",
             pointerEvents: "none",
           }} />
 
+          {/* Left: Lock icon + text */}
           <div style={{ display: "flex", alignItems: "center", gap: 16, position: "relative" }}>
             <div style={{
               width: 62, height: 62, borderRadius: "50%",
@@ -271,7 +257,9 @@ export default function HomePage() {
             </div>
           </div>
 
+          {/* Right: Shield with sparkles */}
           <div style={{ position: "relative", flexShrink: 0, marginLeft: 12 }}>
+            {/* Sparkle stars */}
             <span style={{ position: "absolute", top: -8, right: 2, fontSize: 13, color: "#10b981", opacity: 0.8 }}>✦</span>
             <span style={{ position: "absolute", top: 4, right: -10, fontSize: 9, color: "#10b981", opacity: 0.6 }}>✦</span>
             <span style={{ position: "absolute", bottom: -6, left: -8, fontSize: 10, color: "#10b981", opacity: 0.6 }}>✦</span>
@@ -282,6 +270,7 @@ export default function HomePage() {
               border: "1.5px solid rgba(16,185,129,0.18)",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
+              {/* Shield with check SVG */}
               <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
                 <path d="M12 2L4 5v6c0 5.25 3.5 10.15 8 11.35C16.5 21.15 20 16.25 20 11V5L12 2z"
                   stroke="#10b981" strokeWidth="1.8" strokeLinejoin="round"
@@ -294,7 +283,7 @@ export default function HomePage() {
       </section>
 
       {/* ── FOOTER BAR ────────────────────────────── */}
-      <section className="section-wide" style={{ padding: "18px 24px 44px", maxWidth: 530, margin: "0 auto" }}>
+      <section className="section-wide" style={{ padding: "20px 24px 48px", maxWidth: 600, margin: "0 auto" }}>
         <div style={{
           background: "var(--card-bg)",
           borderRadius: 18,
@@ -307,7 +296,7 @@ export default function HomePage() {
             <div key={label} style={{
               flex: 1,
               display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-              padding: "13px 6px",
+              padding: "14px 6px",
               fontSize: 11, fontWeight: 600,
               color: "var(--text-secondary)",
               borderRight: i < FOOTER_ITEMS.length - 1 ? "1px solid var(--card-border)" : "none",
@@ -317,6 +306,7 @@ export default function HomePage() {
             </div>
           ))}
         </div>
+
       </section>
     </div>
   );

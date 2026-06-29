@@ -3,7 +3,7 @@ import { fetchVideoInfo, downloadVideo, downloadPhoto, VideoInfo, DownloadFormat
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import {
   Video, Music, Film, Clipboard, Download, Image,
-  AlertCircle, Loader2, X, Link as LinkIcon,
+  AlertCircle, Loader2, X, FlaskConical, Link as LinkIcon,
 } from "lucide-react";
 
 const FORMAT_OPTIONS: { format: DownloadFormat; label: string; Icon: React.ElementType }[] = [
@@ -64,7 +64,6 @@ export default function DownloaderBox({ highlightFormat }: Props) {
     setUrl("https://www.tiktok.com/@demo/video/1234567890");
     setInfo(DEMO_DATA); setStep("info-ready"); setError("");
   };
-  void handleDemo;
 
   const handleDownload = async (format: DownloadFormat) => {
     if (isDemo) return;
@@ -142,6 +141,14 @@ export default function DownloaderBox({ highlightFormat }: Props) {
         </button>
       </div>
 
+      {/* Demo button */}
+      {step === "idle" && (
+        <button onClick={handleDemo} className="demo-btn">
+          <FlaskConical size={13} />
+          Preview demo — see result card
+        </button>
+      )}
+
       {/* Error */}
       {step === "error" && (
         <div className="error-box">
@@ -164,7 +171,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                 textTransform: "uppercase", color: "var(--cyan)",
                 background: "var(--result-header-bg)", borderBottom: "1px solid var(--result-header-border)",
               }}>
-                Demo preview
+                <FlaskConical size={12} /> Demo preview
               </div>
             )}
 
