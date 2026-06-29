@@ -45,7 +45,7 @@ export default function Footer() {
             <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 12 }}>
               <div style={{
                 width: 32, height: 32, borderRadius: 10, flexShrink: 0,
-                background: "linear-gradient(135deg, #4f6ef7 0%, #a855f7 100%)",
+                background: "linear-gradient(90deg, #4f6ef7 0%, #a855f7 50%, #ec4899 100%)",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -71,7 +71,10 @@ export default function Footer() {
             <div key={heading}>
               <h4 style={{
                 fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
-                textTransform: "uppercase", color: "#4f6ef7", marginBottom: 14,
+                textTransform: "uppercase", marginBottom: 14,
+                background: "linear-gradient(90deg, #4f6ef7 0%, #a855f7 50%, #ec4899 100%)",
+                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+                display: "inline-block",
               }}>
                 {heading}
               </h4>
