@@ -174,7 +174,12 @@
 }
 
 @layer base {
-  * { @apply border-border; box-sizing: border-box; }
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
   html {
     overflow-x: hidden;
     width: 100%;
@@ -187,6 +192,10 @@
     background: var(--page-bg);
     color: var(--text-primary);
     transition: background 0.25s ease, color 0.2s ease;
+  }
+  input, textarea, select, button, a {
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
   }
 }
 
