@@ -108,20 +108,6 @@ export default function HomePage() {
           <FaTiktok size={160} style={{ color: "var(--tiktok-mark)" }} />
         </div>
 
-        {/* Badge */}
-        <div style={{ marginBottom: 18 }}>
-          <span style={{
-            display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "5px 16px", borderRadius: 999,
-            border: "1.5px solid var(--badge-border)",
-            background: "var(--badge-bg)",
-            color: "var(--text-primary)",
-            fontSize: 12, fontWeight: 600,
-          }}>
-            100% Free <span style={{ color: "#4f6ef7", fontWeight: 800 }}>✦</span>
-          </span>
-        </div>
-
         {/* Headline */}
         <h1 style={{
           fontSize: "clamp(1.9rem, 5.5vw, 2.8rem)",
