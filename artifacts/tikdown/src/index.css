@@ -280,10 +280,13 @@
 .input-box {
   display: flex; align-items: center;
   background: var(--input-bg);
-  border: 1.5px solid var(--input-border);
+  border: 1.5px solid rgba(0,0,0,0.55);
   border-radius: 14px;
   box-shadow: var(--shadow-card);
   outline: none;
+}
+.dark .input-box {
+  border-color: rgba(255,255,255,0.38);
 }
 .input-box:focus-within {
   border-color: var(--input-border);
