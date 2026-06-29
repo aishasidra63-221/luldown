@@ -65,7 +65,7 @@
   --text-secondary: #4a5568;
   --text-muted: #9ca3af;
   --input-bg: #ffffff;
-  --input-border: rgba(0,0,0,0.1);
+  --input-border: rgba(0,0,0,0.06);
   --input-border-focus: #4f6ef7;
   --badge-bg: rgba(0,0,0,0.04);
   --badge-border: rgba(0,0,0,0.1);
