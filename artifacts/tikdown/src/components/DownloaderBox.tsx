@@ -117,6 +117,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
               flex: 1, minWidth: 0, background: "transparent",
               padding: "15px 8px", fontSize: 14.5, outline: "none",
               color: "var(--text-primary)",
+              fontWeight: 400, fontFamily: "inherit",
             }}
           />
           {url ? (
