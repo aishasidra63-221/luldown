@@ -81,10 +81,10 @@ const STEPS = [
 ];
 
 const FOOTER_ITEMS = [
-  { icon: <FiGift size={15} />, label: "100% Free" },
-  { icon: <FiUser size={15} />, label: "No Registration" },
-  { icon: <FiShield size={15} />, label: "Secure & Safe" },
-  { icon: <FiHeadphones size={15} />, label: "Fast Support" },
+  { icon: <FiGift size={15} />,      label: "100% Free",       color: "#a855f7" },
+  { icon: <FiUser size={15} />,      label: "No Registration", color: "#4f6ef7" },
+  { icon: <FiShield size={15} />,    label: "Secure & Safe",   color: "#10b981" },
+  { icon: <FiHeadphones size={15} />,label: "Fast Support",    color: "#ec4899" },
 ];
 
 export default function HomePage() {
@@ -264,69 +264,94 @@ export default function HomePage() {
       {/* ── SAFE & SECURE ─────────────────────────── */}
       <section style={{ padding: "16px 16px 0", maxWidth: 640, margin: "0 auto" }}>
         <div style={{
-          background: "var(--card-bg)", borderRadius: 18,
-          border: "1px solid var(--card-border)",
-          padding: "20px 24px",
+          background: "var(--safe-card-bg)",
+          borderRadius: 18,
+          border: "1px solid rgba(16,185,129,0.18)",
+          padding: "22px 24px",
           display: "flex", alignItems: "center", justifyContent: "space-between",
+          overflow: "hidden", position: "relative",
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          {/* Subtle green glow in background */}
+          <div style={{
+            position: "absolute", inset: 0,
+            background: "radial-gradient(ellipse at 30% 50%, rgba(16,185,129,0.07) 0%, transparent 70%)",
+            pointerEvents: "none",
+          }} />
+
+          {/* Left: Lock icon + text */}
+          <div style={{ display: "flex", alignItems: "center", gap: 16, position: "relative" }}>
             <div style={{
-              width: 54, height: 54, borderRadius: "50%",
-              background: "rgba(16,185,129,0.12)",
+              width: 62, height: 62, borderRadius: "50%",
+              background: "rgba(16,185,129,0.13)",
+              border: "1.5px solid rgba(16,185,129,0.2)",
               display: "flex", alignItems: "center", justifyContent: "center",
               flexShrink: 0,
             }}>
-              <FiLock size={24} color="#10b981" />
+              <FiLock size={28} color="#10b981" strokeWidth={2.2} />
             </div>
             <div>
-              <p style={{ fontWeight: 800, fontSize: 15, color: "#10b981", marginBottom: 4 }}>
+              <p style={{ fontWeight: 800, fontSize: 16, color: "#10b981", marginBottom: 5, letterSpacing: "-0.01em" }}>
                 Safe &amp; Secure
               </p>
-              <p style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>
+              <p style={{ fontSize: 12.5, color: "var(--text-muted)", lineHeight: 1.55 }}>
                 We don't store any videos.<br />Your data is 100% safe.
               </p>
             </div>
           </div>
 
-          {/* Shield decoration */}
-          <div style={{ position: "relative", opacity: 0.85, flexShrink: 0 }}>
+          {/* Right: Shield with sparkles */}
+          <div style={{ position: "relative", flexShrink: 0, marginLeft: 12 }}>
+            {/* Sparkle stars */}
+            <span style={{ position: "absolute", top: -8, right: 2, fontSize: 13, color: "#10b981", opacity: 0.8 }}>✦</span>
+            <span style={{ position: "absolute", top: 4, right: -10, fontSize: 9, color: "#10b981", opacity: 0.6 }}>✦</span>
+            <span style={{ position: "absolute", bottom: -6, left: -8, fontSize: 10, color: "#10b981", opacity: 0.6 }}>✦</span>
+
             <div style={{
-              width: 56, height: 56, borderRadius: "50%",
+              width: 68, height: 68, borderRadius: "50%",
               background: "rgba(16,185,129,0.1)",
+              border: "1.5px solid rgba(16,185,129,0.18)",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
-              <BsCheck2Circle size={28} color="#10b981" />
+              {/* Shield with check SVG */}
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L4 5v6c0 5.25 3.5 10.15 8 11.35C16.5 21.15 20 16.25 20 11V5L12 2z"
+                  stroke="#10b981" strokeWidth="1.8" strokeLinejoin="round"
+                  fill="rgba(16,185,129,0.12)" />
+                <path d="M9 12l2 2 4-4" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </div>
-            <span style={{ position: "absolute", top: -4, right: -4, fontSize: 12 }}>✦</span>
-            <span style={{ position: "absolute", bottom: -4, left: -4, fontSize: 10 }}>✦</span>
           </div>
         </div>
       </section>
 
       {/* ── FOOTER BAR ────────────────────────────── */}
-      <section style={{ padding: "16px 16px 32px", maxWidth: 640, margin: "0 auto" }}>
+      <section style={{ padding: "16px 16px 8px", maxWidth: 640, margin: "0 auto" }}>
         <div style={{
-          background: "var(--footer-bar-bg)", borderRadius: 18,
+          background: "var(--card-bg)",
+          borderRadius: 18,
           border: "1px solid var(--card-border)",
-          padding: "16px 12px",
-          display: "flex", alignItems: "center", justifyContent: "space-around",
-          flexWrap: "wrap", gap: 12,
+          padding: "0 8px",
+          display: "flex", alignItems: "stretch",
+          overflow: "hidden",
         }}>
-          {FOOTER_ITEMS.map(({ icon, label }, i) => (
+          {FOOTER_ITEMS.map(({ icon, label, color }, i) => (
             <div key={label} style={{
-              display: "flex", alignItems: "center", gap: 6,
-              fontSize: 11, fontWeight: 600, color: "var(--text-secondary)",
-              paddingRight: i < FOOTER_ITEMS.length - 1 ? 12 : 0,
+              flex: 1,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              padding: "14px 6px",
+              fontSize: 11, fontWeight: 600,
+              color: "var(--text-secondary)",
               borderRight: i < FOOTER_ITEMS.length - 1 ? "1px solid var(--card-border)" : "none",
             }}>
-              <span style={{ color: "var(--text-muted)" }}>{icon}</span>
-              {label}
+              <span style={{ color }}>{icon}</span>
+              <span>{label}</span>
             </div>
           ))}
         </div>
+
         <p style={{
           textAlign: "center", fontSize: 11, color: "var(--text-muted)",
-          marginTop: 16,
+          marginTop: 14, paddingBottom: 24,
         }}>
           © {new Date().getFullYear()} LulDown.com – All rights reserved.
         </p>

@@ -71,6 +71,7 @@
   --badge-border: rgba(0,0,0,0.1);
   --step-dot: rgba(0,0,0,0.2);
   --footer-bar-bg: #ffffff;
+  --safe-card-bg: rgba(16,185,129,0.04);
   --tiktok-mark: #000000;
 
   /* legacy compat */
@@ -140,6 +141,7 @@
   --badge-border: rgba(255,255,255,0.12);
   --step-dot: rgba(255,255,255,0.2);
   --footer-bar-bg: #161b22;
+  --safe-card-bg: rgba(16,185,129,0.05);
   --tiktok-mark: #ffffff;
 
   /* legacy compat */
