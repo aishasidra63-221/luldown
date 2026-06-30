@@ -3,9 +3,8 @@ import { Menu, X } from "lucide-react";
 import { useState } from "react";
 
 const LINKS = [
-  { href: "/",        label: "Home"             },
-  { href: "/faq",     label: "FAQ"              },
-  { href: "/history", label: "History"          },
+  { href: "/faq",     label: "FAQ"     },
+  { href: "/history", label: "History" },
 ];
 
 export default function Navbar() {
