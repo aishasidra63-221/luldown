@@ -204,7 +204,7 @@ export default function HomePage() {
             color: "rgba(255,255,255,0.25)",
             fontSize: 12, letterSpacing: "0.08em",
           }}>
-            — Advertisement —
+
           </div>
         </div>
       </section>
