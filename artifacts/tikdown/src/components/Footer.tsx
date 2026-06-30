@@ -64,7 +64,7 @@ export default function Footer() {
 
           {/* Link columns */}
           {COLS.map(({ heading, links }) => (
-            <div key={heading}>
+            <div key={heading} className={heading === "Tools" ? "footer-tools" : ""}>
               <h4 style={{
                 fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
                 textTransform: "uppercase", color: "#ffffff", marginBottom: 16,

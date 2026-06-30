@@ -621,4 +621,7 @@
   .footer-brand {
     grid-column: 1 / -1;
   }
+  .footer-tools {
+    grid-column: 1 / -1;
+  }
 }
