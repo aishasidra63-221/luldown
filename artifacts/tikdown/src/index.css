@@ -266,7 +266,7 @@
 /* ─── Input box ──────────────────────────── */
 .input-box {
   display: flex; align-items: center;
-  background: #e8e4f6;
+  background: #ddd8f5;
   border: 1.5px solid #ffffff;
   border-radius: 16px;
   box-shadow: none;
@@ -283,7 +283,7 @@
   color: #9b93c4 !important;
 }
 .dark .input-box {
-  background: #e8e4f6;
+  background: #ddd8f5;
 }
 .input-box:focus-within {
   outline: none;
