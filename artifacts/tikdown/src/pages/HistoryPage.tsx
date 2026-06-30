@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
 import { fetchHistory, clearHistory, HistoryItem } from "@/lib/api";
 import { Trash2, Download, Clock, Video, Music, Image, Film, Inbox, Loader2, User } from "lucide-react";
+import { Link } from "wouter";
 
 const FORMAT_META: Record<string, { Icon: React.ElementType; label: string; color: string }> = {
-  mp4_nowm: { Icon: Video, label: "MP4 No Watermark", color: "text-blue-500" },
-  mp4:      { Icon: Film,  label: "MP4 Original",     color: "text-purple-500" },
-  mp3:      { Icon: Music, label: "MP3 Audio",        color: "text-green-500" },
-  photo:    { Icon: Image, label: "Photo",            color: "text-orange-500" },
+  mp4_nowm:  { Icon: Video, label: "MP4 No Watermark", color: "#4f6ef7" },
+  mp4_1080:  { Icon: Video, label: "MP4 1080p",        color: "#4f6ef7" },
+  mp4_720:   { Icon: Film,  label: "MP4 720p",         color: "#a855f7" },
+  mp4:       { Icon: Film,  label: "MP4 Original",     color: "#a855f7" },
+  mp3:       { Icon: Music, label: "MP3 Audio",        color: "#10b981" },
+  photo:     { Icon: Image, label: "Photo",            color: "#f59e0b" },
+  thumbnail: { Icon: Image, label: "Thumbnail",        color: "#f59e0b" },
 };
 
 function timeAgo(ts: number): string {
@@ -39,112 +43,159 @@ export default function HistoryPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-12">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Download History</h1>
-          <p className="text-muted-foreground text-sm mt-1.5 flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5" />
-            Last 10 downloads — auto-saved per session
-          </p>
+    <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
+      <div style={{ maxWidth: 720, margin: "0 auto", padding: "32px 16px 64px" }}>
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28 }}>
+          <div>
+            <h1 style={{ fontSize: 26, fontWeight: 800, color: "#111827", letterSpacing: "-0.02em", margin: 0, marginBottom: 6 }}>
+              Download History
+            </h1>
+            <p style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, color: "#6b7280", margin: 0 }}>
+              <Clock size={13} />
+              Last 10 downloads — saved locally on this device
+            </p>
+          </div>
+          {history.length > 0 && (
+            <button
+              onClick={handleClear}
+              disabled={clearing}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "8px 14px", borderRadius: 10,
+                background: "rgba(239,68,68,0.08)",
+                border: "1px solid rgba(239,68,68,0.25)",
+                color: "#ef4444", fontSize: 13, fontWeight: 600,
+                cursor: "pointer", flexShrink: 0,
+                opacity: clearing ? 0.5 : 1,
+              }}
+            >
+              {clearing ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Trash2 size={14} />}
+              Clear All
+            </button>
+          )}
         </div>
-        {history.length > 0 && (
-          <button
-            onClick={handleClear}
-            disabled={clearing}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-destructive border border-destructive/30 rounded-xl hover:bg-destructive/10 transition-colors disabled:opacity-50"
-          >
-            {clearing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-            Clear All
-          </button>
+
+        {/* Loading */}
+        {loading ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 0", color: "#9ca3af" }}>
+            <Loader2 size={32} style={{ animation: "spin 1s linear infinite", marginBottom: 12 }} />
+            <p style={{ fontSize: 14, margin: 0 }}>Loading history…</p>
+          </div>
+
+        ) : history.length === 0 ? (
+          /* Empty state */
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 0", textAlign: "center" }}>
+            <div style={{
+              width: 72, height: 72, borderRadius: "50%",
+              background: "#e5e7eb",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              marginBottom: 16,
+            }}>
+              <Inbox size={32} color="#9ca3af" />
+            </div>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", margin: 0, marginBottom: 8 }}>
+              No downloads yet
+            </h2>
+            <p style={{ fontSize: 14, color: "#6b7280", maxWidth: 260, lineHeight: 1.6, margin: "0 0 24px" }}>
+              Your download history will appear here after you download a TikTok video.
+            </p>
+            <Link href="/">
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: 7,
+                padding: "11px 24px", borderRadius: 12,
+                background: "linear-gradient(90deg, #7c3aed 0%, #4f6ef7 50%, #06b6d4 100%)",
+                color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer",
+              }}>
+                <Download size={15} />
+                Download a Video
+              </div>
+            </Link>
+          </div>
+
+        ) : (
+          /* History list */
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {history.map((item, i) => {
+              const meta = FORMAT_META[item.format] ?? FORMAT_META["mp4_nowm"];
+              const MetaIcon = meta.Icon;
+              return (
+                <div
+                  key={i}
+                  style={{
+                    background: "#ffffff",
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    borderRadius: 14,
+                    padding: "14px 14px",
+                    display: "flex", gap: 12, alignItems: "center",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+                  }}
+                >
+                  {/* Thumbnail or icon */}
+                  {item.thumbnail ? (
+                    <img
+                      src={item.thumbnail}
+                      alt={item.title}
+                      style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 10, flexShrink: 0, border: "1px solid rgba(0,0,0,0.08)" }}
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                    />
+                  ) : (
+                    <div style={{ width: 56, height: 56, borderRadius: 10, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <MetaIcon size={22} color={meta.color} />
+                    </div>
+                  )}
+
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontWeight: 600, fontSize: 14, color: "#111827", margin: "0 0 3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {item.title || "TikTok Video"}
+                    </p>
+                    <p style={{ fontSize: 12, color: "#9ca3af", margin: "0 0 7px", display: "flex", alignItems: "center", gap: 4 }}>
+                      <User size={11} /> @{item.author || "Unknown"}
+                    </p>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{
+                        display: "inline-flex", alignItems: "center", gap: 4,
+                        fontSize: 11, fontWeight: 600, padding: "3px 8px",
+                        borderRadius: 999, background: `${meta.color}15`,
+                        color: meta.color,
+                      }}>
+                        <MetaIcon size={10} />
+                        {meta.label}
+                      </span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#9ca3af" }}>
+                        <Clock size={10} /> {timeAgo(item.downloaded_at)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Re-download */}
+                  <Link href={`/?url=${encodeURIComponent(item.url)}`}>
+                    <div style={{
+                      flexShrink: 0, display: "flex", alignItems: "center", gap: 5,
+                      padding: "7px 12px", borderRadius: 9, fontSize: 12, fontWeight: 600,
+                      color: "#4f6ef7", border: "1px solid rgba(79,110,247,0.25)",
+                      background: "rgba(79,110,247,0.06)", cursor: "pointer",
+                    }}>
+                      <Download size={12} />
+                      Again
+                    </div>
+                  </Link>
+                </div>
+              );
+            })}
+
+            <p style={{ textAlign: "center", fontSize: 12, color: "#9ca3af", marginTop: 8 }}>
+              {history.length} / 10 — older downloads auto-removed
+            </p>
+          </div>
         )}
       </div>
 
-      {/* Loading */}
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
-          <Loader2 className="w-8 h-8 animate-spin mb-3" />
-          <p className="text-sm">Loading history…</p>
-        </div>
-      ) : history.length === 0 ? (
-        /* Empty */
-        <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-4">
-            <Inbox className="w-9 h-9 text-muted-foreground" />
-          </div>
-          <h2 className="text-xl font-semibold text-foreground mb-2">No downloads yet</h2>
-          <p className="text-muted-foreground text-sm mb-6 max-w-xs">
-            Your download history will appear here after you download a TikTok video.
-          </p>
-          <a
-            href="/"
-            className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-semibold rounded-xl text-sm hover:opacity-90 transition-opacity"
-          >
-            <Download className="w-4 h-4" />
-            Download a Video
-          </a>
-        </div>
-      ) : (
-        /* History list */
-        <div className="space-y-3">
-          {history.map((item, i) => {
-            const meta = FORMAT_META[item.format] ?? FORMAT_META["mp4_nowm"];
-            return (
-              <div
-                key={i}
-                className="bg-card border border-border rounded-2xl p-4 flex gap-4 items-center hover:border-primary/30 transition-all group"
-              >
-                {/* Thumbnail or icon */}
-                {item.thumbnail ? (
-                  <img
-                    src={item.thumbnail}
-                    alt={item.title}
-                    className="w-16 h-16 object-cover rounded-xl flex-shrink-0 border border-border"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                  />
-                ) : (
-                  <div className="w-16 h-16 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0">
-                    <meta.Icon className={`w-6 h-6 ${meta.color}`} />
-                  </div>
-                )}
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm text-foreground line-clamp-1 mb-0.5">
-                    {item.title || "TikTok Video"}
-                  </p>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1 mb-2">
-                    <User className="w-3 h-3" /> @{item.author || "Unknown"}
-                  </p>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`flex items-center gap-1 text-xs bg-secondary px-2 py-0.5 rounded-full ${meta.color}`}>
-                      <meta.Icon className="w-3 h-3" />
-                      {meta.label}
-                    </span>
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Clock className="w-3 h-3" /> {timeAgo(item.downloaded_at)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Re-download */}
-                <a
-                  href={`/?url=${encodeURIComponent(item.url)}`}
-                  className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-primary border border-primary/30 rounded-xl hover:bg-primary hover:text-primary-foreground transition-colors opacity-0 group-hover:opacity-100"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Again
-                </a>
-              </div>
-            );
-          })}
-
-          <p className="text-center text-xs text-muted-foreground pt-2">
-            {history.length} / 10 items — older downloads are auto-removed (FIFO)
-          </p>
-        </div>
-      )}
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }
