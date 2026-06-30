@@ -234,7 +234,7 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════
           SEO TEXT — white
       ══════════════════════════════════════════ */}
-      <section style={{ background: WHITE, padding: "0 24px 52px", borderTop: "1px solid rgba(0,0,0,0.06)" }}>
+      <section style={{ background: WHITE, padding: "0 24px 52px" }}>
         <div style={{ maxWidth: 680, margin: "0 auto" }}>
           <h2 style={{
             fontSize: "clamp(1.5rem, 4vw, 2rem)",
