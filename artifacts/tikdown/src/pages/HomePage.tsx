@@ -273,9 +273,23 @@ export default function HomePage() {
             Frequently Asked Questions
           </h2>
           <div>
-            {HOME_FAQS.map((item) => (
+            {HOME_FAQS.slice(0, 5).map((item) => (
               <FAQItem key={item.q} {...item} />
             ))}
+          </div>
+          <div style={{ textAlign: "center", marginTop: 20 }}>
+            <a href="/faq" style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "11px 28px", borderRadius: 12,
+              background: "linear-gradient(90deg, #7c3aed 0%, #4f6ef7 50%, #06b6d4 100%)",
+              color: "#fff", fontSize: 14, fontWeight: 700,
+              textDecoration: "none", cursor: "pointer",
+            }}>
+              More FAQs
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </a>
           </div>
         </div>
       </section>
