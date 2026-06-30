@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 
 /* ─── Colors ──────────────────────────────────────────── */
-const DARK_BG   = "#1f1c3d";
+const DARK_BG   = "#0d0b1f";
 const DARK_BG2  = "#1a1730";
 const WHITE     = "#ffffff";
 const BLUE      = "#4f6ef7";
@@ -144,21 +144,56 @@ export default function HomePage() {
     <div style={{ overflowX: "hidden" }}>
 
       {/* ══════════════════════════════════════════
-          HERO — dark navy
+          HERO — dark space
       ══════════════════════════════════════════ */}
       <section style={{
-        background: DARK_BG,
+        background: `linear-gradient(160deg, #0d0b1f 0%, #13103a 60%, #0f0d28 100%)`,
         position: "relative",
         overflow: "hidden",
         padding: "52px 24px 52px",
         textAlign: "center",
       }}>
+
+        {/* Purple glow — left */}
         <div style={{
-          position: "absolute", top: "-30%", left: "50%", transform: "translateX(-50%)",
-          width: 600, height: 400,
-          background: "radial-gradient(ellipse at 50% 50%, rgba(124,58,237,0.18) 0%, transparent 70%)",
+          position: "absolute", top: "-10%", left: "-5%",
+          width: 480, height: 480,
+          background: "radial-gradient(ellipse at 50% 50%, rgba(120,40,220,0.22) 0%, transparent 70%)",
           pointerEvents: "none",
         }} />
+
+        {/* Purple glow — center top */}
+        <div style={{
+          position: "absolute", top: "-20%", left: "50%", transform: "translateX(-50%)",
+          width: 600, height: 400,
+          background: "radial-gradient(ellipse at 50% 50%, rgba(100,50,200,0.14) 0%, transparent 70%)",
+          pointerEvents: "none",
+        }} />
+
+        {/* TikTok musical-note watermark — top right */}
+        <div style={{
+          position: "absolute", top: "-10px", right: "-20px",
+          opacity: 0.07, pointerEvents: "none", userSelect: "none",
+          transform: "rotate(-5deg)",
+        }}>
+          <svg width="260" height="300" viewBox="0 0 90 100" fill="white" xmlns="http://www.w3.org/2000/svg">
+            <path d="M62.5 0C63.8 13.2 71.6 21 85 22v14.5c-8.1 0.8-15.2-1.8-22.5-6.3V60c0 19.6-14.8 34-34.3 33.5C9.8 93 0 80.5 0 65.5 0 49.5 12 37 28.2 37c2.8 0 5.5 0.4 8 1.1V53c-2.3-0.8-4.8-1.2-7.3-1.2C18.5 51.8 12 58.2 12 66s6.5 14 14.7 14c8.5 0 14.8-6 14.8-14V0h21Z"/>
+          </svg>
+        </div>
+
+        {/* Scattered stars/dots */}
+        {[
+          [8,15],[92,8],[18,72],[85,55],[45,5],[70,80],[30,45],[60,20],[15,90],[80,30],
+          [50,65],[25,20],[75,70],[40,85],[65,40]
+        ].map(([x, y], i) => (
+          <div key={i} style={{
+            position: "absolute", left: `${x}%`, top: `${y}%`,
+            width: i % 3 === 0 ? 3 : 2, height: i % 3 === 0 ? 3 : 2,
+            borderRadius: "50%",
+            background: `rgba(255,255,255,${i % 4 === 0 ? 0.5 : 0.25})`,
+            pointerEvents: "none",
+          }} />
+        ))}
 
         <div style={{ position: "relative", maxWidth: 640, margin: "0 auto" }}>
           {/* Title */}
