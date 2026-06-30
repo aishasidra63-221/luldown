@@ -165,7 +165,7 @@ export default function HomePage() {
       <section style={{
         background: `linear-gradient(160deg, #16133a 0%, #1f1854 60%, #151230 100%)`,
         position: "relative", overflow: "hidden",
-        padding: "52px 24px 52px", textAlign: "center",
+        padding: "24px 24px 52px", textAlign: "center",
       }}>
         <div style={{ position: "absolute", top: "-10%", left: "-5%", width: 480, height: 480, background: "radial-gradient(ellipse at 50% 50%, rgba(120,40,220,0.22) 0%, transparent 70%)", pointerEvents: "none" }} />
         <div style={{ position: "absolute", top: "-20%", left: "50%", transform: "translateX(-50%)", width: 600, height: 400, background: "radial-gradient(ellipse at 50% 50%, rgba(100,50,200,0.14) 0%, transparent 70%)", pointerEvents: "none" }} />
