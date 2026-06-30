@@ -1,6 +1,6 @@
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState, useEffect, createContext, useContext, lazy, Suspense } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -20,18 +20,13 @@ declare const __RECAPTCHA_SITE_KEY__: string;
 
 const queryClient = new QueryClient();
 
-type Theme = "dark" | "light";
-interface ThemeCtx { theme: Theme; toggle: () => void }
-export const ThemeContext = createContext<ThemeCtx>({ theme: "dark", toggle: () => {} });
-export const useTheme = () => useContext(ThemeContext);
-
 function NotFound() {
   return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center" style={{ background: "#13112b" }}>
       <div className="text-center">
-        <h1 className="text-6xl font-bold text-primary">404</h1>
-        <p className="mt-4 text-muted-foreground">Page not found</p>
-        <a href="/" className="mt-6 inline-block text-primary hover:underline">Go Home</a>
+        <h1 style={{ fontSize: 64, fontWeight: 800, color: "#4f6ef7" }}>404</h1>
+        <p style={{ marginTop: 16, color: "rgba(255,255,255,0.6)" }}>Page not found</p>
+        <a href="/" style={{ marginTop: 24, display: "inline-block", color: "#4f6ef7" }}>Go Home</a>
       </div>
     </div>
   );
@@ -55,55 +50,28 @@ function Router() {
 }
 
 function App() {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window !== "undefined") {
-      return (localStorage.getItem("luldown-theme") as Theme) || "dark";
-    }
-    return "dark";
-  });
-
-  // Sync class on mount only (initial load already handled by inline script)
+  // Fixed dark theme — no toggle
   useEffect(() => {
-    const root = document.documentElement;
-    if (theme === "dark") root.classList.add("dark");
-    else root.classList.remove("dark");
+    document.documentElement.classList.add("dark");
+    localStorage.setItem("luldown-theme", "dark");
   }, []);
-
-  const toggle = () => {
-    const newTheme = theme === "dark" ? "light" : "dark";
-    const root = document.documentElement;
-
-    // Disable all transitions instantly so there's zero flash
-    root.classList.add("no-transition");
-
-    if (newTheme === "dark") root.classList.add("dark");
-    else root.classList.remove("dark");
-
-    localStorage.setItem("luldown-theme", newTheme);
-    setTheme(newTheme);
-
-    // Re-enable transitions after the paint settles
-    requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove("no-transition")));
-  };
 
   const siteKey = __RECAPTCHA_SITE_KEY__;
 
   const inner = (
-    <ThemeContext.Provider value={{ theme, toggle }}>
-      <QueryClientProvider client={queryClient}>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <div className="min-h-screen flex flex-col text-foreground">
-            <Navbar />
-            <main className="flex-1">
-              <Suspense fallback={null}>
-                <Router />
-              </Suspense>
-            </main>
-            <Footer />
-          </div>
-        </WouterRouter>
-      </QueryClientProvider>
-    </ThemeContext.Provider>
+    <QueryClientProvider client={queryClient}>
+      <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+        <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+          <Navbar />
+          <main style={{ flex: 1 }}>
+            <Suspense fallback={null}>
+              <Router />
+            </Suspense>
+          </main>
+          <Footer />
+        </div>
+      </WouterRouter>
+    </QueryClientProvider>
   );
 
   if (siteKey) {

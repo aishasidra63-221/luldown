@@ -1,74 +1,48 @@
 import { useSEO } from "@/hooks/use-seo";
 import DownloaderBox from "@/components/DownloaderBox";
-import { FaTiktok } from "react-icons/fa";
-import { FiGift, FiUser, FiShield, FiHeadphones, FiLock } from "react-icons/fi";
-import { MdHd } from "react-icons/md";
-import { RiShieldCheckLine } from "react-icons/ri";
-import { BsLightningChargeFill, BsClipboard, BsDownload, BsCheck2Circle } from "react-icons/bs";
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 
+/* ─── Colors ──────────────────────────────────────────── */
+const DARK_BG   = "#13112b";
+const DARK_BG2  = "#0f0d24";
+const WHITE     = "#ffffff";
+const BLUE      = "#4f6ef7";
+const GRAY_TEXT = "#6b7280";
+const DARK_TEXT = "#111827";
+
+/* ─── FAQ ────────────────────────────────────────────── */
 const HOME_FAQS = [
-  {
-    q: "Is Luldown free to use?",
-    a: "Yes, 100% free. No subscription, no account, no hidden fees. You can download unlimited videos at no cost.",
-  },
-  {
-    q: "What formats are available?",
-    a: "MP4 1080p (HD, no watermark), MP4 720p (standard, no watermark), and MP3 192kbps (audio only). Photo slideshows show all images directly.",
-  },
-  {
-    q: "Why is the video without a watermark?",
-    a: "TikTok stores two versions of every video — one with a watermark (shown in the app) and one clean original file. Luldown fetches the clean version directly.",
-  },
-  {
-    q: "Is my data safe?",
-    a: "Your download history is stored only in your browser — it never leaves your device. We don't collect or store any personal data on our servers.",
-  },
-  {
-    q: "Does it work on mobile?",
-    a: "Yes. Luldown is fully responsive and works on iPhone, Android, tablets, and all desktop browsers. No app installation needed.",
-  },
-  {
-    q: "Why does the download open in a new tab?",
-    a: "This is a browser security restriction for cross-origin files. On desktop, right-click and choose 'Save As'. On mobile, long-press and tap 'Save'.",
-  },
+  { q: "Is Luldown free to use?",           a: "Yes, 100% free. No subscription, no account, no hidden fees. You can download unlimited videos at no cost." },
+  { q: "What formats are available?",        a: "MP4 1080p (HD, no watermark), MP4 720p (standard, no watermark), and MP3 192kbps (audio only). Photo slideshows show all images directly." },
+  { q: "Why is the video without a watermark?", a: "TikTok stores two versions of every video — one with a watermark (shown in the app) and one clean original file. Luldown fetches the clean version directly." },
+  { q: "Is my data safe?",                   a: "Your download history is stored only in your browser — it never leaves your device. We don't collect or store any personal data on our servers." },
+  { q: "Does it work on mobile?",            a: "Yes. Luldown is fully responsive and works on iPhone, Android, tablets, and all desktop browsers. No app installation needed." },
+  { q: "Why does the download open in a new tab?", a: "This is a browser security restriction for cross-origin files. On desktop, right-click and choose 'Save As'. On mobile, long-press and tap 'Save'." },
 ];
 
-function HomeFAQItem({ q, a }: { q: string; a: string }) {
+function FAQItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
   return (
     <div style={{
-      background: "var(--card-bg)",
-      border: "1px solid var(--card-border)",
-      borderRadius: 12,
+      borderBottom: "1px solid rgba(0,0,0,0.08)",
       overflow: "hidden",
-      transition: "border-color 0.15s",
     }}>
-      <button
-        onClick={() => setOpen(!open)}
-        style={{
-          width: "100%", display: "flex", alignItems: "center",
-          justifyContent: "space-between", gap: 12,
-          padding: "14px 16px", textAlign: "left",
-          background: "transparent", border: "none", cursor: "pointer",
-        }}
-      >
-        <span style={{ fontWeight: 600, fontSize: 13.5, color: "var(--text-primary)", lineHeight: 1.4 }}>{q}</span>
-        <ChevronDown
-          size={16}
-          style={{
-            color: "var(--text-muted)", flexShrink: 0,
-            transform: open ? "rotate(180deg)" : "rotate(0deg)",
-            transition: "transform 0.2s ease",
-          }}
-        />
+      <button onClick={() => setOpen(!open)} style={{
+        width: "100%", display: "flex", alignItems: "center",
+        justifyContent: "space-between", gap: 12,
+        padding: "16px 0", textAlign: "left",
+        background: "transparent", border: "none", cursor: "pointer",
+      }}>
+        <span style={{ fontWeight: 600, fontSize: 14, color: DARK_TEXT, lineHeight: 1.4 }}>{q}</span>
+        <ChevronDown size={16} style={{
+          color: GRAY_TEXT, flexShrink: 0,
+          transform: open ? "rotate(180deg)" : "rotate(0deg)",
+          transition: "transform 0.2s ease",
+        }} />
       </button>
       {open && (
-        <div style={{
-          padding: "0 16px 14px",
-          fontSize: 13, color: "var(--text-muted)", lineHeight: 1.6,
-        }}>
+        <div style={{ padding: "0 0 16px", fontSize: 13.5, color: GRAY_TEXT, lineHeight: 1.65 }}>
           {a}
         </div>
       )}
@@ -76,85 +50,57 @@ function HomeFAQItem({ q, a }: { q: string; a: string }) {
   );
 }
 
+/* ─── Features (3 items, NO cards) ────────────────────── */
 const FEATURES = [
   {
-    label: "No Watermark",
-    sub: "Clean videos",
-    color: "#4f6ef7",
-    bg: "rgba(79,110,247,0.12)",
-    icon: <RiShieldCheckLine size={24} color="#4f6ef7" />,
-  },
-  {
-    label: "HD Quality",
-    sub: "High Quality",
-    color: "#e63f7a",
-    bg: "rgba(230,63,122,0.12)",
-    icon: <MdHd size={26} color="#e63f7a" />,
-  },
-  {
-    label: "Fast Download",
-    sub: "In seconds",
-    color: "#8b5cf6",
-    bg: "rgba(139,92,246,0.12)",
-    icon: <BsLightningChargeFill size={20} color="#8b5cf6" />,
-  },
-  {
-    label: "All Devices",
-    sub: "Android, iOS, PC",
-    color: "#10b981",
-    bg: "rgba(16,185,129,0.12)",
+    label: "Unlimited",
+    desc:  "Download as many TikTok videos as you want — no daily limits.",
     icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <rect x="2" y="3" width="13" height="10" rx="2" stroke="#10b981" strokeWidth="2"/>
-        <rect x="16" y="8" width="6" height="9" rx="1.5" stroke="#10b981" strokeWidth="2"/>
-        <path d="M2 19h13M8 19v2M8.5 21h5" stroke="#10b981" strokeWidth="2" strokeLinecap="round"/>
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+        <path d="M6 18c0-3.31 2.69-6 6-6 1.66 0 3.16.67 4.24 1.76L18 16" stroke="#c084fc" strokeWidth="2.5" strokeLinecap="round"/>
+        <path d="M30 18c0 3.31-2.69 6-6 6-1.66 0-3.16-.67-4.24-1.76L18 20" stroke="#c084fc" strokeWidth="2.5" strokeLinecap="round"/>
+        <path d="M12 18c0-3.31 2.69-6 6-6s6 2.69 6 6-2.69 6-6 6" stroke="#c084fc" strokeWidth="2.5" strokeLinecap="round"/>
+        <ellipse cx="18" cy="18" rx="12" ry="6" stroke="#c084fc" strokeWidth="2.5" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
+  {
+    label: "No Watermark",
+    desc:  "Get clean videos without the TikTok logo or watermark.",
+    icon: (
+      <span style={{ fontSize: 32, lineHeight: 1 }}>🚫</span>
+    ),
+  },
+  {
+    label: "MP4 & MP3",
+    desc:  "Save in HD video or extract audio as MP3 instantly.",
+    icon: (
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+        <path d="M9 18V5l12-2v13" stroke="#9ca3af" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        <circle cx="6" cy="18" r="3" stroke="#9ca3af" strokeWidth="1.8"/>
+        <circle cx="18" cy="16" r="3" stroke="#9ca3af" strokeWidth="1.8"/>
       </svg>
     ),
   },
 ];
 
+/* ─── Steps ──────────────────────────────────────────── */
 const STEPS = [
   {
-    n: "1", title: "Copy link from TikTok",
-    color: "#4f6ef7", badgeColor: "#4f6ef7",
-    bg: "rgba(79,110,247,0.13)",
-    icon: (
-      <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="#4f6ef7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="#4f6ef7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    ),
+    n: "1",
+    title: "Find a TikTok Video",
+    desc:  "Open the TikTok app and find the video you want to save. Play it to confirm it's the right one.",
   },
   {
-    n: "2", title: "Paste the link above",
-    color: "#8b5cf6", badgeColor: "#8b5cf6",
-    bg: "rgba(139,92,246,0.13)",
-    icon: (
-      <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-        <rect x="8" y="2" width="8" height="4" rx="1.5" stroke="#8b5cf6" strokeWidth="2"/>
-        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round"/>
-        <path d="M9 12h6M9 16h4" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
-    ),
+    n: "2",
+    title: "Copy the Link",
+    desc:  "Tap Share → Copy Link. The TikTok URL is now in your clipboard ready to paste.",
   },
   {
-    n: "3", title: "Click download and enjoy",
-    color: "#e63f7a", badgeColor: "#e63f7a",
-    bg: "rgba(230,63,122,0.13)",
-    icon: (
-      <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="9" stroke="#e63f7a" strokeWidth="2"/>
-        <path d="M12 8v6M9 11l3 3 3-3" stroke="#e63f7a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    ),
+    n: "3",
+    title: "Paste & Download",
+    desc:  "Come to LulDown, paste the link in the box above and click Download. Your video saves in seconds.",
   },
-];
-
-const FOOTER_ITEMS = [
-  { icon: <FiGift size={15} />,      label: "100% Free",       color: "#a855f7" },
-  { icon: <FiUser size={15} />,      label: "No Registration", color: "#4f6ef7" },
-  { icon: <FiShield size={15} />,    label: "Secure & Safe",   color: "#10b981" },
-  { icon: <FiHeadphones size={15} />,label: "Fast Support",    color: "#ec4899" },
 ];
 
 export default function HomePage() {
@@ -164,235 +110,179 @@ export default function HomePage() {
   });
 
   return (
-    <div style={{ position: "relative", background: "var(--page-bg)", overflowX: "hidden" }}>
+    <div style={{ overflowX: "hidden" }}>
 
-      {/* ── HERO ─────────────────────────────────── */}
-      <section className="section-wide" style={{ padding: "40px 24px 24px", textAlign: "center", maxWidth: 620, margin: "0 auto", position: "relative" }}>
-
-        {/* TikTok watermark — very faint background */}
+      {/* ══════════════════════════════════════════
+          HERO — dark navy
+      ══════════════════════════════════════════ */}
+      <section style={{
+        background: DARK_BG,
+        position: "relative",
+        overflow: "hidden",
+        padding: "52px 24px 52px",
+        textAlign: "center",
+      }}>
+        {/* Subtle purple glow blob */}
         <div style={{
-          position: "absolute", top: 0, right: 0,
-          opacity: 0.03, pointerEvents: "none", overflow: "hidden",
-          width: 160, height: 200,
-        }}>
-          <FaTiktok size={160} style={{ color: "var(--tiktok-mark)" }} />
-        </div>
+          position: "absolute", top: "-30%", left: "50%", transform: "translateX(-50%)",
+          width: 600, height: 400,
+          background: "radial-gradient(ellipse at 50% 50%, rgba(124,58,237,0.18) 0%, transparent 70%)",
+          pointerEvents: "none",
+        }} />
 
-        {/* Headline */}
-        <h1 style={{
-          fontSize: "clamp(1.75rem, 4.8vw, 2.6rem)",
-          fontWeight: 800, lineHeight: 1.18,
-          color: "var(--text-primary)",
-          marginBottom: 18,
-        }}>
-          TikTok Video Downloader<br />No Watermark
-        </h1>
+        <div style={{ position: "relative", maxWidth: 640, margin: "0 auto" }}>
+          {/* Title */}
+          <h1 style={{
+            fontSize: "clamp(2rem, 6vw, 3rem)",
+            fontWeight: 800, lineHeight: 1.18,
+            color: "#ffffff",
+            marginBottom: 12,
+            letterSpacing: "-0.02em",
+          }}>
+            TikTok Video Downloader
+          </h1>
+          <h1 style={{
+            fontSize: "clamp(1.8rem, 5.5vw, 2.8rem)",
+            fontWeight: 800, lineHeight: 1.18,
+            background: "linear-gradient(90deg, #4f6ef7 0%, #7c3aed 100%)",
+            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+            marginBottom: 20,
+            letterSpacing: "-0.02em",
+          }}>
+            Without Watermark
+          </h1>
 
-        <p style={{
-          fontSize: 14.5, color: "var(--text-muted)",
-          marginBottom: 32, fontWeight: 400, lineHeight: 1.6,
-        }}>
-          Fast. Free. High Quality.
-        </p>
+          <p style={{
+            fontSize: 15, color: "rgba(255,255,255,0.55)",
+            marginBottom: 40, fontWeight: 400, lineHeight: 1.6,
+          }}>
+            Fast. Free. High Quality. No Registration.
+          </p>
 
-        {/* Downloader */}
-        <div style={{ maxWidth: 680, margin: "0 auto" }}>
-          <DownloaderBox />
+          {/* Downloader box */}
+          <div style={{ maxWidth: 620, margin: "0 auto" }}>
+            <DownloaderBox />
+          </div>
+
+          {/* Advertisement placeholder */}
+          <div style={{
+            marginTop: 28,
+            padding: "14px 20px",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 10,
+            background: "rgba(255,255,255,0.03)",
+            color: "rgba(255,255,255,0.25)",
+            fontSize: 12, letterSpacing: "0.08em",
+          }}>
+            — Advertisement —
+          </div>
         </div>
       </section>
 
-      {/* ── FEATURES ──────────────────────────────── */}
-      <section className="section-wide" style={{ padding: "36px 24px 0", maxWidth: 600, margin: "0 auto" }}>
+      {/* ══════════════════════════════════════════
+          FEATURES — pure white, NO cards
+      ══════════════════════════════════════════ */}
+      <section style={{ background: WHITE, padding: "52px 24px" }}>
         <div style={{
-          display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8,
-          background: "var(--card-bg)", borderRadius: 18,
-          border: "1px solid var(--card-border)",
-          padding: "22px 12px",
-        }}>
-          {FEATURES.map(({ label, sub, color, bg, icon }) => (
-            <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 9 }}>
-              <div style={{
-                width: 46, height: 46, borderRadius: "50%",
-                background: bg,
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                {icon}
-              </div>
-              <div style={{ textAlign: "center" }}>
-                <p style={{ fontWeight: 700, fontSize: 11, color: "var(--text-primary)", lineHeight: 1.3, marginBottom: 2 }}>{label}</p>
-                <p style={{ fontSize: 10, color: "var(--text-muted)" }}>{sub}</p>
-              </div>
+          maxWidth: 860, margin: "0 auto",
+          display: "grid",
+          gridTemplateColumns: "repeat(3, 1fr)",
+          gap: "32px 40px",
+        }}
+          className="features-grid"
+        >
+          {FEATURES.map(({ label, desc, icon }) => (
+            <div key={label} style={{ textAlign: "left" }}>
+              <div style={{ marginBottom: 14 }}>{icon}</div>
+              <h3 style={{ fontWeight: 700, fontSize: 15, color: DARK_TEXT, marginBottom: 8 }}>{label}</h3>
+              <p style={{ fontSize: 13.5, color: GRAY_TEXT, lineHeight: 1.65 }}>{desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ──────────────────────────── */}
-      <section className="section-wide" style={{ padding: "36px 24px 0", maxWidth: 640, margin: "0 auto" }}>
-        <h2 style={{
-          textAlign: "center", fontWeight: 800, fontSize: 17,
-          color: "var(--text-primary)", marginBottom: 18,
-        }}>
-          How it works?
-        </h2>
+      {/* ══════════════════════════════════════════
+          SEO TEXT — white
+      ══════════════════════════════════════════ */}
+      <section style={{ background: WHITE, padding: "0 24px 52px", borderTop: "1px solid rgba(0,0,0,0.06)" }}>
+        <div style={{ maxWidth: 680, margin: "0 auto" }}>
+          <h2 style={{
+            fontSize: "clamp(1.5rem, 4vw, 2rem)",
+            fontWeight: 800, color: DARK_TEXT, lineHeight: 1.25,
+            marginBottom: 18,
+          }}>
+            Download TikTok Videos Online — Free
+          </h2>
+          <p style={{ fontSize: 14.5, color: GRAY_TEXT, lineHeight: 1.75, marginBottom: 20 }}>
+            LulDown is a free TikTok downloader tool that helps you save TikTok videos without watermark
+            in the highest quality MP4 format. No registration, no app needed — just paste the link and
+            download instantly on any device.
+          </p>
+          <a href="#how-to" style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            fontSize: 14, fontWeight: 600, color: BLUE,
+            textDecoration: "none",
+          }}>
+            Here's how it's done:
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={BLUE} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </a>
+        </div>
+      </section>
 
-        <div className="steps-grid">
-          {STEPS.map(({ n, title, icon, bg, color }) => (
-            <div key={n} style={{
-              background: "var(--card-bg)",
-              borderRadius: 16,
-              border: "1px solid var(--card-border)",
-              padding: "32px 20px 28px",
-              display: "flex", flexDirection: "column",
-              alignItems: "center", textAlign: "center", gap: 14,
-              flex: 1,
-            }}>
-              {/* Icon circle */}
-              <div style={{ position: "relative", flexShrink: 0 }}>
+      {/* ══════════════════════════════════════════
+          HOW TO — dark navy again
+      ══════════════════════════════════════════ */}
+      <section id="how-to" style={{ background: DARK_BG2, padding: "52px 24px" }}>
+        <div style={{ maxWidth: 680, margin: "0 auto" }}>
+          <h2 style={{
+            fontSize: "clamp(1.25rem, 3.5vw, 1.6rem)",
+            fontWeight: 800, color: WHITE, lineHeight: 1.3,
+            marginBottom: 36,
+          }}>
+            How to download TikTok without watermark?
+          </h2>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+            {STEPS.map(({ n, title, desc }) => (
+              <div key={n} style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
+                {/* Number badge */}
                 <div style={{
-                  width: 72, height: 72, borderRadius: "50%",
-                  background: bg,
+                  width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
+                  background: BLUE,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  {icon}
-                </div>
-                <div style={{
-                  position: "absolute", bottom: -2, right: -2,
-                  width: 22, height: 22, borderRadius: "50%",
-                  background: color,
-                  color: "#fff", fontSize: 11, fontWeight: 900,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  border: "2px solid var(--card-bg)",
-                  boxShadow: `0 2px 8px ${color}55`,
+                  fontWeight: 800, fontSize: 15, color: WHITE,
+                  boxShadow: `0 4px 14px rgba(79,110,247,0.4)`,
                 }}>
                   {n}
                 </div>
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: 15, color: WHITE, marginBottom: 6 }}>{title}</p>
+                  <p style={{ fontSize: 13.5, color: "rgba(255,255,255,0.55)", lineHeight: 1.65 }}>{desc}</p>
+                </div>
               </div>
-
-              {/* Text */}
-              <div>
-                <p style={{
-                  fontSize: 14, fontWeight: 700,
-                  color: "var(--text-primary)", lineHeight: 1.4,
-                  marginBottom: 4,
-                }}>
-                  {title}
-                </p>
-                <p style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>
-                  {n === "1" && "Open TikTok and copy the video link"}
-                  {n === "2" && "Paste the link into the box above"}
-                  {n === "3" && "Choose your format and download"}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── SAFE & SECURE ─────────────────────────── */}
-      <section className="section-wide" style={{ padding: "36px 24px 0", maxWidth: 600, margin: "0 auto" }}>
-        <div style={{
-          background: "var(--safe-card-bg)",
-          borderRadius: 18,
-          border: "1px solid rgba(16,185,129,0.18)",
-          padding: "22px 24px",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          overflow: "hidden", position: "relative",
-        }}>
-          {/* Subtle green glow in background */}
-          <div style={{
-            position: "absolute", inset: 0,
-            background: "radial-gradient(ellipse at 30% 50%, rgba(16,185,129,0.07) 0%, transparent 70%)",
-            pointerEvents: "none",
-          }} />
-
-          {/* Left: Lock icon + text */}
-          <div style={{ display: "flex", alignItems: "center", gap: 16, position: "relative" }}>
-            <div style={{
-              width: 62, height: 62, borderRadius: "50%",
-              background: "rgba(16,185,129,0.13)",
-              border: "1.5px solid rgba(16,185,129,0.2)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              flexShrink: 0,
-            }}>
-              <FiLock size={28} color="#10b981" strokeWidth={2.2} />
-            </div>
-            <div>
-              <p style={{ fontWeight: 800, fontSize: 16, color: "#10b981", marginBottom: 5, letterSpacing: "-0.01em" }}>
-                Safe &amp; Secure
-              </p>
-              <p style={{ fontSize: 12.5, color: "var(--text-muted)", lineHeight: 1.55 }}>
-                We don't store any videos.<br />Your data is 100% safe.
-              </p>
-            </div>
-          </div>
-
-          {/* Right: Shield with sparkles */}
-          <div style={{ position: "relative", flexShrink: 0, marginLeft: 12 }}>
-            {/* Sparkle stars */}
-            <span style={{ position: "absolute", top: -8, right: 2, fontSize: 13, color: "#10b981", opacity: 0.8 }}>✦</span>
-            <span style={{ position: "absolute", top: 4, right: -10, fontSize: 9, color: "#10b981", opacity: 0.6 }}>✦</span>
-            <span style={{ position: "absolute", bottom: -6, left: -8, fontSize: 10, color: "#10b981", opacity: 0.6 }}>✦</span>
-
-            <div style={{
-              width: 68, height: 68, borderRadius: "50%",
-              background: "rgba(16,185,129,0.1)",
-              border: "1.5px solid rgba(16,185,129,0.18)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              {/* Shield with check SVG */}
-              <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L4 5v6c0 5.25 3.5 10.15 8 11.35C16.5 21.15 20 16.25 20 11V5L12 2z"
-                  stroke="#10b981" strokeWidth="1.8" strokeLinejoin="round"
-                  fill="rgba(16,185,129,0.12)" />
-                <path d="M9 12l2 2 4-4" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* ── FAQ ───────────────────────────────────── */}
-      <section className="section-wide" style={{ padding: "36px 24px 0", maxWidth: 600, margin: "0 auto" }}>
-        <h2 style={{
-          textAlign: "center", fontWeight: 800, fontSize: 17,
-          color: "var(--text-primary)", marginBottom: 14,
-        }}>
-          Frequently Asked Questions
-        </h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {HOME_FAQS.map((item) => (
-            <HomeFAQItem key={item.q} {...item} />
-          ))}
+      {/* ══════════════════════════════════════════
+          FAQ — white
+      ══════════════════════════════════════════ */}
+      <section style={{ background: WHITE, padding: "52px 24px" }}>
+        <div style={{ maxWidth: 680, margin: "0 auto" }}>
+          <h2 style={{ fontWeight: 800, fontSize: "clamp(1.2rem, 3vw, 1.5rem)", color: DARK_TEXT, marginBottom: 24 }}>
+            Frequently Asked Questions
+          </h2>
+          <div>
+            {HOME_FAQS.map((item) => (
+              <FAQItem key={item.q} {...item} />
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ── FOOTER BAR ────────────────────────────── */}
-      <section className="section-wide" style={{ padding: "20px 24px 48px", maxWidth: 600, margin: "0 auto" }}>
-        <div style={{
-          background: "var(--card-bg)",
-          borderRadius: 18,
-          border: "1px solid var(--card-border)",
-          padding: "0 8px",
-          display: "flex", alignItems: "stretch",
-          overflow: "hidden",
-        }}>
-          {FOOTER_ITEMS.map(({ icon, label, color }, i) => (
-            <div key={label} style={{
-              flex: 1,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-              padding: "14px 6px",
-              fontSize: 11, fontWeight: 600,
-              color: "var(--text-secondary)",
-              borderRight: i < FOOTER_ITEMS.length - 1 ? "1px solid var(--card-border)" : "none",
-            }}>
-              <span style={{ color }}>{icon}</span>
-              <span>{label}</span>
-            </div>
-          ))}
-        </div>
-
-      </section>
     </div>
   );
 }
