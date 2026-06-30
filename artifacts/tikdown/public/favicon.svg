@@ -1,3 +1,12 @@
 <svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="180" height="180" rx="36" fill="#FF3C00"/>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+  </defs>
+  <rect width="180" height="180" rx="40" fill="url(#bg)"/>
+  <line x1="90" y1="32" x2="90" y2="112" stroke="white" stroke-width="15" stroke-linecap="round"/>
+  <polyline points="57,86 90,119 123,86" stroke="white" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M42,140 L42,148 Q42,156 50,156 L130,156 Q138,156 138,148 L138,140" stroke="white" stroke-width="15" stroke-linecap="round" fill="none"/>
 </svg>
