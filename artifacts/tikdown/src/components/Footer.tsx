@@ -73,7 +73,7 @@ export default function Footer() {
             <div key={heading}>
               <h4 style={{
                 fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
-                textTransform: "uppercase", color: "#7c3aed", marginBottom: 16,
+                textTransform: "uppercase", color: "#ffffff", marginBottom: 16,
               }}>
                 {heading}
               </h4>
