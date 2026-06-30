@@ -163,7 +163,7 @@ export default function HomePage() {
 
       {/* ══════════ HERO ══════════ */}
       <section style={{
-        background: `linear-gradient(160deg, #1e1a3f 0%, #2a2260 60%, #1a1840 100%)`,
+        background: `linear-gradient(160deg, #16133a 0%, #1f1854 60%, #151230 100%)`,
         position: "relative", overflow: "hidden",
         padding: "52px 24px 52px", textAlign: "center",
       }}>
@@ -174,9 +174,6 @@ export default function HomePage() {
             <path d="M62.5 0C63.8 13.2 71.6 21 85 22v14.5c-8.1 0.8-15.2-1.8-22.5-6.3V60c0 19.6-14.8 34-34.3 33.5C9.8 93 0 80.5 0 65.5 0 49.5 12 37 28.2 37c2.8 0 5.5 0.4 8 1.1V53c-2.3-0.8-4.8-1.2-7.3-1.2C18.5 51.8 12 58.2 12 66s6.5 14 14.7 14c8.5 0 14.8-6 14.8-14V0h21Z"/>
           </svg>
         </div>
-        {[[8,15],[92,8],[18,72],[85,55],[45,5],[70,80],[30,45],[60,20],[15,90],[80,30],[50,65],[25,20],[75,70],[40,85],[65,40]].map(([x,y],i) => (
-          <div key={i} style={{ position: "absolute", left: `${x}%`, top: `${y}%`, width: i%3===0?3:2, height: i%3===0?3:2, borderRadius: "50%", background: `rgba(255,255,255,${i%4===0?0.5:0.25})`, pointerEvents: "none" }} />
-        ))}
 
         <div style={{ position: "relative", maxWidth: 640, margin: "0 auto" }}>
           <h1 style={{ fontSize: "clamp(2rem,6vw,3rem)", fontWeight: 800, lineHeight: 1.18, color: "#ffffff", marginBottom: 12, letterSpacing: "-0.02em" }}>
