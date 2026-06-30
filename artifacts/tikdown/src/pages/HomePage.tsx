@@ -155,34 +155,26 @@ export default function HomePage() {
           HERO — dark space
       ══════════════════════════════════════════ */}
       <section style={{
-        background: `linear-gradient(160deg, #130f35 0%, #1c1450 45%, #16103e 100%)`,
+        background: `linear-gradient(160deg, #0d0b1f 0%, #13103a 60%, #0f0d28 100%)`,
         position: "relative",
         overflow: "hidden",
         padding: "52px 24px 52px",
         textAlign: "center",
       }}>
 
-        {/* Purple glow — left side (like reference) */}
+        {/* Purple glow — left */}
         <div style={{
-          position: "absolute", top: "20%", left: "-8%",
-          width: 340, height: 340,
-          background: "radial-gradient(circle, rgba(130,50,230,0.45) 0%, rgba(100,30,200,0.2) 40%, transparent 70%)",
+          position: "absolute", top: "-10%", left: "-5%",
+          width: 480, height: 480,
+          background: "radial-gradient(ellipse at 50% 50%, rgba(120,40,220,0.22) 0%, transparent 70%)",
           pointerEvents: "none",
         }} />
 
-        {/* Blue/cyan glow — bottom right (like reference) */}
+        {/* Purple glow — center top */}
         <div style={{
-          position: "absolute", bottom: "-10%", right: "5%",
-          width: 300, height: 300,
-          background: "radial-gradient(circle, rgba(40,100,255,0.35) 0%, rgba(60,80,220,0.15) 40%, transparent 70%)",
-          pointerEvents: "none",
-        }} />
-
-        {/* Subtle center glow */}
-        <div style={{
-          position: "absolute", top: "-10%", left: "50%", transform: "translateX(-50%)",
-          width: 700, height: 350,
-          background: "radial-gradient(ellipse, rgba(80,40,180,0.12) 0%, transparent 70%)",
+          position: "absolute", top: "-20%", left: "50%", transform: "translateX(-50%)",
+          width: 600, height: 400,
+          background: "radial-gradient(ellipse at 50% 50%, rgba(100,50,200,0.14) 0%, transparent 70%)",
           pointerEvents: "none",
         }} />
 
