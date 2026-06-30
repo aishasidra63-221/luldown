@@ -57,9 +57,9 @@ function IconCircle({ color, bg, border, children }: {
 }) {
   return (
     <div style={{
-      width: 58, height: 58, borderRadius: "50%",
+      width: 80, height: 80, borderRadius: "50%",
       background: bg,
-      border: `2px solid ${border}`,
+      border: `2.5px solid ${border}`,
       display: "flex", alignItems: "center", justifyContent: "center",
       flexShrink: 0,
     }}>
@@ -76,7 +76,7 @@ const FEATURES = [
       <IconCircle color="#c084fc" bg="rgba(192,132,252,0.1)" border="rgba(192,132,252,0.45)">
         {/* ∞ Unicode with gradient — most accurate render */}
         <span style={{
-          fontSize: 30, fontWeight: 900, lineHeight: 1,
+          fontSize: 42, fontWeight: 900, lineHeight: 1,
           background: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)",
           WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
           backgroundClip: "text",
@@ -92,7 +92,7 @@ const FEATURES = [
     icon: (
       <IconCircle color="#ef4444" bg="rgba(239,68,68,0.1)" border="rgba(239,68,68,0.4)">
         {/* Prohibition / no symbol — outer ring + diagonal slash */}
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+        <svg width="42" height="42" viewBox="0 0 24 24" fill="none">
           <circle cx="12" cy="12" r="9" stroke="#ef4444" strokeWidth="2"/>
           <line x1="5.64" y1="5.64" x2="18.36" y2="18.36" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"/>
         </svg>
@@ -105,7 +105,7 @@ const FEATURES = [
     icon: (
       <IconCircle color="#6366f1" bg="rgba(99,102,241,0.1)" border="rgba(99,102,241,0.4)">
         {/* Single music note */}
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none">
           <path d="M9 18V5l12-2v13" stroke="#818cf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           <circle cx="6" cy="18" r="3" fill="rgba(129,140,248,0.25)" stroke="#818cf8" strokeWidth="2"/>
           <circle cx="18" cy="16" r="3" fill="rgba(129,140,248,0.25)" stroke="#818cf8" strokeWidth="2"/>
@@ -224,8 +224,8 @@ export default function HomePage() {
           {FEATURES.map(({ label, desc, icon }) => (
             <div key={label} style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
               <div style={{ marginBottom: 16 }}>{icon}</div>
-              <h3 style={{ fontWeight: 800, fontSize: 20, color: DARK_TEXT, marginBottom: 10, lineHeight: 1.3 }}>{label}</h3>
-              <p style={{ fontSize: 14.5, color: GRAY_TEXT, lineHeight: 1.65, maxWidth: 200 }}>{desc}</p>
+              <h3 style={{ fontWeight: 800, fontSize: 24, color: DARK_TEXT, marginBottom: 10, lineHeight: 1.3 }}>{label}</h3>
+              <p style={{ fontSize: 15.5, color: GRAY_TEXT, lineHeight: 1.65, maxWidth: 220 }}>{desc}</p>
             </div>
           ))}
         </div>
