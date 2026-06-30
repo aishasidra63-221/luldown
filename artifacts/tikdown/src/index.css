@@ -254,11 +254,26 @@
   gap: 10px;
   width: 100%;
 }
+@media (min-width: 600px) {
+  .input-action-row {
+    flex-direction: row;
+    align-items: stretch;
+  }
+  .input-action-row .input-box {
+    flex: 1;
+  }
+  .dl-btn {
+    width: auto !important;
+    white-space: nowrap;
+    padding: 0 26px !important;
+    border-radius: 14px !important;
+  }
+}
 .dl-btn {
   width: 100%;
   padding: 15px;
   border-radius: 14px;
-  font-size: 15.5px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.01em;
 }
@@ -266,42 +281,46 @@
 /* ─── Input box ──────────────────────────── */
 .input-box {
   display: flex; align-items: center;
-  background: rgba(255,255,255,0.96);
-  border: none;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.15);
+  background: rgba(255,255,255,0.08);
+  border: 1.5px solid rgba(255,255,255,0.15);
+  border-radius: 14px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
   outline: none;
-  min-height: 60px;
+  min-height: 58px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 .input-box input {
   font-weight: 400 !important;
   font-family: inherit !important;
-  color: #1e1b3a !important;
+  color: rgba(255,255,255,0.9) !important;
   font-size: 15px !important;
 }
 .input-box input::placeholder {
-  color: #a0a8be !important;
+  color: rgba(255,255,255,0.38) !important;
 }
 .dark .input-box {
-  background: rgba(255,255,255,0.96);
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.15);
 }
 .input-box:focus-within {
   outline: none;
-  box-shadow: 0 8px 32px rgba(79,110,247,0.3), 0 2px 8px rgba(0,0,0,0.15);
+  border-color: rgba(79,110,247,0.6);
+  box-shadow: 0 4px 24px rgba(79,110,247,0.2);
 }
 
 /* Paste / Clear button inside input box */
 .input-box .btn-ghost {
-  background: #f0f0ff !important;
-  border-color: rgba(79,110,247,0.25) !important;
-  color: #4f6ef7 !important;
-  border-width: 1.5px !important;
+  background: rgba(255,255,255,0.12) !important;
+  border-color: rgba(255,255,255,0.2) !important;
+  color: rgba(255,255,255,0.9) !important;
+  border-width: 1px !important;
   border-radius: 10px !important;
 }
 .input-box .btn-ghost:hover {
-  background: rgba(79,110,247,0.1) !important;
-  border-color: #4f6ef7 !important;
-  color: #4f6ef7 !important;
+  background: rgba(255,255,255,0.2) !important;
+  border-color: rgba(255,255,255,0.35) !important;
+  color: #ffffff !important;
 }
 
 /* ─── Steps grid ─────────────────────────── */
