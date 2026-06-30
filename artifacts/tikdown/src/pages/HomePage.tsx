@@ -208,7 +208,7 @@ export default function HomePage() {
       {/* ══════════ SEO TEXT ══════════ */}
       <section style={{ background: WHITE, padding: "0 24px 52px" }}>
         <div style={{ maxWidth: 680, margin: "0 auto" }}>
-          <h2 style={{ fontSize: "clamp(1.5rem,4vw,2rem)", fontWeight: 800, color: DARK_TEXT, lineHeight: 1.25, marginBottom: 18 }}>
+          <h2 style={{ fontSize: "clamp(1.5rem,4vw,2rem)", fontWeight: 700, color: DARK_TEXT, lineHeight: 1.25, marginBottom: 18, fontFamily: "'Poppins', sans-serif" }}>
             Download TikTok Videos Online — Free
           </h2>
           <p style={{ fontSize: 14.5, color: GRAY_TEXT, lineHeight: 1.75, marginBottom: 20 }}>
