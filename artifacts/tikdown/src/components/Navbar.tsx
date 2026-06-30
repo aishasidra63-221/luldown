@@ -18,7 +18,7 @@ export default function Navbar() {
       borderBottom: "1px solid rgba(0,0,0,0.08)",
     }}>
       <div style={{
-        width: "100%", padding: "0 24px", height: 60,
+        width: "100%", padding: "0 24px", height: 48,
         display: "flex", alignItems: "center", justifyContent: "space-between",
         maxWidth: 1100, margin: "0 auto", paddingLeft: 16,
       }}>
