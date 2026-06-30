@@ -176,7 +176,7 @@ export default function HomePage() {
         </div>
 
         <div style={{ position: "relative", maxWidth: 640, margin: "0 auto" }}>
-          <h1 style={{ fontSize: "clamp(2rem,6vw,3rem)", fontWeight: 700, lineHeight: 1.2, color: "#ffffff", marginBottom: 12, letterSpacing: "-0.01em" }}>
+          <h1 style={{ fontSize: "clamp(2rem,6vw,3rem)", fontWeight: 700, lineHeight: 1.2, color: "#ffffff", marginBottom: 2, letterSpacing: "-0.01em" }}>
             TikTok Video Downloader
           </h1>
           <h1 style={{ fontSize: "clamp(1.8rem,5.5vw,2.8rem)", fontWeight: 700, lineHeight: 1.2, background: "linear-gradient(90deg, #7c3aed 0%, #4f6ef7 50%, #06b6d4 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", marginBottom: 20, letterSpacing: "-0.01em" }}>
