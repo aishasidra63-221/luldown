@@ -279,7 +279,7 @@ export default function HomePage() {
             Frequently Asked Questions
           </h2>
           <div>
-            {HOME_FAQS.map((item) => (
+            {HOME_FAQS.slice(0, 6).map((item) => (
               <FAQItem key={item.q} {...item} />
             ))}
           </div>
