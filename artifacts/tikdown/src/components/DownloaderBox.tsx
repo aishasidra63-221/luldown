@@ -196,52 +196,6 @@ export default function DownloaderBox({ highlightFormat }: Props) {
         </button>
       )}
 
-      {/* ══════════ SKELETON CARD ══════════ */}
-      {step === "loading-info" && (
-        <div style={{
-          borderRadius:20, overflow:"hidden",
-          background:"linear-gradient(160deg, #1a1040 0%, #0f0a2e 60%, #0a0620 100%)",
-          border:"1px solid rgba(255,255,255,0.08)",
-          boxShadow:"0 20px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(124,58,237,0.15)",
-          animation:"fadeUp 0.3s ease both",
-        }}>
-          {/* Thumbnail skeleton */}
-          <div style={{ width:"100%", height:140, background:"rgba(255,255,255,0.06)", position:"relative", overflow:"hidden" }}>
-            <div style={{ position:"absolute", inset:0, background:"linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%)", animation:"shimmer 1.4s infinite" }} />
-          </div>
-
-          {/* Avatar + text skeleton */}
-          <div style={{ padding:"14px 16px 16px", display:"flex", alignItems:"flex-start", gap:12 }}>
-            <div style={{ width:54, height:54, borderRadius:"50%", flexShrink:0, background:"rgba(255,255,255,0.08)", position:"relative", overflow:"hidden" }}>
-              <div style={{ position:"absolute", inset:0, background:"linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 50%, transparent 100%)", animation:"shimmer 1.4s infinite" }} />
-            </div>
-            <div style={{ flex:1, paddingTop:4 }}>
-              <div style={{ height:14, width:"45%", borderRadius:7, background:"rgba(255,255,255,0.1)", marginBottom:10, position:"relative", overflow:"hidden" }}>
-                <div style={{ position:"absolute", inset:0, background:"linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%)", animation:"shimmer 1.4s infinite" }} />
-              </div>
-              <div style={{ height:12, width:"80%", borderRadius:6, background:"rgba(255,255,255,0.07)", marginBottom:7, position:"relative", overflow:"hidden" }}>
-                <div style={{ position:"absolute", inset:0, background:"linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.07) 50%, transparent 100%)", animation:"shimmer 1.4s infinite 0.1s" }} />
-              </div>
-              <div style={{ height:12, width:"55%", borderRadius:6, background:"rgba(255,255,255,0.07)", position:"relative", overflow:"hidden" }}>
-                <div style={{ position:"absolute", inset:0, background:"linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.07) 50%, transparent 100%)", animation:"shimmer 1.4s infinite 0.2s" }} />
-              </div>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div style={{ height:1, background:"rgba(255,255,255,0.06)", margin:"0 16px" }} />
-
-          {/* Button skeletons */}
-          <div style={{ padding:"12px 12px 14px", display:"flex", flexDirection:"column", gap:7 }}>
-            {["rgba(124,58,237,0.35)","rgba(59,130,246,0.35)","rgba(34,197,94,0.35)","rgba(249,115,22,0.35)"].map((bg, i) => (
-              <div key={i} style={{ height:50, borderRadius:13, background:bg, position:"relative", overflow:"hidden" }}>
-                <div style={{ position:"absolute", inset:0, background:"linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 50%, transparent 100%)", animation:`shimmer 1.4s infinite ${i*0.1}s` }} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Error */}
       {step === "error" && (
         <div className="error-box">
