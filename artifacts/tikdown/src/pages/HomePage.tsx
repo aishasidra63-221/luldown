@@ -186,7 +186,7 @@ export default function HomePage() {
       }}>
         <div style={{ position: "absolute", top: "-10%", left: "-5%", width: 480, height: 480, background: "radial-gradient(ellipse at 50% 50%, rgba(120,40,220,0.22) 0%, transparent 70%)", pointerEvents: "none" }} />
         <div style={{ position: "absolute", top: "-20%", left: "50%", transform: "translateX(-50%)", width: 600, height: 400, background: "radial-gradient(ellipse at 50% 50%, rgba(100,50,200,0.14) 0%, transparent 70%)", pointerEvents: "none" }} />
-        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "140%", height: "140%", background: "radial-gradient(ellipse at 50% 50%, rgba(88,28,135,0.30) 0%, rgba(76,29,149,0.14) 50%, transparent 75%)", pointerEvents: "none", filter: "blur(18px)" }} />
+        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "160%", height: "160%", background: "radial-gradient(ellipse at 50% 50%, rgba(109,40,217,0.45) 0%, rgba(88,28,135,0.22) 45%, transparent 72%)", pointerEvents: "none", filter: "blur(24px)" }} />
         <div style={{ position: "absolute", top: "-10px", right: "-10px", opacity: 0.035, pointerEvents: "none", userSelect: "none", transform: "rotate(-5deg)" }}>
           <svg width="180" height="210" viewBox="0 0 90 100" fill="white" xmlns="http://www.w3.org/2000/svg">
             <path d="M62.5 0C63.8 13.2 71.6 21 85 22v14.5c-8.1 0.8-15.2-1.8-22.5-6.3V60c0 19.6-14.8 34-34.3 33.5C9.8 93 0 80.5 0 65.5 0 49.5 12 37 28.2 37c2.8 0 5.5 0.4 8 1.1V53c-2.3-0.8-4.8-1.2-7.3-1.2C18.5 51.8 12 58.2 12 66s6.5 14 14.7 14c8.5 0 14.8-6 14.8-14V0h21Z"/>
