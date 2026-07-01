@@ -1,5 +1,5 @@
 export type Lang = "en" | "ur" | "hi" | "bn" | "id" | "ar" | "tr" | "es" | "pt" | "ru" | "vi" | "fr" | "de" | "ja" | "ko" | "th" | "it" | "pl";
-export type PageKey = "home" | "mp3" | "story" | "thumbnail" | "viewer";
+export type PageKey = "home" | "mp3" | "story" | "thumbnail" | "viewer" | "apk" | "howto";
 
 export interface LangMeta {
   code: Lang;
@@ -39,6 +39,8 @@ export const PAGE_SLUGS: Record<PageKey, string> = {
   story:     "/story",
   thumbnail: "/thumbnail",
   viewer:    "/viewer",
+  apk:       "/apk",
+  howto:     "/how-to-download-tiktok-video",
 };
 
 export const SITE_URL = "https://luldown.com";
@@ -59,10 +61,12 @@ export function getLangFromPath(path: string): { lang: Lang; pageSlug: string } 
 
 export function getPageKeyFromSlug(slug: string): PageKey {
   const clean = slug.replace(/^\//, "").split("?")[0];
-  if (clean === "mp3")       return "mp3";
-  if (clean === "story")     return "story";
-  if (clean === "thumbnail") return "thumbnail";
-  if (clean === "viewer")    return "viewer";
+  if (clean === "mp3")                           return "mp3";
+  if (clean === "story")                         return "story";
+  if (clean === "thumbnail")                     return "thumbnail";
+  if (clean === "viewer")                        return "viewer";
+  if (clean === "apk")                           return "apk";
+  if (clean === "how-to-download-tiktok-video")  return "howto";
   return "home";
 }
 

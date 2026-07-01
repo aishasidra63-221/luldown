@@ -256,6 +256,98 @@
   <url><loc>https://luldown.com/pl/thumbnail</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.77</priority></url>
   <url><loc>https://luldown.com/pl/viewer</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.72</priority></url>
 
+  <!-- ══════════════════════════════════════════
+       APK / INSTALL PAGE (18 languages)
+  ══════════════════════════════════════════ -->
+  <url>
+    <loc>https://luldown.com/apk</loc>
+    <lastmod>2026-07-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.92</priority>
+    <xhtml:link rel="alternate" hreflang="en"        href="https://luldown.com/apk"/>
+    <xhtml:link rel="alternate" hreflang="ur"        href="https://luldown.com/ur/apk"/>
+    <xhtml:link rel="alternate" hreflang="hi"        href="https://luldown.com/hi/apk"/>
+    <xhtml:link rel="alternate" hreflang="bn"        href="https://luldown.com/bn/apk"/>
+    <xhtml:link rel="alternate" hreflang="id"        href="https://luldown.com/id/apk"/>
+    <xhtml:link rel="alternate" hreflang="ar"        href="https://luldown.com/ar/apk"/>
+    <xhtml:link rel="alternate" hreflang="tr"        href="https://luldown.com/tr/apk"/>
+    <xhtml:link rel="alternate" hreflang="es"        href="https://luldown.com/es/apk"/>
+    <xhtml:link rel="alternate" hreflang="pt"        href="https://luldown.com/pt/apk"/>
+    <xhtml:link rel="alternate" hreflang="ru"        href="https://luldown.com/ru/apk"/>
+    <xhtml:link rel="alternate" hreflang="vi"        href="https://luldown.com/vi/apk"/>
+    <xhtml:link rel="alternate" hreflang="fr"        href="https://luldown.com/fr/apk"/>
+    <xhtml:link rel="alternate" hreflang="de"        href="https://luldown.com/de/apk"/>
+    <xhtml:link rel="alternate" hreflang="ja"        href="https://luldown.com/ja/apk"/>
+    <xhtml:link rel="alternate" hreflang="ko"        href="https://luldown.com/ko/apk"/>
+    <xhtml:link rel="alternate" hreflang="th"        href="https://luldown.com/th/apk"/>
+    <xhtml:link rel="alternate" hreflang="it"        href="https://luldown.com/it/apk"/>
+    <xhtml:link rel="alternate" hreflang="pl"        href="https://luldown.com/pl/apk"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://luldown.com/apk"/>
+  </url>
+  <url><loc>https://luldown.com/ur/apk</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.87</priority></url>
+  <url><loc>https://luldown.com/hi/apk</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.87</priority></url>
+  <url><loc>https://luldown.com/bn/apk</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.87</priority></url>
+  <url><loc>https://luldown.com/id/apk</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://luldown.com/ar/apk</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://luldown.com/tr/apk</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.83</priority></url>
+  <url><loc>https://luldown.com/es/apk</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://luldown.com/pt/apk</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://luldown.com/ru/apk</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.83</priority></url>
+  <url><loc>https://luldown.com/vi/apk</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://luldown.com/fr/apk</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.83</priority></url>
+  <url><loc>https://luldown.com/de/apk</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.83</priority></url>
+  <url><loc>https://luldown.com/ja/apk</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.83</priority></url>
+  <url><loc>https://luldown.com/ko/apk</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.83</priority></url>
+  <url><loc>https://luldown.com/th/apk</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.83</priority></url>
+  <url><loc>https://luldown.com/it/apk</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.82</priority></url>
+  <url><loc>https://luldown.com/pl/apk</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.82</priority></url>
+
+  <!-- ══════════════════════════════════════════
+       HOW-TO PAGE (18 languages)
+  ══════════════════════════════════════════ -->
+  <url>
+    <loc>https://luldown.com/how-to-download-tiktok-video</loc>
+    <lastmod>2026-07-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.93</priority>
+    <xhtml:link rel="alternate" hreflang="en"        href="https://luldown.com/how-to-download-tiktok-video"/>
+    <xhtml:link rel="alternate" hreflang="ur"        href="https://luldown.com/ur/how-to-download-tiktok-video"/>
+    <xhtml:link rel="alternate" hreflang="hi"        href="https://luldown.com/hi/how-to-download-tiktok-video"/>
+    <xhtml:link rel="alternate" hreflang="bn"        href="https://luldown.com/bn/how-to-download-tiktok-video"/>
+    <xhtml:link rel="alternate" hreflang="id"        href="https://luldown.com/id/how-to-download-tiktok-video"/>
+    <xhtml:link rel="alternate" hreflang="ar"        href="https://luldown.com/ar/how-to-download-tiktok-video"/>
+    <xhtml:link rel="alternate" hreflang="tr"        href="https://luldown.com/tr/how-to-download-tiktok-video"/>
+    <xhtml:link rel="alternate" hreflang="es"        href="https://luldown.com/es/how-to-download-tiktok-video"/>
+    <xhtml:link rel="alternate" hreflang="pt"        href="https://luldown.com/pt/how-to-download-tiktok-video"/>
+    <xhtml:link rel="alternate" hreflang="ru"        href="https://luldown.com/ru/how-to-download-tiktok-video"/>
+    <xhtml:link rel="alternate" hreflang="vi"        href="https://luldown.com/vi/how-to-download-tiktok-video"/>
+    <xhtml:link rel="alternate" hreflang="fr"        href="https://luldown.com/fr/how-to-download-tiktok-video"/>
+    <xhtml:link rel="alternate" hreflang="de"        href="https://luldown.com/de/how-to-download-tiktok-video"/>
+    <xhtml:link rel="alternate" hreflang="ja"        href="https://luldown.com/ja/how-to-download-tiktok-video"/>
+    <xhtml:link rel="alternate" hreflang="ko"        href="https://luldown.com/ko/how-to-download-tiktok-video"/>
+    <xhtml:link rel="alternate" hreflang="th"        href="https://luldown.com/th/how-to-download-tiktok-video"/>
+    <xhtml:link rel="alternate" hreflang="it"        href="https://luldown.com/it/how-to-download-tiktok-video"/>
+    <xhtml:link rel="alternate" hreflang="pl"        href="https://luldown.com/pl/how-to-download-tiktok-video"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://luldown.com/how-to-download-tiktok-video"/>
+  </url>
+  <url><loc>https://luldown.com/ur/how-to-download-tiktok-video</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://luldown.com/hi/how-to-download-tiktok-video</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://luldown.com/bn/how-to-download-tiktok-video</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://luldown.com/id/how-to-download-tiktok-video</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.86</priority></url>
+  <url><loc>https://luldown.com/ar/how-to-download-tiktok-video</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.86</priority></url>
+  <url><loc>https://luldown.com/tr/how-to-download-tiktok-video</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.84</priority></url>
+  <url><loc>https://luldown.com/es/how-to-download-tiktok-video</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.86</priority></url>
+  <url><loc>https://luldown.com/pt/how-to-download-tiktok-video</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.86</priority></url>
+  <url><loc>https://luldown.com/ru/how-to-download-tiktok-video</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.84</priority></url>
+  <url><loc>https://luldown.com/vi/how-to-download-tiktok-video</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.86</priority></url>
+  <url><loc>https://luldown.com/fr/how-to-download-tiktok-video</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.84</priority></url>
+  <url><loc>https://luldown.com/de/how-to-download-tiktok-video</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.84</priority></url>
+  <url><loc>https://luldown.com/ja/how-to-download-tiktok-video</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.84</priority></url>
+  <url><loc>https://luldown.com/ko/how-to-download-tiktok-video</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.84</priority></url>
+  <url><loc>https://luldown.com/th/how-to-download-tiktok-video</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.84</priority></url>
+  <url><loc>https://luldown.com/it/how-to-download-tiktok-video</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.83</priority></url>
+  <url><loc>https://luldown.com/pl/how-to-download-tiktok-video</loc><lastmod>2026-07-01</lastmod><changefreq>weekly</changefreq><priority>0.83</priority></url>
+
   <!-- ══ UTILITY / BLOG ══ -->
   <url><loc>https://luldown.com/faq</loc><lastmod>2026-07-01</lastmod><changefreq>monthly</changefreq><priority>0.70</priority></url>
   <url><loc>https://luldown.com/privacy</loc><lastmod>2026-07-01</lastmod><changefreq>yearly</changefreq><priority>0.40</priority></url>

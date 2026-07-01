@@ -19,6 +19,8 @@ const ThumbnailPage  = lazy(() => import("@/pages/ThumbnailPage"));
 const ViewerPage     = lazy(() => import("@/pages/ViewerPage"));
 const SsstikAltPage  = lazy(() => import("@/pages/SsstikAltPage"));
 const LangHomePage   = lazy(() => import("@/pages/LangHomePage"));
+const ApkPage        = lazy(() => import("@/pages/ApkPage"));
+const HowToPage      = lazy(() => import("@/pages/HowToPage"));
 
 declare const __RECAPTCHA_SITE_KEY__: string;
 
@@ -56,11 +58,17 @@ function Router() {
       <Route path="/blog"       component={BlogIndexPage} />
       <Route path="/blog/:slug" component={BlogPostPage} />
 
+      {/* ── English tool pages ── */}
+      <Route path="/apk"                             component={ApkPage} />
+      <Route path="/how-to-download-tiktok-video"    component={HowToPage} />
+
       {/* ── Language-prefixed tool pages ── */}
-      <Route path="/:lang/mp3"       component={Mp3Page} />
-      <Route path="/:lang/story"     component={StoryPage} />
-      <Route path="/:lang/thumbnail" component={ThumbnailPage} />
-      <Route path="/:lang/viewer"    component={ViewerPage} />
+      <Route path="/:lang/mp3"                            component={Mp3Page} />
+      <Route path="/:lang/story"                          component={StoryPage} />
+      <Route path="/:lang/thumbnail"                      component={ThumbnailPage} />
+      <Route path="/:lang/viewer"                         component={ViewerPage} />
+      <Route path="/:lang/apk"                            component={ApkPage} />
+      <Route path="/:lang/how-to-download-tiktok-video"   component={HowToPage} />
 
       {/* ── Language home pages (must be last to avoid swallowing other routes) ── */}
       <Route path="/:lang" component={LangHomePage} />
