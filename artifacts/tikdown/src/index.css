@@ -262,12 +262,6 @@
   font-size: 15.5px;
   font-weight: 700;
   letter-spacing: 0.01em;
-  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 60%, #4f6ef7 100%) !important;
-  border: none !important;
-  box-shadow: 0 4px 18px rgba(109,40,217,0.35) !important;
-}
-.dl-btn:hover:not(:disabled) {
-  box-shadow: 0 6px 22px rgba(109,40,217,0.50) !important;
 }
 
 @media (max-width: 640px) {
