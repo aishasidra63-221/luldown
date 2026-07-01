@@ -182,7 +182,7 @@ export default function HomePage() {
           <h1 style={{ fontSize: "clamp(1.8rem,5.5vw,2.8rem)", fontWeight: 700, lineHeight: 1.2, background: "linear-gradient(90deg, #7c3aed 0%, #4f6ef7 50%, #06b6d4 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", marginBottom: 8, letterSpacing: "-0.01em" }}>
             No Watermark
           </h1>
-          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.55)", marginBottom: 40, fontWeight: 400, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.55)", marginBottom: 40, fontWeight: 400, lineHeight: 1.6, transition: "none" }}>
             Fast. Free. High Quality. No Registration.
           </p>
           <div style={{ maxWidth: 780, margin: "0 auto" }}>
