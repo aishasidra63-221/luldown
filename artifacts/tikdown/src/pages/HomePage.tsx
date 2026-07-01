@@ -187,12 +187,6 @@ export default function HomePage() {
         <div style={{ position: "absolute", top: "-10%", left: "-5%", width: 480, height: 480, background: "radial-gradient(ellipse at 50% 50%, rgba(120,40,220,0.22) 0%, transparent 70%)", pointerEvents: "none" }} />
         <div style={{ position: "absolute", top: "-20%", left: "50%", transform: "translateX(-50%)", width: 600, height: 400, background: "radial-gradient(ellipse at 50% 50%, rgba(100,50,200,0.14) 0%, transparent 70%)", pointerEvents: "none" }} />
         <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "160%", height: "160%", background: "radial-gradient(ellipse at 50% 50%, rgba(109,40,217,0.38) 0%, rgba(88,28,135,0.16) 45%, transparent 72%)", pointerEvents: "none" }} />
-        <div style={{ position: "absolute", top: "20px", right: "10px", opacity: 0.055, pointerEvents: "none", userSelect: "none", transform: "rotate(-22deg)" }}>
-          <svg width="130" height="130" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="1" y="4" width="17" height="16" rx="2.5" fill="white"/>
-            <path d="M18 9l5-3v12l-5-3V9z" fill="white"/>
-          </svg>
-        </div>
 
         <div style={{ position: "relative", maxWidth: 640, margin: "0 auto" }}>
           <h1 style={{ fontSize: "clamp(2rem,6vw,3rem)", fontWeight: 700, lineHeight: 1.05, color: "#ffffff", marginBottom: 2, letterSpacing: "-0.01em" }}>
