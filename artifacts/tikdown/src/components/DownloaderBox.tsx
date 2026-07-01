@@ -2,25 +2,91 @@ import { useState, useCallback, useRef } from "react";
 import { fetchVideoInfo, downloadVideo, downloadPhoto, VideoInfo, DownloadFormat } from "@/lib/api";
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import {
-  Video, Music, Film, Clipboard, Download, Image,
-  AlertCircle, Loader2, X, FlaskConical, Link as LinkIcon,
+  Music, Clipboard, Download, Image,
+  AlertCircle, Loader2, X, FlaskConical,
 } from "lucide-react";
 
-const FORMAT_OPTIONS: { format: DownloadFormat; label: string; Icon: React.ElementType }[] = [
-  { format: "mp4_1080",  label: "Download HD 1080p — No Watermark", Icon: Video },
-  { format: "mp4_720",   label: "Download 720p — No Watermark",     Icon: Film  },
-  { format: "mp3",       label: "Download MP3 Audio — 192kbps",     Icon: Music },
-  { format: "thumbnail", label: "Download Thumbnail",               Icon: Image },
+interface FormatConfig {
+  format: DownloadFormat;
+  badge: string;
+  label: string;
+  sublabel: string;
+  badges: { icon: string; text: string; color: string }[];
+  badgeColor: string;
+  rowBg: string;
+  rowBorder: string;
+  btnBg: string;
+  iconEl: React.ReactNode;
+}
+
+const FORMAT_CONFIGS: FormatConfig[] = [
+  {
+    format: "mp4_1080",
+    badge: "1080p\nHD",
+    label: "Download 1080p — No Watermark",
+    sublabel: "",
+    badges: [
+      { icon: "⭐", text: "Best Quality", color: "#f59e0b" },
+      { icon: "🟢", text: "Recommended", color: "#10b981" },
+    ],
+    badgeColor: "#7c3aed",
+    rowBg: "rgba(124,58,237,0.08)",
+    rowBorder: "rgba(124,58,237,0.22)",
+    btnBg: "linear-gradient(135deg,#7c3aed,#6d28d9)",
+    iconEl: <span style={{ fontSize: 10, fontWeight: 900, textAlign: "center", lineHeight: 1.2, color: "#fff" }}>1080p{"\n"}HD</span>,
+  },
+  {
+    format: "mp4_720",
+    badge: "720p\nHD",
+    label: "Download 720p — No Watermark",
+    sublabel: "",
+    badges: [
+      { icon: "🔵", text: "Good Quality", color: "#3b82f6" },
+    ],
+    badgeColor: "#1d4ed8",
+    rowBg: "rgba(29,78,216,0.07)",
+    rowBorder: "rgba(29,78,216,0.2)",
+    btnBg: "linear-gradient(135deg,#1d4ed8,#1e40af)",
+    iconEl: <span style={{ fontSize: 10, fontWeight: 900, textAlign: "center", lineHeight: 1.2, color: "#fff" }}>720p{"\n"}HD</span>,
+  },
+  {
+    format: "mp3",
+    badge: "MP3",
+    label: "Download MP3 Audio — 192kbps",
+    sublabel: "",
+    badges: [
+      { icon: "🟢", text: "High Quality Audio", color: "#10b981" },
+    ],
+    badgeColor: "#15803d",
+    rowBg: "rgba(21,128,61,0.07)",
+    rowBorder: "rgba(21,128,61,0.2)",
+    btnBg: "linear-gradient(135deg,#16a34a,#15803d)",
+    iconEl: <Music size={18} color="#fff" />,
+  },
+  {
+    format: "thumbnail",
+    badge: "IMG",
+    label: "Download Thumbnail",
+    sublabel: "",
+    badges: [
+      { icon: "🟡", text: "JPG Image", color: "#f59e0b" },
+    ],
+    badgeColor: "#b45309",
+    rowBg: "rgba(180,83,9,0.07)",
+    rowBorder: "rgba(180,83,9,0.2)",
+    btnBg: "linear-gradient(135deg,#d97706,#b45309)",
+    iconEl: <Image size={18} color="#fff" />,
+  },
 ];
 
 const DEMO_DATA: VideoInfo = {
   success: true,
-  title: "How your result card looks 🎉 — paste any TikTok link to try it for real",
+  title: "Beautiful Nature Scenery in 4K – Relaxing Video 🌿 #nature #4k #relaxing",
   author: "@creator_username",
-  duration: 47,
+  duration: 28,
   thumbnail: "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=800&q=80",
-  view_count: 2400000,
-  like_count: 184000,
+  view_count: 5400000,
+  like_count: 1200000,
   comment_count: 3200,
   share_count: 12000,
   is_photo: false,
@@ -88,13 +154,10 @@ export default function DownloaderBox({ highlightFormat }: Props) {
   };
 
   const handlePaste = async () => {
-    // Try modern clipboard API first
     try {
       const text = await navigator.clipboard.readText();
       if (text) { setUrl(text); return; }
     } catch {}
-
-    // Fallback: temporary textarea + execCommand (works in restricted iframes)
     const ta = document.createElement("textarea");
     ta.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0";
     document.body.appendChild(ta);
@@ -104,8 +167,6 @@ export default function DownloaderBox({ highlightFormat }: Props) {
       if (ok && ta.value) { setUrl(ta.value); return; }
     } catch {}
     finally { document.body.removeChild(ta); }
-
-    // Last resort: focus input so user can Ctrl+V / long-press paste
     inputRef.current?.focus();
   };
 
@@ -113,13 +174,13 @@ export default function DownloaderBox({ highlightFormat }: Props) {
 
   const isPhoto = info?.is_photo && (info.images?.length ?? 0) > 0;
   const formats = highlightFormat
-    ? [...FORMAT_OPTIONS].sort((a) => (a.format === highlightFormat ? -1 : 1))
-    : FORMAT_OPTIONS;
+    ? [...FORMAT_CONFIGS].sort((a) => (a.format === highlightFormat ? -1 : 1))
+    : FORMAT_CONFIGS;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
 
-      {/* Input + button row — side by side on desktop, stacked on mobile */}
+      {/* Input + button row */}
       <div className="input-action-row">
         <div className="input-box" style={{ flex: 1 }}>
           <input
@@ -186,7 +247,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
         const tags = (info.title || "").match(/#\w+/g) ?? [];
         const cleanTitle = (info.title || "").replace(/#\w+/g, "").trim();
         return (
-          <div className="result-card" style={{ animation: "fadeUp 0.35s ease both" }}>
+          <div className="result-card" style={{ animation: "fadeUp 0.35s ease both", overflow: "hidden" }}>
 
             {isDemo && (
               <div style={{
@@ -199,50 +260,73 @@ export default function DownloaderBox({ highlightFormat }: Props) {
               </div>
             )}
 
+            {/* Thumbnail — full width, taller */}
             {info.thumbnail && (
-              <div style={{ overflow: "hidden", maxHeight: 160 }}>
-                <img src={info.thumbnail} alt="" style={{ width: "100%", maxHeight: 160, objectFit: "cover", display: "block" }} />
+              <div style={{ position: "relative", overflow: "hidden" }}>
+                <img
+                  src={info.thumbnail}
+                  alt=""
+                  style={{ width: "100%", height: 200, objectFit: "cover", display: "block" }}
+                />
               </div>
             )}
 
-            <div style={{ padding: "14px 16px 10px" }}>
+            {/* Author info + title + tags */}
+            <div style={{ padding: "14px 16px 12px" }}>
               <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                {/* Avatar circle */}
                 <div style={{
-                  width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
-                  background: "linear-gradient(135deg, var(--cyan) 0%, var(--cyan-dark) 100%)",
+                  width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
+                  background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontWeight: 800, fontSize: 15, color: "#fff",
+                  fontWeight: 800, fontSize: 17, color: "#fff",
+                  border: "2px solid rgba(124,58,237,0.3)",
                 }}>
                   {(info.author || "T").replace("@", "").charAt(0).toUpperCase()}
                 </div>
+
+                {/* Username + title */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   {info.author && (
-                    <p style={{ fontWeight: 700, fontSize: 13, color: "var(--cyan)", marginBottom: 3 }}>
-                      {info.author}
-                    </p>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                      <p style={{ fontWeight: 700, fontSize: 14, color: "var(--cyan)", margin: 0 }}>
+                        {info.author}
+                      </p>
+                      {/* Verified badge */}
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="12" fill="#3b82f6" />
+                        <path d="M7 12.5l3.5 3.5 6.5-7" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
                   )}
                   {cleanTitle && (
                     <p style={{
-                      fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.45,
-                      display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden",
+                      fontSize: 13, fontWeight: 600,
+                      color: "var(--text-primary)", lineHeight: 1.45, margin: 0,
+                      display: "-webkit-box", WebkitLineClamp: 3,
+                      WebkitBoxOrient: "vertical", overflow: "hidden",
                     }}>
                       {cleanTitle}
                     </p>
                   )}
                 </div>
               </div>
+
+              {/* Tags */}
               {tags.length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
-                  {tags.slice(0, 5).map(tag => (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 10 }}>
+                  {tags.slice(0, 6).map(tag => (
                     <span key={tag} style={{
-                      fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999,
-                      background: "var(--tag-bg)", border: "1px solid var(--tag-border)", color: "var(--tag-color)",
+                      fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 999,
+                      background: "var(--tag-bg)", border: "1px solid var(--tag-border)",
+                      color: "var(--cyan)",
                     }}>{tag}</span>
                   ))}
                 </div>
               )}
             </div>
 
+            {/* Download options */}
             {isPhoto ? (
               <div style={{ padding: "0 12px 12px" }}>
                 <p style={{
@@ -291,19 +375,67 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                 </div>
               </div>
             ) : (
-              <div style={{ padding: "4px 12px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
-                {formats.map(({ format, label, Icon }) => {
-                  const isActive = activeDownload === format;
+              <div style={{ padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 7 }}>
+                {formats.map((cfg) => {
+                  const isActive = activeDownload === cfg.format;
                   return (
-                    <button
-                      key={format}
-                      onClick={() => handleDownload(format)}
-                      disabled={!!activeDownload || isDemo}
-                      className="gradient-btn"
-                      style={{ width: "100%", padding: "12px 16px", borderRadius: 10, fontSize: 14, justifyContent: "flex-start" }}>
-                      {isActive ? <Loader2 size={15} className="animate-spin" /> : <Icon size={15} />}
-                      <span>{isActive ? "Downloading…" : label}</span>
-                    </button>
+                    <div
+                      key={cfg.format}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 0,
+                        borderRadius: 12, overflow: "hidden",
+                        background: cfg.rowBg,
+                        border: `1px solid ${cfg.rowBorder}`,
+                      }}
+                    >
+                      {/* Left colored badge */}
+                      <div style={{
+                        width: 52, minWidth: 52, alignSelf: "stretch",
+                        background: cfg.badgeColor,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        flexDirection: "column", gap: 2,
+                      }}>
+                        {cfg.iconEl}
+                      </div>
+
+                      {/* Middle: label + quality badges */}
+                      <div style={{ flex: 1, padding: "10px 12px", minWidth: 0 }}>
+                        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.3 }}>
+                          {cfg.label}
+                        </p>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 5 }}>
+                          {cfg.badges.map(b => (
+                            <span key={b.text} style={{
+                              fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 999,
+                              background: `${b.color}20`, border: `1px solid ${b.color}50`,
+                              color: b.color, display: "flex", alignItems: "center", gap: 3,
+                            }}>
+                              {b.icon} {b.text}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Right: Download button */}
+                      <button
+                        onClick={() => handleDownload(cfg.format)}
+                        disabled={!!activeDownload || isDemo}
+                        style={{
+                          flexShrink: 0, margin: "8px 10px 8px 0",
+                          padding: "9px 16px", borderRadius: 9, border: "none",
+                          background: cfg.btnBg, color: "#fff",
+                          fontSize: 13, fontWeight: 700, cursor: "pointer",
+                          display: "flex", alignItems: "center", gap: 6,
+                          opacity: (!!activeDownload && !isActive) || isDemo ? 0.55 : 1,
+                          transition: "opacity 0.2s",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {isActive
+                          ? <><Loader2 size={13} className="animate-spin" /> Saving…</>
+                          : <><Download size={13} /> Download</>}
+                      </button>
+                    </div>
                   );
                 })}
               </div>
