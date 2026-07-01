@@ -10,12 +10,18 @@ const DARK_TEXT = "#111827";
 
 /* ─── FAQ ────────────────────────────────────────────── */
 const HOME_FAQS = [
-  { q: "Is Luldown free to use?",           a: "Yes, 100% free. No subscription, no account, no hidden fees. You can download unlimited videos at no cost." },
-  { q: "What formats are available?",        a: "MP4 1080p (HD, no watermark), MP4 720p (standard, no watermark), and MP3 192kbps (audio only). Photo slideshows show all images directly." },
-  { q: "Why is the video without a watermark?", a: "TikTok stores two versions of every video — one with a watermark (shown in the app) and one clean original file. Luldown fetches the clean version directly." },
-  { q: "Is my data safe?",                   a: "Your download history is stored only in your browser — it never leaves your device. We don't collect or store any personal data on our servers." },
-  { q: "Does it work on mobile?",            a: "Yes. Luldown is fully responsive and works on iPhone, Android, tablets, and all desktop browsers. No app installation needed." },
-  { q: "Why does the download open in a new tab?", a: "This is a browser security restriction for cross-origin files. On desktop, right-click and choose 'Save As'. On mobile, long-press and tap 'Save'." },
+  { q: "Is Luldown free to use?",                         a: "Yes, 100% free. No subscription, no account, no hidden fees. You can download unlimited videos at no cost." },
+  { q: "Do I need to install an extension or app?",       a: "No installation needed. Luldown works entirely in your browser — just paste the TikTok link and download. No extensions, no apps, no plugins." },
+  { q: "Do I need a TikTok account to download videos?",  a: "No account required. You can download any public TikTok video without logging in or creating an account." },
+  { q: "What formats are available?",                     a: "MP4 1080p (HD, no watermark), MP4 720p (standard, no watermark), and MP3 192kbps (audio only). Photo slideshows show all images directly." },
+  { q: "Why is the video without a watermark?",           a: "TikTok stores two versions of every video — one with a watermark (shown in the app) and one clean original file. Luldown fetches the clean version directly." },
+  { q: "How to download TikTok videos on iPhone (iOS)?",  a: "Open TikTok, tap Share → Copy Link. Then open Luldown in Safari, paste the link and tap Download. Long-press the download link and choose 'Download Linked File' to save to your Photos." },
+  { q: "How to download TikTok videos on Android?",       a: "Copy the TikTok link from the Share menu, open Luldown in Chrome, paste and tap Download. The file will save to your Downloads folder automatically." },
+  { q: "Can I download videos from private TikTok accounts?", a: "No. Luldown can only download videos from public TikTok accounts. Private account videos are not accessible without the account owner's permission." },
+  { q: "Where are TikTok videos saved after downloading?", a: "On desktop, files go to your browser's Downloads folder. On iPhone, use 'Download Linked File' in Safari to save to the Files app. On Android, files save to the Downloads folder." },
+  { q: "Is my data safe?",                                a: "Your download history is stored only in your browser — it never leaves your device. We don't collect or store any personal data on our servers." },
+  { q: "Does it work on mobile?",                         a: "Yes. Luldown is fully responsive and works on iPhone, Android, tablets, and all desktop browsers. No app installation needed." },
+  { q: "Why does the download open in a new tab?",        a: "This is a browser security restriction for cross-origin files. On desktop, right-click and choose 'Save As'. On mobile, long-press and tap 'Save'." },
 ];
 
 function FAQItem({ q, a }: { q: string; a: string }) {
@@ -268,12 +274,12 @@ export default function HomePage() {
 
       {/* ══════════ FAQ ══════════ */}
       <section style={{ background: WHITE, padding: "52px 24px" }}>
-        <div style={{ maxWidth: 680, margin: "0 auto" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto" }}>
           <h2 style={{ fontWeight: 800, fontSize: "clamp(1.2rem,3vw,1.5rem)", color: DARK_TEXT, marginBottom: 24 }}>
             Frequently Asked Questions
           </h2>
           <div>
-            {HOME_FAQS.slice(0, 5).map((item) => (
+            {HOME_FAQS.map((item) => (
               <FAQItem key={item.q} {...item} />
             ))}
           </div>
