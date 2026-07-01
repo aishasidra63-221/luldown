@@ -119,6 +119,7 @@ export default function LangPage({ lang, pageKey, highlightFormat }: Props) {
         padding: "38px 24px 52px", textAlign: "center",
       }}>
         <div style={{ position: "absolute", top: "-10%", left: "-5%", width: 480, height: 480, background: "radial-gradient(ellipse at 50% 50%, rgba(120,40,220,0.22) 0%, transparent 70%)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "160%", height: "160%", background: "radial-gradient(ellipse at 50% 50%, rgba(109,40,217,0.45) 0%, rgba(88,28,135,0.22) 45%, transparent 72%)", pointerEvents: "none", filter: "blur(24px)" }} />
         <div style={{ position: "relative", maxWidth: 640, margin: "0 auto" }}>
           <h1 style={{ fontSize: "clamp(2rem,6vw,3rem)", fontWeight: 700, lineHeight: 1.05, color: "#ffffff", marginBottom: 2, letterSpacing: "-0.01em" }}>
             {tr.h1Line1}
