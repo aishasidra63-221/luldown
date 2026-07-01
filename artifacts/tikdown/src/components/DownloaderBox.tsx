@@ -268,37 +268,27 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                   <p style={{ margin:0, fontWeight:700, fontSize:14.5, color:"#c4b5fd" }}>
                     {info.author}
                   </p>
-                  <p style={{ margin:"2px 0 0", fontSize:11, color:"rgba(255,255,255,0.35)", fontWeight:500 }}>
-                    TikTok Creator
-                  </p>
                 </div>
               </div>
 
-              {/* Title */}
+              {/* Title + Tags together */}
               {cleanTitle && (
                 <p style={{
-                  margin:"0 0 10px", fontSize:13.5, fontWeight:700,
-                  color:"rgba(255,255,255,0.92)", lineHeight:1.5,
-                  display:"-webkit-box", WebkitLineClamp:3,
-                  WebkitBoxOrient:"vertical", overflow:"hidden",
+                  margin:0, fontSize:13.5, fontWeight:700,
+                  color:"rgba(255,255,255,0.92)", lineHeight:1.6,
                 }}>
                   {cleanTitle}
+                  {tags.length > 0 && (
+                    <>
+                      {" "}
+                      {tags.slice(0, 6).map(tag => (
+                        <span key={tag} style={{ color:"#a78bfa", fontWeight:600 }}>
+                          {tag}{" "}
+                        </span>
+                      ))}
+                    </>
+                  )}
                 </p>
-              )}
-
-              {/* Tags */}
-              {tags.length > 0 && (
-                <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
-                  {tags.slice(0, 6).map(tag => (
-                    <span key={tag} style={{
-                      fontSize:11, fontWeight:600, padding:"3px 10px", borderRadius:999,
-                      background:"rgba(167,139,250,0.12)", border:"1px solid rgba(167,139,250,0.25)",
-                      color:"#a78bfa",
-                    }}>
-                      {tag}
-                    </span>
-                  ))}
-                </div>
               )}
             </div>
 
