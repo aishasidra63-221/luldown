@@ -29,7 +29,7 @@ const FMTS: FmtCfg[] = [
   },
   {
     format: "mp4_720",
-    label: "HD Download 720p",
+    label: "Download 720p",
     sub: "No Watermark · Good Quality",
     leftBg: "#2563eb",
     leftNode: <Video size={20} color="#fff" strokeWidth={2.2} />,
