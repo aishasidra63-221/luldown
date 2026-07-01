@@ -246,6 +246,12 @@
   background-clip: text;
 }
 
+/* ─── Spinner keyframe ───────────────────────────── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 /* ─── Hero inner container (wider on desktop) ─────── */
 .hero-inner {
   position: relative;

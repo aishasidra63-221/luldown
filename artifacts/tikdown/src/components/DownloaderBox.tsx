@@ -178,7 +178,13 @@ export default function DownloaderBox({ highlightFormat }: Props) {
         </div>
         <button onClick={handleFetch} disabled={!url.trim() || step === "loading-info"} className="btn-primary dl-btn" style={step === "loading-info" ? { opacity:0.85, cursor:"wait", minWidth:160 } : { minWidth:160 }}>
           {step === "loading-info"
-            ? <><Loader2 size={22} className="animate-spin" /> Please wait…</>
+            ? <><span style={{
+                display:"inline-block", width:20, height:20, flexShrink:0,
+                border:"2.5px solid rgba(255,255,255,0.25)",
+                borderTopColor:"#ffffff",
+                borderRadius:"50%",
+                animation:"spin 0.75s linear infinite",
+              }} /> Please wait…</>
             : <><Download size={18} /> Download Now</>}
         </button>
       </div>
