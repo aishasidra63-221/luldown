@@ -17,8 +17,12 @@ const Mp3Page        = lazy(() => import("@/pages/Mp3Page"));
 const StoryPage      = lazy(() => import("@/pages/StoryPage"));
 const ThumbnailPage  = lazy(() => import("@/pages/ThumbnailPage"));
 const ViewerPage     = lazy(() => import("@/pages/ViewerPage"));
-const SsstikAltPage  = lazy(() => import("@/pages/SsstikAltPage"));
-const LangHomePage   = lazy(() => import("@/pages/LangHomePage"));
+const SsstikAltPage     = lazy(() => import("@/pages/SsstikAltPage"));
+const SnaptikAltPage    = lazy(() => import("@/pages/SnaptikAltPage"));
+const MusicalDownAltPage = lazy(() => import("@/pages/MusicalDownAltPage"));
+const SavetikAltPage    = lazy(() => import("@/pages/SavetikAltPage"));
+const TikmateAltPage    = lazy(() => import("@/pages/TikmateAltPage"));
+const LangHomePage      = lazy(() => import("@/pages/LangHomePage"));
 const ApkPage        = lazy(() => import("@/pages/ApkPage"));
 const HowToPage      = lazy(() => import("@/pages/HowToPage"));
 
@@ -47,7 +51,11 @@ function Router() {
       <Route path="/story"              component={StoryPage} />
       <Route path="/thumbnail"          component={ThumbnailPage} />
       <Route path="/viewer"             component={ViewerPage} />
-      <Route path="/ssstik-alternative" component={SsstikAltPage} />
+      <Route path="/ssstik-alternative"      component={SsstikAltPage} />
+      <Route path="/snaptik-alternative"     component={SnaptikAltPage} />
+      <Route path="/musicaldown-alternative" component={MusicalDownAltPage} />
+      <Route path="/savetik-alternative"     component={SavetikAltPage} />
+      <Route path="/tikmate-alternative"     component={TikmateAltPage} />
 
       {/* ── Utility pages ── */}
       <Route path="/history"    component={HistoryPage} />
