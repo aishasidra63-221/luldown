@@ -1,15 +1,33 @@
 import { Link, useLocation } from "wouter";
-import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { LANG_META, ALL_LANGS, Lang, getLangFromPath, getPageKeyFromSlug, buildPageUrl } from "@/i18n/langMeta";
 
 const NAV_LINKS = [
-  { href: "/faq",     label: "FAQ"     },
-  { href: "/history", label: "History" },
-  { href: "/mp3",     label: "MP3"     },
-  { href: "/story",   label: "Story"   },
-  { href: "/thumbnail", label: "Thumbnail" },
+  { href: "/faq",       label: "FAQ",       icon: "❓" },
+  { href: "/history",   label: "History",   icon: "🕒" },
+  { href: "/mp3",       label: "MP3",       icon: "🎵" },
+  { href: "/story",     label: "Story",     icon: "📖" },
+  { href: "/thumbnail", label: "Thumbnail", icon: "🖼️" },
 ];
+
+function HamburgerIcon() {
+  return (
+    <svg width="20" height="14" viewBox="0 0 20 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0"  width="20" height="2.2" rx="1.1" fill="currentColor"/>
+      <rect x="4" y="6"  width="12" height="2.2" rx="1.1" fill="currentColor"/>
+      <rect x="0" y="12" width="20" height="2.2" rx="1.1" fill="currentColor"/>
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <line x1="1" y1="1" x2="15" y2="15" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
+      <line x1="15" y1="1" x2="1" y2="15" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
+    </svg>
+  );
+}
 
 export default function Navbar() {
   const [loc, navigate] = useLocation();
@@ -62,59 +80,95 @@ export default function Navbar() {
         <button
           onClick={() => setOpen(!open)}
           style={{
-            width: 38, height: 38, borderRadius: 10,
+            width: 40, height: 40, borderRadius: 11,
             display: "flex", alignItems: "center", justifyContent: "center",
-            background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.1)",
-            color: "#4b5563", cursor: "pointer",
+            background: open ? "rgba(124,58,237,0.1)" : "rgba(0,0,0,0.04)",
+            border: open ? "1.5px solid rgba(124,58,237,0.35)" : "1px solid rgba(0,0,0,0.1)",
+            color: open ? "#7c3aed" : "#4b5563",
+            cursor: "pointer",
+            transition: "all 0.18s ease",
           }}
           aria-label="Menu"
         >
-          {open ? <X size={18} /> : <Menu size={18} />}
+          {open ? <CloseIcon /> : <HamburgerIcon />}
         </button>
       </div>
 
       {/* Dropdown */}
       {open && (
         <div style={{
-          borderTop: "1px solid rgba(0,0,0,0.08)",
-          padding: "12px 16px 16px",
-          display: "flex", flexDirection: "column", gap: 4,
+          borderTop: "1px solid rgba(0,0,0,0.07)",
           background: "#ffffff",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.10)",
         }}>
           {/* Nav links */}
-          {NAV_LINKS.map(({ href, label }) => (
-            <Link key={href} href={href}>
-              <div onClick={() => setOpen(false)} style={{
-                padding: "11px 14px", borderRadius: 10, fontSize: 14, fontWeight: 500,
-                cursor: "pointer",
-                color: loc === href ? "#4f6ef7" : "#4b5563",
-                background: loc === href ? "rgba(79,110,247,0.1)" : "transparent",
-              }}>
-                {label}
-              </div>
-            </Link>
-          ))}
+          <div style={{ padding: "10px 12px 8px" }}>
+            {NAV_LINKS.map(({ href, label, icon }) => {
+              const active = loc === href;
+              return (
+                <Link key={href} href={href}>
+                  <div
+                    onClick={() => setOpen(false)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 12,
+                      padding: "10px 14px", borderRadius: 10,
+                      fontSize: 14, fontWeight: active ? 600 : 500,
+                      cursor: "pointer",
+                      color: active ? "#7c3aed" : "#374151",
+                      background: active ? "rgba(124,58,237,0.08)" : "transparent",
+                      transition: "background 0.15s",
+                      marginBottom: 2,
+                    }}
+                  >
+                    <span style={{ fontSize: 16, lineHeight: 1 }}>{icon}</span>
+                    <span>{label}</span>
+                    {active && (
+                      <span style={{
+                        marginLeft: "auto", width: 6, height: 6,
+                        borderRadius: "50%", background: "#7c3aed",
+                      }} />
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
 
           {/* Language switcher */}
-          <div style={{ marginTop: 8, paddingTop: 12, borderTop: "1px solid rgba(0,0,0,0.07)" }}>
-            <p style={{ fontSize: 11, fontWeight: 600, color: "#9ca3af", marginBottom: 8, paddingLeft: 14, letterSpacing: "0.06em", textTransform: "uppercase" }}>Language</p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, paddingLeft: 4 }}>
-              {ALL_LANGS.map(l => (
-                <button
-                  key={l}
-                  onClick={() => switchLang(l)}
-                  style={{
-                    padding: "5px 12px", borderRadius: 18, fontSize: 12, fontWeight: 700,
-                    cursor: "pointer", border: "1px solid",
-                    background: l === lang ? "#4f6ef7" : "transparent",
-                    color: l === lang ? "#ffffff" : "#6b7280",
-                    borderColor: l === lang ? "#4f6ef7" : "rgba(0,0,0,0.15)",
-                    transition: "all 0.15s",
-                  }}
-                >
-                  {LANG_META[l].label}
-                </button>
-              ))}
+          <div style={{
+            margin: "0 12px 12px",
+            background: "rgba(0,0,0,0.025)",
+            borderRadius: 12,
+            padding: "12px 14px",
+            border: "1px solid rgba(0,0,0,0.06)",
+          }}>
+            <p style={{
+              fontSize: 10, fontWeight: 700, color: "#9ca3af",
+              marginBottom: 10, letterSpacing: "0.08em", textTransform: "uppercase",
+            }}>
+              Language
+            </p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {ALL_LANGS.map(l => {
+                const active = l === lang;
+                return (
+                  <button
+                    key={l}
+                    onClick={() => switchLang(l)}
+                    style={{
+                      padding: "5px 13px", borderRadius: 20, fontSize: 12, fontWeight: 700,
+                      cursor: "pointer", border: "1.5px solid",
+                      background: active ? "linear-gradient(135deg, #7c3aed, #4f6ef7)" : "transparent",
+                      color: active ? "#ffffff" : "#6b7280",
+                      borderColor: active ? "transparent" : "rgba(0,0,0,0.12)",
+                      boxShadow: active ? "0 2px 8px rgba(124,58,237,0.3)" : "none",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    {LANG_META[l].label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
