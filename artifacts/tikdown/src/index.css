@@ -246,6 +246,18 @@
   background-clip: text;
 }
 
+/* ─── Hero inner container (wider on desktop) ─────── */
+.hero-inner {
+  position: relative;
+  max-width: 640px;
+  margin: 0 auto;
+}
+@media (min-width: 768px) {
+  .hero-inner {
+    max-width: 860px;
+  }
+}
+
 /* ─── Input action row (URL + button) ───── */
 .input-action-row {
   display: flex;
