@@ -3,11 +3,46 @@ import { useState } from "react";
 import { LANG_META, ALL_LANGS, Lang, getLangFromPath, getPageKeyFromSlug, buildPageUrl } from "@/i18n/langMeta";
 
 const NAV_LINKS = [
-  { href: "/faq",       label: "FAQ",       icon: "❓" },
-  { href: "/history",   label: "History",   icon: "🕒" },
-  { href: "/mp3",       label: "MP3",       icon: "🎵" },
-  { href: "/story",     label: "Story",     icon: "📖" },
-  { href: "/thumbnail", label: "Thumbnail", icon: "🖼️" },
+  {
+    href: "/faq", label: "FAQ",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+    ),
+  },
+  {
+    href: "/history", label: "History",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 0 .5-4.5"/><polyline points="3 3 3 7 7 7"/>
+      </svg>
+    ),
+  },
+  {
+    href: "/mp3", label: "MP3",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+      </svg>
+    ),
+  },
+  {
+    href: "/story", label: "Story",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="8" x2="12" y2="9"/><line x1="12" y1="15" x2="12" y2="16"/>
+      </svg>
+    ),
+  },
+  {
+    href: "/thumbnail", label: "Thumbnail",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+      </svg>
+    ),
+  },
 ];
 
 function HamburgerIcon() {
