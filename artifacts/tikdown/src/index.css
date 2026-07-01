@@ -277,7 +277,7 @@
 .input-box {
   display: flex; align-items: center;
   background: #ddd8f5;
-  border: 1.5px solid rgba(124,58,237,0.35);
+  border: 1.5px solid #ffffff;
   border-radius: 16px;
   box-shadow: none;
   outline: none;
@@ -297,14 +297,14 @@
 }
 .input-box:focus-within {
   outline: none;
-  border-color: rgba(124,58,237,0.5);
+  border-color: #ffffff;
   box-shadow: none;
 }
 
 /* Paste / Clear button inside input box */
 .input-box .btn-ghost {
   background: #ffffff !important;
-  border-color: rgba(124,58,237,0.2) !important;
+  border-color: rgba(124,58,237,0.55) !important;
   color: #5b4fcf !important;
   border-width: 1.5px !important;
   border-radius: 10px !important;
@@ -312,8 +312,14 @@
 }
 .input-box .btn-ghost:hover {
   background: #f5f3ff !important;
-  border-color: #7c3aed !important;
+  border-color: rgba(124,58,237,0.55) !important;
   color: #7c3aed !important;
+}
+.input-box .btn-ghost:active,
+.input-box .btn-ghost:focus {
+  border-color: rgba(124,58,237,0.55) !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 /* ─── Steps grid ─────────────────────────── */
