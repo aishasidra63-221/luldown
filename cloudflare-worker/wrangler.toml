@@ -3,6 +3,9 @@ main = "worker.js"
 compatibility_date = "2024-11-01"
 compatibility_flags = ["nodejs_compat"]
 
+[placement]
+mode = "smart"
+
 # Workers free plan: 100,000 req/day
 # Upgrade to Paid ($5/mo) for 10M req/day
 
