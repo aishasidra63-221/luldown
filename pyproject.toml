@@ -16,5 +16,7 @@ dependencies = [
     "yt-dlp==2024.11.18",
 ]
 
-[tool.setuptools]
-packages = []
+[tool.setuptools.packages.find]
+where = ["."]
+include = []
+exclude = ["*"]
