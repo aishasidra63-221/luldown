@@ -36,6 +36,60 @@
     <!-- Canonical -->
     <link rel="canonical" href="https://luldown.com/" />
 
+    <!-- No auto-translate (hreflang pages confuse ho jaate hain) -->
+    <meta name="google" content="notranslate" />
+
+    <!-- Hreflang — Google ko batao kaun sa page kaun si language ke liye hai -->
+    <link rel="alternate" href="https://luldown.com/"     hreflang="en" />
+    <link rel="alternate" href="https://luldown.com/"     hreflang="en-US" />
+    <link rel="alternate" href="https://luldown.com/ur"   hreflang="ur" />
+    <link rel="alternate" href="https://luldown.com/hi"   hreflang="hi" />
+    <link rel="alternate" href="https://luldown.com/bn"   hreflang="bn" />
+    <link rel="alternate" href="https://luldown.com/id"   hreflang="id" />
+    <link rel="alternate" href="https://luldown.com/ar"   hreflang="ar" />
+    <link rel="alternate" href="https://luldown.com/tr"   hreflang="tr" />
+    <link rel="alternate" href="https://luldown.com/es"   hreflang="es" />
+    <link rel="alternate" href="https://luldown.com/pt"   hreflang="pt" />
+    <link rel="alternate" href="https://luldown.com/ru"   hreflang="ru" />
+    <link rel="alternate" href="https://luldown.com/vi"   hreflang="vi" />
+    <link rel="alternate" href="https://luldown.com/fr"   hreflang="fr" />
+    <link rel="alternate" href="https://luldown.com/de"   hreflang="de" />
+    <link rel="alternate" href="https://luldown.com/ja"   hreflang="ja" />
+    <link rel="alternate" href="https://luldown.com/ko"   hreflang="ko" />
+    <link rel="alternate" href="https://luldown.com/th"   hreflang="th" />
+    <link rel="alternate" href="https://luldown.com/it"   hreflang="it" />
+    <link rel="alternate" href="https://luldown.com/pl"   hreflang="pl" />
+    <link rel="alternate" href="https://luldown.com/"     hreflang="x-default" />
+
+    <!-- JSON-LD Schema — Google ko ready data (rating Google search mein dikhi) -->
+    <script type="application/ld+json">
+    {
+      "@context": "http://schema.org",
+      "@type": "Organization",
+      "name": "Luldown",
+      "url": "https://luldown.com",
+      "logo": "https://luldown.com/pwa-192.svg",
+      "image": "https://luldown.com/opengraph.jpg",
+      "description": "Download TikTok videos without watermark in HD quality. Free, fast, unlimited downloads. No login required."
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "http://schema.org",
+      "@type": "WebApplication",
+      "name": "TikTok Video Downloader",
+      "url": "https://luldown.com",
+      "applicationCategory": "EntertainmentApplication",
+      "operatingSystem": "All",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "description": "Download TikTok videos without watermark in HD quality. Free, fast, unlimited downloads."
+    }
+    </script>
+
     <!-- PWA -->
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#7c3aed" />
