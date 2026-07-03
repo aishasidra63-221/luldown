@@ -106,27 +106,23 @@ function _addHistoryEntry(entry: HistoryItem) {
   _saveHistory(items);
 }
 
-// ─── CDN-direct download ──────────────────────────────────────────────────────
-// Worker returns CDN URL only — server never streams file bytes.
-// Browser fetches directly from TikTok CDN.
+// ─── Proxy download ───────────────────────────────────────────────────────────
+// Worker /api/proxy streams the TikTok CDN file with proper Referer headers.
+// Browser never touches TikTok CDN directly → no "Access Denied".
 
 async function _cdnDownload(cdnUrl: string, filename: string): Promise<void> {
-  try {
-    const res = await fetch(cdnUrl, { mode: "cors" });
-    if (!res.ok) throw new Error("fetch failed");
-    const blob = await res.blob();
-    const blobUrl = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = blobUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-  } catch {
-    // CORS blocked by CDN — open in new tab, user can long-press → Save
-    window.open(cdnUrl, "_blank", "noopener,noreferrer");
-  }
+  // Route through Worker proxy so TikTok CDN doesn't block the request
+  const proxyUrl =
+    `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
+
+  // Create a hidden <a> pointing to the proxy — browser streams the download
+  const a = document.createElement("a");
+  a.href = proxyUrl;
+  a.download = filename;
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────

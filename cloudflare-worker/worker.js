@@ -694,6 +694,55 @@ export default {
       });
     }
 
+    // GET /api/proxy — stream TikTok CDN file through Worker (avoids browser "Access Denied")
+    // Usage: /api/proxy?url=<encoded-cdn-url>&filename=<name.mp4>
+    if (pathname === "/api/proxy" && method === "GET") {
+      const params   = new URL(request.url).searchParams;
+      const rawUrl   = params.get("url");
+      const filename = params.get("filename") || "luldown.mp4";
+
+      if (!rawUrl) return err("Missing url parameter", 400);
+
+      let cdnUrl;
+      try { cdnUrl = decodeURIComponent(rawUrl); } catch { return err("Invalid URL encoding", 400); }
+
+      // Safety: only proxy known TikTok CDN domains
+      const allowed = ["tiktok.com", "tiktokcdn.com", "tiktokv.com", "musical.ly", "douyin.com", "bytecdn.cn", "snssdk.com"];
+      if (!allowed.some(d => cdnUrl.includes(d))) {
+        return err("Only TikTok CDN URLs are supported", 403);
+      }
+
+      let upstream;
+      try {
+        upstream = await fetch(cdnUrl, {
+          headers: {
+            "Referer":         "https://www.tiktok.com/",
+            "Origin":          "https://www.tiktok.com",
+            "User-Agent":      randomUA(),
+            "Accept":          "*/*",
+            "Accept-Encoding": "identity",
+          },
+        });
+      } catch (e) {
+        return err("Failed to fetch from TikTok CDN", 502);
+      }
+
+      if (!upstream.ok) {
+        return err(`TikTok CDN returned ${upstream.status}`, upstream.status);
+      }
+
+      const respHeaders = new Headers({
+        ...CORS_HEADERS,
+        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Content-Type":        upstream.headers.get("Content-Type") || "video/mp4",
+        "Cache-Control":       "no-store",
+      });
+      const ct = upstream.headers.get("Content-Length");
+      if (ct) respHeaders.set("Content-Length", ct);
+
+      return new Response(upstream.body, { status: 200, headers: respHeaders });
+    }
+
     // POST /api/download — return CDN URL (browser downloads direct from TikTok CDN)
     if (pathname === "/api/download" && method === "POST") {
       let body;
