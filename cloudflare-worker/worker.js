@@ -235,6 +235,7 @@ async function fetchTikTokPage(videoId, lang) {
   const ua    = randomUA();
   const hints = getBrowserHints(ua);
   const res = await fetch(url, {
+    redirect: "manual",
     headers: {
       "User-Agent":      ua,
       ...BROWSER_HEADERS,
@@ -243,11 +244,86 @@ async function fetchTikTokPage(videoId, lang) {
     },
   });
 
-  if (!res.ok) {
+  // TikTok redirects datacenter IPs to /about — treat as block
+  if (res.status === 302 || res.status === 301) {
+    const loc = res.headers.get("location") || "";
+    if (loc.includes("/about") || loc.includes("/login")) {
+      throw new Error("TikTok blocked this datacenter IP (redirect detected).");
+    }
+  }
+
+  if (!res.ok && res.status !== 301 && res.status !== 302) {
     throw new Error(`TikTok page returned HTTP ${res.status}`);
   }
 
   return res.text();
+}
+
+// ── Mobile API fallback ───────────────────────────────────────────────────────
+// TikTok's internal API used by the mobile app.
+// Works from datacenter IPs that block HTML scraping.
+
+async function fetchTikTokMobileApi(videoId) {
+  const endpoints = [
+    `https://api22-normal-c-useast2a.tiktokv.com/aweme/v1/feed/?aweme_id=${videoId}&version_code=262036&app_name=musical_ly&channel=App&device_id=1234567890&os_version=14.4.2&device_type=iPhone12`,
+    `https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/feed/?aweme_id=${videoId}&version_code=262036&app_name=musical_ly&channel=App&device_id=1234567890&os_version=14.4.2&device_type=iPhone12`,
+    `https://api19-normal-c-useast1a.tiktokv.com/aweme/v1/feed/?aweme_id=${videoId}&version_code=262036&app_name=musical_ly`,
+  ];
+
+  for (const endpoint of endpoints) {
+    try {
+      const res = await fetch(endpoint, {
+        headers: {
+          "User-Agent": "TikTok 26.2.0 rv:262018 (iPhone; iOS 14.4.2; en_US) Cronet",
+          "Accept":     "application/json",
+        },
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const aweme = (data.aweme_list || [])[0];
+      if (!aweme) continue;
+
+      // Parse mobile API response into same shape as parseItemStruct
+      const video  = aweme.video   || {};
+      const music  = aweme.music   || {};
+      const author = aweme.author  || {};
+      const stats  = aweme.statistics || {};
+
+      const playUrls     = safeGet(video, "play_addr",     "url_list") || [];
+      const downloadUrls = safeGet(video, "download_addr", "url_list") || [];
+      const coverUrls    = safeGet(video, "cover",         "url_list") || [];
+      const musicUrls    = safeGet(music, "play_url",      "url_list") || [];
+      const avatarUrls   = safeGet(author, "avatar_medium","url_list") ||
+                           safeGet(author, "avatar_thumb", "url_list") || [];
+
+      const videoUrl  = downloadUrls[0] || playUrls[0] || "";
+      const audioUrl  = musicUrls[0] || "";
+      const thumbUrl  = coverUrls[0] || "";
+      const avatarUrl = avatarUrls[0] || "";
+
+      if (!videoUrl) continue; // empty response — try next endpoint
+
+      return {
+        title:         aweme.desc || "TikTok Video",
+        author:        author.unique_id ? `@${author.unique_id}` : author.nickname || "",
+        author_avatar: avatarUrl,
+        duration:      video.duration || 0,
+        thumbnail:     thumbUrl,
+        view_count:    stats.play_count   || 0,
+        like_count:    stats.digg_count   || 0,
+        comment_count: stats.comment_count|| 0,
+        share_count:   stats.share_count  || 0,
+        is_photo:      false,
+        images:        [],
+        _hd_url:       videoUrl,
+        _sd_url:       playUrls[0] || videoUrl,
+        _audio_url:    audioUrl,
+      };
+    } catch (_) {
+      continue;
+    }
+  }
+  return null; // all endpoints failed
 }
 
 // ── Step 3: Parse JSON from HTML ─────────────────────────────────────────────
@@ -451,8 +527,14 @@ function parsePageData(parsed, videoId) {
 
 async function getVideoData(tiktokUrl, lang) {
   const videoId = await resolveVideoId(tiktokUrl);
-  const html    = await fetchTikTokPage(videoId, lang);
-  const parsed  = extractJsonFromHtml(html);
+
+  // Try mobile API first — works even from datacenter IPs
+  const mobileResult = await fetchTikTokMobileApi(videoId);
+  if (mobileResult) return mobileResult;
+
+  // Fallback: HTML scraping
+  const html   = await fetchTikTokPage(videoId, lang);
+  const parsed = extractJsonFromHtml(html);
 
   if (!parsed) {
     throw new Error("TikTok page structure changed — could not find embedded JSON. Please try again.");
