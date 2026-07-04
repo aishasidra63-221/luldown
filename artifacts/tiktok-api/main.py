@@ -88,6 +88,23 @@ _ALLOWED_TIKTOK_HOSTS = {
     "vt.tiktok.com", "m.tiktok.com",
 }
 
+_ALLOWED_CDN_DOMAINS = [
+    "tiktok.com", "tiktokcdn.com", "tiktokv.com",
+    "musical.ly", "douyin.com", "bytecdn.cn", "snssdk.com",
+]
+
+_CDN_FETCH_HEADERS = {
+    "User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Referer":         "https://www.tiktok.com/",
+    "Origin":          "https://www.tiktok.com",
+    "Accept":          "*/*",
+    "Accept-Encoding": "identity",
+    "Range":           "bytes=0-",
+    "Sec-Fetch-Dest":  "video",
+}
+
+PROXY_SECRET = os.environ.get("PROXY_SECRET", "")
+
 def validate_tiktok_url(url: str) -> str:
     from urllib.parse import urlparse
     url = url.strip()
@@ -232,6 +249,56 @@ async def delete_history(request: Request):
     ip = get_client_ip(request)
     clear_history(ip)
     return {"success": True, "message": "History cleared"}
+
+
+# ─── Render Proxy ──────────────────────────────────────────────────────────────
+
+@app.get("/proxy")
+@limiter.limit("30/minute")
+async def proxy_cdn(request: Request, url: str, filename: str = "luldown.mp4"):
+    """
+    Stream TikTok CDN file through this server.
+    Called by Cloudflare Worker with x-proxy-secret header.
+    Adds 7 browser-like headers so TikTok CDN accepts the request.
+    """
+    from urllib.parse import unquote
+
+    # Verify shared secret (Worker → Render)
+    incoming = request.headers.get("x-proxy-secret", "")
+    if PROXY_SECRET and incoming != PROXY_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    # Decode and validate CDN URL
+    cdn_url = unquote(url)
+    if not cdn_url.startswith("http"):
+        raise HTTPException(status_code=400, detail="Invalid URL")
+    if not any(d in cdn_url for d in _ALLOWED_CDN_DOMAINS):
+        raise HTTPException(status_code=403, detail="Only TikTok CDN URLs are supported")
+
+    # Detect media type from filename
+    if filename.endswith(".mp3"):
+        media_type = "audio/mpeg"
+    else:
+        media_type = "video/mp4"
+
+    async def _stream():
+        async with httpx.AsyncClient(
+            follow_redirects=True,
+            timeout=httpx.Timeout(120.0, connect=15.0),
+        ) as client:
+            async with client.stream("GET", cdn_url, headers=_CDN_FETCH_HEADERS) as resp:
+                async for chunk in resp.aiter_bytes(chunk_size=65536):
+                    yield chunk
+
+    return StreamingResponse(
+        _stream(),
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 if __name__ == "__main__":

@@ -694,7 +694,9 @@ export default {
       });
     }
 
-    // GET /api/proxy — stream TikTok CDN file through Worker (avoids browser "Access Denied")
+    // GET /api/proxy — stream TikTok CDN file
+    // If RENDER_URL is set → forward to Render proxy server (recommended for production).
+    // If RENDER_URL is not set → fetch CDN directly from Worker (fallback / local dev).
     // Usage: /api/proxy?url=<encoded-cdn-url>&filename=<name.mp4>
     if (pathname === "/api/proxy" && method === "GET") {
       const params   = new URL(request.url).searchParams;
@@ -712,15 +714,51 @@ export default {
         return err("Only TikTok CDN URLs are supported", 403);
       }
 
+      // ── Path A: Render proxy (production) ──────────────────────────────────
+      // Set RENDER_URL + PROXY_SECRET in Cloudflare Worker env vars to enable.
+      // Render fetches CDN with proper browser headers → streams to user.
+      if (env.RENDER_URL) {
+        const renderProxyUrl =
+          `${env.RENDER_URL.replace(/\/$/, "")}/proxy` +
+          `?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
+
+        let upstream;
+        try {
+          upstream = await fetch(renderProxyUrl, {
+            headers: { "x-proxy-secret": env.PROXY_SECRET || "" },
+          });
+        } catch (e) {
+          return err("Failed to reach Render proxy server", 502);
+        }
+
+        if (!upstream.ok) {
+          return err(`Render proxy returned ${upstream.status}`, upstream.status);
+        }
+
+        const respHeaders = new Headers({
+          ...CORS_HEADERS,
+          "Content-Disposition": `attachment; filename="${filename}"`,
+          "Content-Type":        upstream.headers.get("Content-Type") || "video/mp4",
+          "Cache-Control":       "no-store",
+        });
+        const cl = upstream.headers.get("Content-Length");
+        if (cl) respHeaders.set("Content-Length", cl);
+
+        return new Response(upstream.body, { status: 200, headers: respHeaders });
+      }
+
+      // ── Path B: Direct CDN fetch from Worker (fallback / no Render) ─────────
       let upstream;
       try {
         upstream = await fetch(cdnUrl, {
           headers: {
+            "User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Referer":         "https://www.tiktok.com/",
             "Origin":          "https://www.tiktok.com",
-            "User-Agent":      randomUA(),
             "Accept":          "*/*",
             "Accept-Encoding": "identity",
+            "Range":           "bytes=0-",
+            "Sec-Fetch-Dest":  "video",
           },
         });
       } catch (e) {

@@ -9,6 +9,16 @@ mode = "smart"
 # Workers free plan: 100,000 req/day
 # Upgrade to Paid ($5/mo) for 10M req/day
 
+# ── Environment Variables ─────────────────────────────────────────────────────
+# Set these in Cloudflare Dashboard → Workers → luldown → Settings → Variables
+#
+# TOKEN_SECRET   — HMAC secret for signed session tokens (bot protection)
+# RENDER_URL     — Your Render server URL, e.g. https://luldown.onrender.com
+#                  When set, /api/proxy forwards to Render instead of CDN directly.
+# PROXY_SECRET   — Shared secret between Worker and Render (prevent proxy abuse).
+#                  Must match PROXY_SECRET env var on Render.
+#                  Generate with: openssl rand -hex 32
+
 # Built-in rate limiting — no code needed
 # Cloudflare handles it at the edge, per-IP, globally
 [[unsafe.bindings]]
