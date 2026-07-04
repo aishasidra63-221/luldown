@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: luldown-proxy
+    runtime: python
+    rootDir: artifacts/tiktok-api
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    plan: free
+    region: oregon
+    envVars:
+      - key: PORT
+        value: "8000"
+      - key: WORKERS
+        value: "1"
+      - key: PROXY_SECRET
+        generateValue: true
