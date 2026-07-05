@@ -6,6 +6,12 @@ compatibility_flags = ["nodejs_compat"]
 [placement]
 mode = "smart"
 
+# Route luldown.com/api/* directly to this Worker
+# So frontend calls /api/info, /api/proxy etc work without WORKER_URL
+[[routes]]
+pattern = "luldown.com/api/*"
+zone_name = "luldown.com"
+
 # Workers free plan: 100,000 req/day
 # Upgrade to Paid ($5/mo) for 10M req/day
 
