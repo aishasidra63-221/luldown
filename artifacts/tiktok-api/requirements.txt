@@ -4,5 +4,6 @@ httpx[http2]==0.28.0
 slowapi==0.1.9
 python-multipart==0.0.12
 aiofiles==24.1.0
+pydantic-core==2.27.1
 pydantic==2.10.3
 python-dotenv==1.0.1
