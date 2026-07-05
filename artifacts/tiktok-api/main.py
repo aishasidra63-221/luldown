@@ -139,7 +139,7 @@ async def health():
     return {
         "status": "ok",
         "version": "2.1.0",
-        "engine": "tikwm+4layer-bypass",
+        "engine": "tiktok-html-direct",
         "cache": cache_stats(),
         "history": history_stats(),
         "proxy_pool": pool_stats(),

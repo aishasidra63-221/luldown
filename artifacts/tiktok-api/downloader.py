@@ -1,18 +1,19 @@
 """
-TikTok downloader — Direct TikTok Mobile API (aweme/v1/feed)
-ssstik-style: no third parties, no proxy pool needed.
+TikTok downloader — direct browser-style page fetch (single method).
 
-Phase 1: TikTok public oembed API  → title, author, thumbnail (metadata)
-Phase 2: TikTok mobile API (aweme) → CDN video URL (no watermark baked in)
+Just like a real browser opening the video page:
+  1. Resolve the video ID from the URL (follow redirects for short links)
+  2. Fetch https://www.tiktok.com/@_/video/{id} with real browser headers
+  3. Parse the JSON TikTok embeds in the page (__UNIVERSAL_DATA_FOR_REHYDRATION__ /
+     SIGI_STATE / __NEXT_DATA__)
+  4. Pull title, author, stats and CDN URLs straight out of that JSON
 
-play_addr URLs from the mobile API are watermark-free when fetched server-side
-because the TikTok app overlays the watermark client-side during playback.
+No mobile app API, no third-party services — one path only.
 """
-import asyncio
+import json as _json
 import logging
 import random
 import re
-import time
 from typing import Optional
 
 import httpx
@@ -24,100 +25,43 @@ class DownloadError(Exception):
     pass
 
 
-# ── TikTok Mobile API hosts ───────────────────────────────────────────────────
-MOBILE_API_HOSTS = [
-    "api22-normal-c-useast2a.tiktokv.com",
-    "api16-normal-c-useast1a.tiktokv.com",
-    "api19-normal-c-useast1a.tiktokv.com",
-    "api21-normal-c-alisg.tiktokv.com",
-    "api26-normal-c-useast2a.tiktokv.com",
-]
-
-# ── Android device profiles ───────────────────────────────────────────────────
-ANDROID_DEVICES = [
-    {"model": "Pixel 6",            "build": "SD1A.210817.015.A4",  "android": "12", "dpi": "411"},
-    {"model": "Pixel 7",            "build": "TD1A.220804.009.A2",  "android": "13", "dpi": "411"},
-    {"model": "Pixel 8",            "build": "UP1A.231005.007",     "android": "14", "dpi": "428"},
-    {"model": "Pixel 7a",           "build": "UP1A.231005.007",     "android": "14", "dpi": "429"},
-    {"model": "SM-S921B",           "build": "UP1A.231005.007",     "android": "14", "dpi": "393"},
-    {"model": "SM-S918B",           "build": "UP1A.231005.007",     "android": "14", "dpi": "393"},
-    {"model": "SM-A546E",           "build": "TP1A.220624.014",     "android": "13", "dpi": "397"},
-    {"model": "SM-A135F",           "build": "TP1A.220624.014",     "android": "13", "dpi": "401"},
-    {"model": "Redmi Note 12",      "build": "TKQ1.220829.002",     "android": "13", "dpi": "395"},
-    {"model": "Redmi Note 12 Pro",  "build": "TKQ1.220829.002",     "android": "13", "dpi": "395"},
-    {"model": "POCO X5 Pro",        "build": "TKQ1.220829.002",     "android": "13", "dpi": "395"},
-    {"model": "vivo V29e",          "build": "TP1A.220624.014",     "android": "13", "dpi": "393"},
-    {"model": "OPPO A77 5G",        "build": "TP1A.220624.014",     "android": "13", "dpi": "401"},
-    {"model": "motorola moto g84",  "build": "T2SNS33.73-11-15",    "android": "13", "dpi": "400"},
+# ── Rotating desktop browser User-Agents ─────────────────────────────────────
+_USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15",
 ]
 
 
-def _random_device() -> dict:
-    return random.choice(ANDROID_DEVICES)
+def _random_ua() -> str:
+    return random.choice(_USER_AGENTS)
 
 
-def _random_host() -> str:
-    return random.choice(MOBILE_API_HOSTS)
+_BROWSER_HEADERS = {
+    "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer":         "https://www.tiktok.com/",
+    "Sec-Fetch-Dest":  "document",
+    "Sec-Fetch-Mode":  "navigate",
+    "Sec-Fetch-Site":  "same-origin",
+}
 
 
-def _random_device_id() -> str:
-    return str(random.randint(10**17, 10**18 - 1))
+# ── Step 1: resolve the video ID from any URL shape ──────────────────────────
+
+_REGION_BLOCK_PATHS = ("/in/about", "/about", "/restricted", "/unavailable")
 
 
-def _build_mobile_ua(device: dict, version: str = "300904") -> str:
-    return (
-        f"com.ss.android.ugc.trill/{version} "
-        f"(Linux; U; Android {device['android']}; en_US; {device['model']}; "
-        f"Build/{device['build']}; Cronet/TTNetVersion:c5b2a578 3d6d7cd7 MultiProcessNotSupport)"
-    )
-
-
-# ── Phase 1: oembed for metadata ──────────────────────────────────────────────
-
-async def _fetch_oembed(tiktok_url: str) -> dict:
-    endpoint = f"https://www.tiktok.com/oembed?url={tiktok_url}"
-    async with httpx.AsyncClient(
-        timeout=httpx.Timeout(15.0, connect=8.0),
-        follow_redirects=True,
-        headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-            "Accept": "application/json",
-            "Referer": "https://www.tiktok.com/",
-        },
-        http2=True,
-    ) as client:
-        resp = await client.get(endpoint)
-        resp.raise_for_status()
-        return resp.json()
-
-
-# ── Short URL resolution ──────────────────────────────────────────────────────
-
-_BROWSER_UA = (
-    "Mozilla/5.0 (Linux; Android 14; SM-S921B) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/125.0.6422.82 Mobile Safari/537.36"
-)
-
-
-async def _resolve_url(url: str) -> str:
-    """Follow redirects and return the final URL with browser-like headers."""
-    async with httpx.AsyncClient(
-        timeout=httpx.Timeout(15.0, connect=8.0),
-        follow_redirects=True,
-        headers={
-            "User-Agent":      _BROWSER_UA,
-            "Accept-Language": "en-US,en;q=0.9",
-            "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Referer":         "https://www.tiktok.com/",
-        },
-    ) as client:
-        resp = await client.get(url)
-        return str(resp.url), resp.text
+def _extract_video_id_from_url(url: str) -> Optional[str]:
+    match = re.search(r"/video/(\d{10,20})", url)
+    return match.group(1) if match else None
 
 
 def _extract_video_id_from_text(text: str) -> Optional[str]:
-    """Try to find a video ID inside page HTML (meta, JSON-LD, etc.)."""
     for pattern in [
         r'"/video/(\d{15,20})"',
         r'"aweme_id"\s*:\s*"(\d{15,20})"',
@@ -130,81 +74,35 @@ def _extract_video_id_from_text(text: str) -> Optional[str]:
     return None
 
 
-def _extract_video_id_from_url(url: str) -> Optional[str]:
-    match = re.search(r"/video/(\d{10,20})", url)
-    return match.group(1) if match else None
-
-
-async def _get_video_id_from_oembed(tiktok_url: str) -> Optional[str]:
-    """Use TikTok's oembed API to get video ID — works with short links too."""
-    try:
-        endpoint = f"https://www.tiktok.com/oembed?url={tiktok_url}"
-        async with httpx.AsyncClient(
-            timeout=httpx.Timeout(15.0, connect=8.0),
-            follow_redirects=True,
-            headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-                "Accept": "application/json",
-                "Referer": "https://www.tiktok.com/",
-            },
-        ) as client:
-            resp = await client.get(endpoint)
-            if not resp.is_success:
-                return None
-            data = resp.json()
-            # embed_product_id is the video/aweme ID
-            vid = data.get("embed_product_id") or data.get("video_id")
-            if vid:
-                return str(vid)
-            # Try parsing it from the embed HTML: <blockquote ... data-video-id="...">
-            html_embed = data.get("html", "")
-            m = re.search(r'data-video-id=["\'](\d{10,20})["\']', html_embed)
-            if m:
-                return m.group(1)
-            # Try author_url which often has full profile but thumbnail_url has video id sometimes
-            author_url = data.get("author_url", "")
-            m = re.search(r"/video/(\d{10,20})", author_url)
-            if m:
-                return m.group(1)
-    except Exception as e:
-        logger.debug("oembed video ID lookup failed: %s", e)
-    return None
-
-
-_REGION_BLOCK_PATHS = ("/in/about", "/about", "/restricted", "/unavailable")
-
-
 async def _get_video_id(tiktok_url: str) -> str:
     # Fast path — full URL already has the video ID
     vid = _extract_video_id_from_url(tiktok_url)
     if vid:
         return vid
 
-    # Short link or /t/ link — follow redirects with browser UA
-    try:
-        final_url, html = await _resolve_url(tiktok_url)
-    except Exception as e:
-        raise DownloadError(f"Could not resolve URL: {e}")
+    # Short link (vm./vt./ /t/) — follow redirects like a real browser would
+    async with httpx.AsyncClient(
+        timeout=httpx.Timeout(15.0, connect=8.0),
+        follow_redirects=True,
+        headers={"User-Agent": _random_ua(), **_BROWSER_HEADERS},
+    ) as client:
+        try:
+            resp = await client.get(tiktok_url)
+        except Exception as e:
+            raise DownloadError(f"Could not resolve URL: {e}")
+        final_url, html = str(resp.url), resp.text
 
-    # Detect region-block redirect (e.g., /in/about when TikTok is banned in India)
     if any(p in final_url for p in _REGION_BLOCK_PATHS):
         raise DownloadError(
             "Short link could not be resolved — TikTok is restricted in this server region. "
             "Please paste the full video URL (e.g. https://www.tiktok.com/@username/video/1234...) instead of a short link."
         )
 
-    # Check the resolved URL
     vid = _extract_video_id_from_url(final_url)
     if vid:
         return vid
 
-    # Scrape the HTML for the video ID
     vid = _extract_video_id_from_text(html)
-    if vid:
-        return vid
-
-    # Fallback: oembed API accepts short links and returns embed_product_id
-    vid = await _get_video_id_from_oembed(tiktok_url)
     if vid:
         return vid
 
@@ -213,167 +111,192 @@ async def _get_video_id(tiktok_url: str) -> str:
     )
 
 
-# ── Phase 2: TikTok Mobile API ────────────────────────────────────────────────
+# ── Step 2: fetch the TikTok video page directly ─────────────────────────────
 
-async def _fetch_mobile_api_once(video_id: str, device: dict, host: str) -> dict:
-    version = "300904"
-    app_ver = "30.9.4"
-    dev_id  = _random_device_id()
-
-    params = {
-        "aweme_id":              video_id,
-        "version_code":          version,
-        "version_name":          app_ver,
-        "app_name":              "musical_ly",
-        "app_version":           app_ver,
-        "channel":               "App",
-        "device_id":             dev_id,
-        "os_version":            device["android"],
-        "device_platform":       "android",
-        "device_type":           device["model"],
-        "resolution":            f"{device['dpi']}*{device['dpi']}",
-        "dpi":                   device["dpi"],
-        "app_type":              "normal",
-        "manifest_version_code": "2022600030",
-        "ts":                    str(int(time.time())),
-    }
-
-    ua  = _build_mobile_ua(device, version)
-    url = f"https://{host}/aweme/v1/feed/"
-
+async def _fetch_tiktok_page(video_id: str) -> str:
+    url = f"https://www.tiktok.com/@_/video/{video_id}"
     async with httpx.AsyncClient(
-        timeout=httpx.Timeout(20.0, connect=8.0),
+        timeout=httpx.Timeout(15.0, connect=8.0),
         follow_redirects=True,
-        http2=True,
-        headers={
-            "User-Agent":  ua,
-            "Accept":      "application/json",
-            "sdk-version": "2",
-            "X-SS-DP":     "1233",
-        },
+        headers={"User-Agent": _random_ua(), **_BROWSER_HEADERS},
     ) as client:
-        resp = await client.get(url, params=params)
-        resp.raise_for_status()
-        data = resp.json()
+        resp = await client.get(url)
 
-    aweme_list = data.get("aweme_list", [])
-    if not aweme_list:
-        raise DownloadError("Video not found or private")
-    return aweme_list[0]
+        final_path = resp.url.path
+        if "/about" in final_path or "/login" in final_path:
+            raise DownloadError("TikTok blocked this server IP (redirected to /about).")
+
+        if resp.status_code != 200:
+            raise DownloadError(f"TikTok page returned HTTP {resp.status_code}")
+
+        return resp.text
 
 
-async def _fetch_mobile_api(video_id: str) -> dict:
-    """Try up to 2 random hosts before giving up."""
-    device = _random_device()
-    hosts  = random.sample(MOBILE_API_HOSTS, min(2, len(MOBILE_API_HOSTS)))
-    last_err: Exception = DownloadError("No hosts available")
-    for host in hosts:
+# ── Step 3: parse the embedded JSON out of the page HTML ─────────────────────
+
+def _extract_json_from_html(html: str) -> Optional[dict]:
+    for script_id, source in (
+        ("__UNIVERSAL_DATA_FOR_REHYDRATION__", "universal"),
+        ("SIGI_STATE", "sigi"),
+        ("__NEXT_DATA__", "next"),
+    ):
+        m = re.search(
+            rf'<script\s+id="{script_id}"[^>]*>([\s\S]*?)</script>', html
+        )
+        if not m:
+            continue
         try:
-            return await _fetch_mobile_api_once(video_id, device, host)
-        except Exception as e:
-            last_err = e
-            logger.warning("Mobile API failed on %s: %s", host, e)
-    raise last_err
+            return {"data": _json.loads(m.group(1)), "source": source}
+        except Exception:
+            continue
+    return None
 
 
-# ── Parse aweme response ──────────────────────────────────────────────────────
+def _safe_get(obj, *keys):
+    cur = obj
+    for k in keys:
+        if not isinstance(cur, dict):
+            return None
+        cur = cur.get(k)
+    return cur
 
-def _parse_aweme(aweme: dict) -> dict:
-    video   = aweme.get("video", {})
-    music   = aweme.get("music", {})
-    author  = aweme.get("author", {})
-    stats   = aweme.get("statistics", {})
-    img_post = aweme.get("image_post_info")
+
+def _first_str(*vals) -> str:
+    for v in vals:
+        if isinstance(v, str) and v:
+            return v
+    return ""
+
+
+def _first_num(*vals):
+    for v in vals:
+        if isinstance(v, (int, float)):
+            return v
+    return 0
+
+
+def _parse_item_struct(item: dict) -> dict:
+    video  = item.get("video") or {}
+    music  = item.get("music") or {}
+    author = item.get("author") or {}
+    stats  = item.get("stats") or item.get("statistics") or {}
+    img_post = item.get("imagePost") or item.get("image_post_info")
 
     images: list[str] = []
     if img_post:
         for img in img_post.get("images", []):
-            urls = (
-                img.get("display_image", {}).get("url_list", [])
-                or img.get("owner_watermark_image", {}).get("url_list", [])
+            url = _first_str(
+                _safe_get(img, "displayImage", "urlList", 0)
+                if isinstance(_safe_get(img, "displayImage", "urlList"), list)
+                else "",
+                (img.get("display_image") or {}).get("url_list", [""])[0]
+                if (img.get("display_image") or {}).get("url_list") else "",
+                (img.get("ownerWatermarkImage") or {}).get("urlList", [""])[0]
+                if (img.get("ownerWatermarkImage") or {}).get("urlList") else "",
             )
-            if urls:
-                images.append(urls[0])
+            if url:
+                images.append(url)
 
     is_photo = len(images) > 0
 
-    def _best_url(b: dict) -> str:
-        return (
-            (b.get("download_addr") or {}).get("url_list", [""])[0]
-            or (b.get("play_addr") or {}).get("url_list", [""])[0]
-            or ""
-        )
-
-    bit_rates = sorted(
-        [b for b in video.get("bit_rate", [])
-         if (b.get("play_addr") or b.get("download_addr") or {}).get("url_list")],
-        key=lambda b: b.get("bit_rate", 0),
-        reverse=True,
+    video_hd = _first_str(
+        video.get("downloadAddr"), video.get("download_addr"),
+        video.get("playAddr"), video.get("play_addr"),
+    )
+    video_sd = _first_str(
+        video.get("playAddr"), video.get("play_addr"), video_hd,
+    )
+    audio_url = _first_str(music.get("playUrl"), music.get("play_url"))
+    thumbnail = _first_str(
+        video.get("cover"), video.get("originCover"),
+        video.get("origin_cover"), video.get("dynamicCover"),
     )
 
-    hd_fallback = (
-        (video.get("download_addr") or {}).get("url_list", [""])[0]
-        or (video.get("play_addr") or {}).get("url_list", [""])[0]
+    author_name = _first_str(
+        author.get("uniqueId"), author.get("unique_id"), author.get("nickname"),
     )
-    hd_url    = _best_url(bit_rates[0]) if bit_rates else hd_fallback
-    sd_url    = _best_url(bit_rates[1]) if len(bit_rates) > 1 else (hd_fallback or hd_url)
-    audio_url = (music.get("play_url") or {}).get("url_list", [""])[0] or ""
-
-    thumbnail = (
-        (video.get("cover") or {}).get("url_list", [""])[0]
-        or (video.get("origin_cover") or {}).get("url_list", [""])[0]
-        or ""
+    author_avatar = _first_str(
+        author.get("avatarMedium"), author.get("avatar_medium"),
+        author.get("avatarThumb"), author.get("avatar_thumb"),
+        author.get("avatarLarger"), author.get("avatar_larger"),
     )
 
     return {
         "success":       True,
-        "title":         aweme.get("desc", "TikTok Video"),
-        "author":        author.get("nickname") or author.get("unique_id", ""),
-        "duration":      int((aweme.get("duration") or video.get("duration") or 0) / 1000),
+        "title":         item.get("desc") or "TikTok Video",
+        "author":        f"@{author_name}" if author_name else "",
+        "author_avatar": author_avatar,
+        "duration":      int(_first_num(video.get("duration"))),
         "thumbnail":     thumbnail,
-        "view_count":    stats.get("play_count", 0),
-        "like_count":    stats.get("digg_count", 0),
-        "comment_count": stats.get("comment_count", 0),
-        "share_count":   stats.get("share_count", 0),
+        "view_count":    int(_first_num(stats.get("playCount"), stats.get("play_count"))),
+        "like_count":    int(_first_num(stats.get("diggCount"), stats.get("digg_count"))),
+        "comment_count": int(_first_num(stats.get("commentCount"), stats.get("comment_count"))),
+        "share_count":   int(_first_num(stats.get("shareCount"), stats.get("share_count"))),
         "is_photo":      is_photo,
         "images":        images,
-        "_hd_url":       hd_url,
-        "_sd_url":       sd_url,
+        "_hd_url":       video_hd,
+        "_sd_url":       video_sd,
         "_audio_url":    audio_url,
     }
+
+
+def _parse_page_data(parsed: dict, video_id: str) -> dict:
+    data, source = parsed["data"], parsed["source"]
+    item = None
+
+    if source == "universal":
+        item = (
+            _safe_get(data, "__DEFAULT_SCOPE__", "webapp.video-detail", "itemInfo", "itemStruct")
+            or _safe_get(data, "__DEFAULT_SCOPE__", "webapp.video-detail", "itemInfo", "item")
+        )
+
+    if not item and source == "sigi":
+        item_module = _safe_get(data, "ItemModule")
+        if item_module:
+            item = item_module.get(video_id) or next(iter(item_module.values()), None)
+        if not item:
+            item = _safe_get(data, "itemInfo", "itemStruct")
+
+    if not item and source == "next":
+        item = (
+            _safe_get(data, "props", "pageProps", "itemInfo", "itemStruct")
+            or _safe_get(data, "props", "pageProps", "videoData")
+        )
+
+    if not item:
+        raise DownloadError("Video data not found in TikTok page. The video may be private or deleted.")
+
+    return _parse_item_struct(item)
+
+
+# ── Step 4: full pipeline — one path, direct page fetch ──────────────────────
+
+async def _get_video_data(url: str) -> dict:
+    video_id = await _get_video_id(url)
+    html     = await _fetch_tiktok_page(video_id)
+    parsed   = _extract_json_from_html(html)
+
+    if not parsed:
+        raise DownloadError("TikTok page structure changed — could not find embedded JSON. Please try again.")
+
+    return _parse_page_data(parsed, video_id)
 
 
 # ── Public interface ──────────────────────────────────────────────────────────
 
 async def get_video_info(url: str) -> dict:
-    video_id = await _get_video_id(url)
-    aweme    = await _fetch_mobile_api(video_id)
-    result   = _parse_aweme(aweme)
-
-    if not result["thumbnail"]:
-        try:
-            oembed = await _fetch_oembed(url)
-            result["thumbnail"] = oembed.get("thumbnail_url", "")
-            if not result["title"] or result["title"] == "TikTok Video":
-                result["title"] = oembed.get("title", result["title"])
-            if not result["author"]:
-                result["author"] = oembed.get("author_name", "")
-        except Exception:
-            pass
+    result = await _get_video_data(url)
 
     result["download_urls"] = {
         "mp4_1080": result.pop("_hd_url", ""),
         "mp4_720":  result.pop("_sd_url", ""),
         "mp3":      result.pop("_audio_url", ""),
     }
-
     return result
 
 
 async def get_cdn_url(url: str, format_type: str) -> dict:
-    video_id = await _get_video_id(url)
-    aweme    = await _fetch_mobile_api(video_id)
-    parsed   = _parse_aweme(aweme)
+    parsed = await _get_video_data(url)
 
     cdn_url    = ""
     filename   = "luldown"
@@ -410,11 +333,9 @@ async def get_cdn_url(url: str, format_type: str) -> dict:
     }
 
 
-async def stream_download(cdn_url: str) -> httpx.AsyncByteStream:
-    device = _random_device()
-    ua     = _build_mobile_ua(device)
+async def stream_download(cdn_url: str) -> httpx.Response:
     client = httpx.AsyncClient(
-        headers={"User-Agent": ua},
+        headers={"User-Agent": _random_ua(), "Referer": "https://www.tiktok.com/"},
         follow_redirects=True,
     )
     req = client.build_request("GET", cdn_url)
