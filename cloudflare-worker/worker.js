@@ -221,16 +221,26 @@ async function resolveVideoId(rawUrl) {
 // ── Step 2: Fetch TikTok HTML page ───────────────────────────────────────────
 
 const BROWSER_HEADERS = {
-  "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-  "Accept-Language": "en-US,en;q=0.9",
-  "Accept-Encoding": "gzip, deflate, br",
-  "Referer":         "https://www.tiktok.com/",
-  "Sec-Fetch-Dest":  "document",
-  "Sec-Fetch-Mode":  "navigate",
-  "Sec-Fetch-Site":  "same-origin",
+  "Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+  "Accept-Language":           "en-US,en;q=0.9",
+  "Accept-Encoding":           "gzip, deflate, br",
+  "Referer":                   "https://www.tiktok.com/",
+  "Sec-Fetch-Dest":            "document",
+  "Sec-Fetch-Mode":            "navigate",
+  "Sec-Fetch-Site":            "same-origin",
+  "Sec-Fetch-User":            "?1",
+  "Upgrade-Insecure-Requests": "1",
+  "Priority":                  "u=0, i",
 };
 
-async function fetchTikTokPage(videoId, lang) {
+// A single real Chrome browser tab always looks the same to the server — one
+// User-Agent + header fingerprint for the whole session. We only rotate the
+// fingerprint *between* attempts (not mid-request), and rely on Cloudflare's
+// anycast network routing each attempt through a different edge IP — the
+// browser itself never "closes", the network path underneath just changes.
+const PAGE_FETCH_ATTEMPTS = 3;
+
+async function fetchTikTokPageOnce(videoId, lang) {
   const url = `https://www.tiktok.com/@_/video/${videoId}`;
   const ua    = randomUA();
   const hints = getBrowserHints(ua);
@@ -257,6 +267,21 @@ async function fetchTikTokPage(videoId, lang) {
   }
 
   return res.text();
+}
+
+async function fetchTikTokPage(videoId, lang) {
+  let lastErr;
+  for (let attempt = 0; attempt < PAGE_FETCH_ATTEMPTS; attempt++) {
+    try {
+      return await fetchTikTokPageOnce(videoId, lang);
+    } catch (e) {
+      lastErr = e;
+      // Cloudflare Workers run from a global anycast network — a retry can
+      // land on a completely different edge IP, so a block on one attempt
+      // doesn't mean the next one is blocked too.
+    }
+  }
+  throw lastErr;
 }
 
 // ── Step 3: Parse JSON from HTML ─────────────────────────────────────────────

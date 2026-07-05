@@ -42,13 +42,22 @@ def _random_ua() -> str:
 
 
 _BROWSER_HEADERS = {
-    "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Referer":         "https://www.tiktok.com/",
-    "Sec-Fetch-Dest":  "document",
-    "Sec-Fetch-Mode":  "navigate",
-    "Sec-Fetch-Site":  "same-origin",
+    "Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "Accept-Language":           "en-US,en;q=0.9",
+    "Referer":                   "https://www.tiktok.com/",
+    "Sec-Fetch-Dest":            "document",
+    "Sec-Fetch-Mode":            "navigate",
+    "Sec-Fetch-Site":            "same-origin",
+    "Sec-Fetch-User":            "?1",
+    "Upgrade-Insecure-Requests": "1",
+    "Priority":                  "u=0, i",
 }
+
+# Number of attempts before giving up. On a static dev IP this mostly just
+# retries with a different UA/header fingerprint (limited benefit — the IP
+# doesn't change). In production behind Cloudflare Workers, each attempt can
+# land on a different anycast edge IP, which is where retrying actually helps.
+_PAGE_FETCH_ATTEMPTS = 2
 
 
 # ── Step 1: resolve the video ID from any URL shape ──────────────────────────
@@ -113,7 +122,7 @@ async def _get_video_id(tiktok_url: str) -> str:
 
 # ── Step 2: fetch the TikTok video page directly ─────────────────────────────
 
-async def _fetch_tiktok_page(video_id: str) -> str:
+async def _fetch_tiktok_page_once(video_id: str) -> str:
     url = f"https://www.tiktok.com/@_/video/{video_id}"
     async with httpx.AsyncClient(
         timeout=httpx.Timeout(15.0, connect=8.0),
@@ -130,6 +139,16 @@ async def _fetch_tiktok_page(video_id: str) -> str:
             raise DownloadError(f"TikTok page returned HTTP {resp.status_code}")
 
         return resp.text
+
+
+async def _fetch_tiktok_page(video_id: str) -> str:
+    last_error: Optional[Exception] = None
+    for _attempt in range(_PAGE_FETCH_ATTEMPTS):
+        try:
+            return await _fetch_tiktok_page_once(video_id)
+        except DownloadError as e:
+            last_error = e
+    raise last_error
 
 
 # ── Step 3: parse the embedded JSON out of the page HTML ─────────────────────
