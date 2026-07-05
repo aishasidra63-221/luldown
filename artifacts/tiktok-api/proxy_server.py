@@ -1,0 +1,57 @@
+import os
+import httpx
+from flask import Flask, request, Response, stream_with_context
+
+app = Flask(__name__)
+
+PROXY_SECRET = os.environ.get("PROXY_SECRET", "")
+CDN_DOMAINS = ["tiktok.com", "tiktokcdn.com", "tiktokv.com", "musical.ly", "douyin.com", "bytecdn.cn", "snssdk.com"]
+CDN_HEADERS = {
+    "User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Referer":         "https://www.tiktok.com/",
+    "Origin":          "https://www.tiktok.com",
+    "Accept":          "*/*",
+    "Accept-Encoding": "identity",
+    "Range":           "bytes=0-",
+    "Sec-Fetch-Dest":  "video",
+}
+
+
+@app.route("/health")
+def health():
+    return {"status": "ok"}
+
+
+@app.route("/proxy")
+def proxy():
+    secret = request.headers.get("x-proxy-secret", "")
+    if PROXY_SECRET and secret != PROXY_SECRET:
+        return "Forbidden", 403
+
+    url = request.args.get("url", "")
+    filename = request.args.get("filename", "luldown.mp4")
+
+    if not url.startswith("http"):
+        return "Invalid URL", 400
+    if not any(d in url for d in CDN_DOMAINS):
+        return "Forbidden", 403
+
+    media_type = "audio/mpeg" if filename.endswith(".mp3") else "video/mp4"
+
+    def generate():
+        with httpx.Client(follow_redirects=True, timeout=httpx.Timeout(120.0, connect=15.0)) as client:
+            with client.stream("GET", url, headers=CDN_HEADERS) as resp:
+                for chunk in resp.iter_bytes(65536):
+                    yield chunk
+
+    headers = {
+        "Content-Disposition": f'attachment; filename="{filename}"',
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "no-store",
+    }
+    return Response(stream_with_context(generate()), content_type=media_type, headers=headers)
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host="0.0.0.0", port=port, threaded=True)
