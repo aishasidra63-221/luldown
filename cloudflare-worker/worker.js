@@ -240,10 +240,49 @@ const BROWSER_HEADERS = {
 // browser itself never "closes", the network path underneath just changes.
 const PAGE_FETCH_ATTEMPTS = 3;
 
+// A real browser never hits a video page cold — it already has session
+// cookies (ttwid, msToken, etc.) from having visited tiktok.com before.
+// A sessionless request with only headers (no cookies) gets served a
+// stripped-down guest page that's missing the embedded JSON blob TikTok
+// normally rehydrates the page with. So we visit the homepage first (like a
+// real visitor landing on the site), collect whatever cookies TikTok hands
+// out, and carry them into the video page request.
+function mergeSetCookies(headers) {
+  const jar = [];
+  for (const [key, value] of headers.entries()) {
+    if (key.toLowerCase() === "set-cookie") {
+      const pair = value.split(";")[0];
+      if (pair) jar.push(pair);
+    }
+  }
+  return jar.join("; ");
+}
+
+async function primeSessionCookies(ua, hints, lang) {
+  try {
+    const res = await fetch("https://www.tiktok.com/", {
+      redirect: "manual",
+      headers: {
+        "User-Agent":      ua,
+        ...BROWSER_HEADERS,
+        "Sec-Fetch-Site":  "none",
+        "Sec-Fetch-User":  "?1",
+        "Accept-Language": lang || "en-US,en;q=0.9",
+        ...(hints || {}),
+      },
+    });
+    return mergeSetCookies(res.headers);
+  } catch (_) {
+    return "";
+  }
+}
+
 async function fetchTikTokPageOnce(videoId, lang) {
   const url = `https://www.tiktok.com/@_/video/${videoId}`;
   const ua    = randomUA();
   const hints = getBrowserHints(ua);
+  const cookie = await primeSessionCookies(ua, hints, lang);
+
   const res = await fetch(url, {
     redirect: "manual",
     headers: {
@@ -251,6 +290,7 @@ async function fetchTikTokPageOnce(videoId, lang) {
       ...BROWSER_HEADERS,
       "Accept-Language": lang || "en-US,en;q=0.9",
       ...(hints || {}),
+      ...(cookie ? { "Cookie": cookie } : {}),
     },
   });
 
