@@ -1,11 +1,11 @@
 /**
- * Luldown — TikTok Downloader Cloudflare Worker (v5.1)
+ * Luldown — TikTok Downloader Cloudflare Worker (v6.0)
  *
  * Direct TikTok HTML scraping — no third-party APIs, no mobile API.
  *   Step 1: Resolve video ID from any URL (full, short, vm., vt.)
- *   Step 2: Fetch tiktok.com/@_/video/{id} with rotating browser headers
- *           + dynamic Accept-Language matched to Cloudflare datacenter country
- *   Step 3: Parse __UNIVERSAL_DATA_FOR_REHYDRATION__ or SIGI_STATE JSON
+ *   Step 2: Fetch tiktok.com/@_/video/{id} with rotating Chrome User-Agent
+ *           + fixed en-US Accept-Language + 7 fixed headers (no session priming)
+ *   Step 3: Parse __remixContext JSON (falls back to older formats if missing)
  *   Step 4: Return CDN URLs — browser downloads directly from TikTok CDN
  */
 
@@ -15,72 +15,12 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-// ── Countries where TikTok is government-banned ──────────────────────────────
-// If CF routes our worker from one of these colos, we force en-US lang anyway
-// (can't change outbound IP, but at least language won't reveal the region)
-const TIKTOK_BANNED_COUNTRIES = new Set(["IN", "AF", "IR"]);
-
-// ── Accept-Language per Cloudflare datacenter country ────────────────────────
-// TikTok uses language header to decide which CDN region & content variant to serve
-const COUNTRY_LANGUAGE = {
-  US: "en-US,en;q=0.9",
-  CA: "en-CA,en;q=0.9,fr-CA;q=0.8",
-  GB: "en-GB,en;q=0.9",
-  AU: "en-AU,en;q=0.9",
-  NZ: "en-NZ,en;q=0.9",
-  IE: "en-IE,en;q=0.9",
-  SG: "en-SG,en;q=0.9,zh-Hans;q=0.8",
-  PH: "en-PH,en;q=0.9,fil;q=0.8",
-  MY: "en-MY,en;q=0.9,ms;q=0.8",
-  ZA: "en-ZA,en;q=0.9",
-  NG: "en-NG,en;q=0.9",
-  GH: "en-GH,en;q=0.9",
-  KE: "en-KE,en;q=0.9,sw;q=0.8",
-  PK: "ur-PK,ur;q=0.9,en;q=0.8",
-  DE: "de-DE,de;q=0.9,en;q=0.8",
-  AT: "de-AT,de;q=0.9,en;q=0.8",
-  CH: "de-CH,de;q=0.9,fr;q=0.8,en;q=0.7",
-  FR: "fr-FR,fr;q=0.9,en;q=0.8",
-  BE: "fr-BE,fr;q=0.9,nl;q=0.8,en;q=0.7",
-  NL: "nl-NL,nl;q=0.9,en;q=0.8",
-  ES: "es-ES,es;q=0.9,en;q=0.8",
-  MX: "es-MX,es;q=0.9,en;q=0.8",
-  AR: "es-AR,es;q=0.9,en;q=0.8",
-  CO: "es-CO,es;q=0.9,en;q=0.8",
-  CL: "es-CL,es;q=0.9,en;q=0.8",
-  PE: "es-PE,es;q=0.9,en;q=0.8",
-  BR: "pt-BR,pt;q=0.9,en;q=0.8",
-  PT: "pt-PT,pt;q=0.9,en;q=0.8",
-  IT: "it-IT,it;q=0.9,en;q=0.8",
-  PL: "pl-PL,pl;q=0.9,en;q=0.8",
-  RO: "ro-RO,ro;q=0.9,en;q=0.8",
-  SE: "sv-SE,sv;q=0.9,en;q=0.8",
-  NO: "nb-NO,nb;q=0.9,en;q=0.8",
-  DK: "da-DK,da;q=0.9,en;q=0.8",
-  FI: "fi-FI,fi;q=0.9,en;q=0.8",
-  JP: "ja-JP,ja;q=0.9,en;q=0.8",
-  KR: "ko-KR,ko;q=0.9,en;q=0.8",
-  TH: "th-TH,th;q=0.9,en;q=0.8",
-  VN: "vi-VN,vi;q=0.9,en;q=0.8",
-  ID: "id-ID,id;q=0.9,en;q=0.8",
-  TR: "tr-TR,tr;q=0.9,en;q=0.8",
-  SA: "ar-SA,ar;q=0.9,en;q=0.8",
-  AE: "ar-AE,ar;q=0.9,en;q=0.8",
-  EG: "ar-EG,ar;q=0.9,en;q=0.8",
-  UA: "uk-UA,uk;q=0.9,ru;q=0.8,en;q=0.7",
-  CZ: "cs-CZ,cs;q=0.9,en;q=0.8",
-  HU: "hu-HU,hu;q=0.9,en;q=0.8",
-  GR: "el-GR,el;q=0.9,en;q=0.8",
-  IL: "he-IL,he;q=0.9,en;q=0.8",
-};
-
-function getLanguage(cfCountry) {
-  // Banned countries → force US English so TikTok doesn't serve restricted content
-  if (!cfCountry || TIKTOK_BANNED_COUNTRIES.has(cfCountry)) return "en-US,en;q=0.9";
-  return COUNTRY_LANGUAGE[cfCountry] || "en-US,en;q=0.9";
+// ── Language: FIXED — always en-US, matches competitor's approach ───────────
+function getLanguage() {
+  return "en-US,en;q=0.9";
 }
 
-// ── 45 Rotating User-Agents (Chrome · Firefox · Safari · Edge · Opera) ───────
+// ── Rotating User-Agents — Chrome only ───────────────────────────────────────
 const USER_AGENTS = [
   // Chrome — Windows 10 / 11
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
@@ -105,80 +45,10 @@ const USER_AGENTS = [
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-  // Firefox — Windows
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0",
-  // Firefox — macOS
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.5; rv:128.0) Gecko/20100101 Firefox/128.0",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.5; rv:127.0) Gecko/20100101 Firefox/127.0",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 13.6; rv:126.0) Gecko/20100101 Firefox/126.0",
-  // Firefox — Linux
-  "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
-  "Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0",
-  "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:126.0) Gecko/20100101 Firefox/126.0",
-  // Safari — macOS
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15",
-  // Edge — Windows
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36 Edg/123.0.0.0",
-  // Opera — Windows
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 OPR/111.0.0.0",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 OPR/110.0.0.0",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36 OPR/109.0.0.0",
-  // Brave — Windows (looks like Chrome to servers)
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-  // Vivaldi — Windows
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
 ];
 
 function randomUA() {
   return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
-}
-
-// ── sec-ch-ua Client Hints — match the selected User-Agent ───────────────────
-// Chrome/Edge/Opera send Client Hints. Firefox and Safari do NOT — so we skip
-// these headers for those browsers to stay authentic.
-
-function getBrowserHints(ua) {
-  // Firefox — does not support Client Hints at all
-  if (ua.includes("Firefox/")) return null;
-
-  // Safari (without Chrome) — does not support Client Hints
-  if (ua.includes("Safari/") && !ua.includes("Chrome/")) return null;
-
-  // All Chromium-based: Chrome, Edge, Opera, Brave, Vivaldi
-  const chromeVersion = (ua.match(/Chrome\/(\d+)/) || [])[1] || "126";
-
-  let platform = '"Windows"';
-  if (ua.includes("Macintosh"))        platform = '"macOS"';
-  else if (ua.includes("X11; Linux"))  platform = '"Linux"';
-
-  let brands;
-  if (ua.includes("Edg/")) {
-    const edgeV = (ua.match(/Edg\/(\d+)/) || [])[1] || chromeVersion;
-    brands = `"Not/A)Brand";v="8", "Chromium";v="${chromeVersion}", "Microsoft Edge";v="${edgeV}"`;
-  } else if (ua.includes("OPR/")) {
-    const operaV = (ua.match(/OPR\/(\d+)/) || [])[1] || chromeVersion;
-    brands = `"Not/A)Brand";v="8", "Chromium";v="${chromeVersion}", "Opera";v="${operaV}"`;
-  } else {
-    // Chrome / Brave / Vivaldi — all appear as Chrome to servers
-    brands = `"Not/A)Brand";v="8", "Chromium";v="${chromeVersion}", "Google Chrome";v="${chromeVersion}"`;
-  }
-
-  return {
-    "sec-ch-ua":          brands,
-    "sec-ch-ua-mobile":   "?0",
-    "sec-ch-ua-platform": platform,
-  };
 }
 
 // ── Step 1: Extract video ID ─────────────────────────────────────────────────
@@ -219,19 +89,19 @@ async function resolveVideoId(rawUrl) {
 }
 
 // ── Step 2: Fetch TikTok HTML page ───────────────────────────────────────────
+// Fixed 7-header set — no session priming, no cookies. Cloudflare's anycast
+// network handles the outbound IP automatically, one IP per request.
 
 const BROWSER_HEADERS = {
-  "Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-  "Accept-Language":           "en-US,en;q=0.9",
-  "Accept-Encoding":           "gzip, deflate, br",
-  "Referer":                   "https://www.tiktok.com/",
-  "Sec-Fetch-Dest":            "document",
-  "Sec-Fetch-Mode":            "navigate",
-  "Sec-Fetch-Site":            "same-origin",
-  "Sec-Fetch-User":            "?1",
-  "Upgrade-Insecure-Requests": "1",
-  "Priority":                  "u=0, i",
+  "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+  "Accept-Language": "en-US,en;q=0.9",
+  "Accept-Encoding": "gzip, deflate, br",
+  "Referer":         "https://www.tiktok.com/",
+  "Sec-Fetch-Dest":  "document",
+  "Sec-Fetch-Mode":  "navigate",
+  "Sec-Fetch-Site":  "same-origin",
 };
+// + "User-Agent" (set per-request below) = 7 headers total.
 
 // A single real Chrome browser tab always looks the same to the server — one
 // User-Agent + header fingerprint for the whole session. We only rotate the
@@ -240,57 +110,16 @@ const BROWSER_HEADERS = {
 // browser itself never "closes", the network path underneath just changes.
 const PAGE_FETCH_ATTEMPTS = 3;
 
-// A real browser never hits a video page cold — it already has session
-// cookies (ttwid, msToken, etc.) from having visited tiktok.com before.
-// A sessionless request with only headers (no cookies) gets served a
-// stripped-down guest page that's missing the embedded JSON blob TikTok
-// normally rehydrates the page with. So we visit the homepage first (like a
-// real visitor landing on the site), collect whatever cookies TikTok hands
-// out, and carry them into the video page request.
-function mergeSetCookies(headers) {
-  const jar = [];
-  for (const [key, value] of headers.entries()) {
-    if (key.toLowerCase() === "set-cookie") {
-      const pair = value.split(";")[0];
-      if (pair) jar.push(pair);
-    }
-  }
-  return jar.join("; ");
-}
-
-async function primeSessionCookies(ua, hints, lang) {
-  try {
-    const res = await fetch("https://www.tiktok.com/", {
-      redirect: "manual",
-      headers: {
-        "User-Agent":      ua,
-        ...BROWSER_HEADERS,
-        "Sec-Fetch-Site":  "none",
-        "Sec-Fetch-User":  "?1",
-        "Accept-Language": lang || "en-US,en;q=0.9",
-        ...(hints || {}),
-      },
-    });
-    return mergeSetCookies(res.headers);
-  } catch (_) {
-    return "";
-  }
-}
-
 async function fetchTikTokPageOnce(videoId, lang) {
   const url = `https://www.tiktok.com/@_/video/${videoId}`;
   const ua    = randomUA();
-  const hints = getBrowserHints(ua);
-  const cookie = await primeSessionCookies(ua, hints, lang);
 
   const res = await fetch(url, {
     redirect: "manual",
     headers: {
-      "User-Agent":      ua,
+      "User-Agent": ua,
       ...BROWSER_HEADERS,
       "Accept-Language": lang || "en-US,en;q=0.9",
-      ...(hints || {}),
-      ...(cookie ? { "Cookie": cookie } : {}),
     },
   });
 
@@ -327,7 +156,17 @@ async function fetchTikTokPage(videoId, lang) {
 // ── Step 3: Parse JSON from HTML ─────────────────────────────────────────────
 
 function extractJsonFromHtml(html) {
-  // Try __UNIVERSAL_DATA_FOR_REHYDRATION__ first (newer TikTok)
+  // Try __remixContext first (primary format we target now)
+  const m0 = html.match(/<script[^>]*>\s*window\.__remixContext\s*=\s*({[\s\S]*?})\s*;?\s*<\/script>/);
+  if (m0) {
+    try { return { data: JSON.parse(m0[1]), source: "remix" }; } catch (_) {}
+  }
+  const m0b = html.match(/<script\s+id="__remixContext"[^>]*>([\s\S]*?)<\/script>/);
+  if (m0b) {
+    try { return { data: JSON.parse(m0b[1]), source: "remix" }; } catch (_) {}
+  }
+
+  // Try __UNIVERSAL_DATA_FOR_REHYDRATION__ (newer TikTok)
   const m1 = html.match(/<script\s+id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([\s\S]*?)<\/script>/);
   if (m1) {
     try { return { data: JSON.parse(m1[1]), source: "universal" }; } catch (_) {}
@@ -472,12 +311,53 @@ function parseItemStruct(item) {
   };
 }
 
+// Recursive search — finds an object that looks like a TikTok item
+// (has "video" or "author" key, and id matches when known). Used as a
+// robust fallback when the exact __remixContext path can't be predicted
+// (Remix route loader keys vary by build).
+function findItemDeep(node, videoId, depth = 0, seen = new Set()) {
+  if (!node || typeof node !== "object" || depth > 8 || seen.has(node)) return null;
+  seen.add(node);
+
+  if (!Array.isArray(node)) {
+    const looksLikeItem =
+      (node.video || node.imagePost || node.image_post_info) &&
+      (node.author || node.stats || node.statistics);
+    if (looksLikeItem && (!videoId || node.id === videoId || node.itemId === videoId)) {
+      return node;
+    }
+  }
+
+  const values = Array.isArray(node) ? node : Object.values(node);
+  for (const v of values) {
+    if (v && typeof v === "object") {
+      const found = findItemDeep(v, videoId, depth + 1, seen);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 function parsePageData(parsed, videoId) {
   const { data, source } = parsed;
 
   let item = null;
 
-  if (source === "universal") {
+  if (source === "remix") {
+    // __remixContext → state.loaderData.<route> → videoInfo/itemInfo/itemStruct
+    const loaderData = safeGet(data, "state", "loaderData") || safeGet(data, "loaderData") || {};
+    for (const routeData of Object.values(loaderData)) {
+      item =
+        safeGet(routeData, "videoInfo", "itemInfo", "itemStruct") ||
+        safeGet(routeData, "itemInfo", "itemStruct") ||
+        safeGet(routeData, "itemStruct");
+      if (item) break;
+    }
+    // Fall back to a deep scan of the whole remix payload
+    if (!item) item = findItemDeep(data, videoId);
+  }
+
+  if (!item && source === "universal") {
     // __UNIVERSAL_DATA_FOR_REHYDRATION__ → __DEFAULT_SCOPE__ → webapp.video-detail
     item =
       safeGet(data, "__DEFAULT_SCOPE__", "webapp.video-detail", "itemInfo", "itemStruct") ||

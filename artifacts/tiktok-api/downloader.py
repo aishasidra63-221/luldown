@@ -25,15 +25,13 @@ class DownloadError(Exception):
     pass
 
 
-# ── Rotating desktop browser User-Agents ─────────────────────────────────────
+# ── Rotating desktop browser User-Agents — Chrome only ───────────────────────
 _USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15",
 ]
 
 
@@ -41,16 +39,15 @@ def _random_ua() -> str:
     return random.choice(_USER_AGENTS)
 
 
+# Fixed 7-header set (+ User-Agent set separately) — always en-US language,
+# no session priming / cookies.
 _BROWSER_HEADERS = {
-    "Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-    "Accept-Language":           "en-US,en;q=0.9",
-    "Referer":                   "https://www.tiktok.com/",
-    "Sec-Fetch-Dest":            "document",
-    "Sec-Fetch-Mode":            "navigate",
-    "Sec-Fetch-Site":            "same-origin",
-    "Sec-Fetch-User":            "?1",
-    "Upgrade-Insecure-Requests": "1",
-    "Priority":                  "u=0, i",
+    "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer":         "https://www.tiktok.com/",
+    "Sec-Fetch-Dest":  "document",
+    "Sec-Fetch-Mode":  "navigate",
+    "Sec-Fetch-Site":  "same-origin",
 }
 
 # Number of attempts before giving up. On a static dev IP this mostly just
@@ -154,6 +151,21 @@ async def _fetch_tiktok_page(video_id: str) -> str:
 # ── Step 3: parse the embedded JSON out of the page HTML ─────────────────────
 
 def _extract_json_from_html(html: str) -> Optional[dict]:
+    # Try __remixContext first (primary format we target now)
+    m = re.search(
+        r"<script[^>]*>\s*window\.__remixContext\s*=\s*({[\s\S]*?})\s*;?\s*</script>",
+        html,
+    )
+    if not m:
+        m = re.search(
+            r'<script\s+id="__remixContext"[^>]*>([\s\S]*?)</script>', html
+        )
+    if m:
+        try:
+            return {"data": _json.loads(m.group(1)), "source": "remix"}
+        except Exception:
+            pass
+
     for script_id, source in (
         ("__UNIVERSAL_DATA_FOR_REHYDRATION__", "universal"),
         ("SIGI_STATE", "sigi"),
@@ -168,6 +180,36 @@ def _extract_json_from_html(html: str) -> Optional[dict]:
             return {"data": _json.loads(m.group(1)), "source": source}
         except Exception:
             continue
+    return None
+
+
+def _find_item_deep(node, video_id: Optional[str], depth: int = 0, seen=None):
+    """Recursive fallback — finds a TikTok item object by shape rather than
+    a fixed path, since Remix route-loader keys vary by build."""
+    if seen is None:
+        seen = set()
+    if not isinstance(node, (dict, list)) or depth > 8 or id(node) in seen:
+        return None
+    seen.add(id(node))
+
+    if isinstance(node, dict):
+        looks_like_item = (
+            (node.get("video") or node.get("imagePost") or node.get("image_post_info"))
+            and (node.get("author") or node.get("stats") or node.get("statistics"))
+        )
+        if looks_like_item and (
+            not video_id or node.get("id") == video_id or node.get("itemId") == video_id
+        ):
+            return node
+        values = node.values()
+    else:
+        values = node
+
+    for v in values:
+        if isinstance(v, (dict, list)):
+            found = _find_item_deep(v, video_id, depth + 1, seen)
+            if found:
+                return found
     return None
 
 
@@ -263,7 +305,22 @@ def _parse_page_data(parsed: dict, video_id: str) -> dict:
     data, source = parsed["data"], parsed["source"]
     item = None
 
-    if source == "universal":
+    if source == "remix":
+        loader_data = (
+            _safe_get(data, "state", "loaderData") or _safe_get(data, "loaderData") or {}
+        )
+        for route_data in (loader_data or {}).values():
+            item = (
+                _safe_get(route_data, "videoInfo", "itemInfo", "itemStruct")
+                or _safe_get(route_data, "itemInfo", "itemStruct")
+                or _safe_get(route_data, "itemStruct")
+            )
+            if item:
+                break
+        if not item:
+            item = _find_item_deep(data, video_id)
+
+    if not item and source == "universal":
         item = (
             _safe_get(data, "__DEFAULT_SCOPE__", "webapp.video-detail", "itemInfo", "itemStruct")
             or _safe_get(data, "__DEFAULT_SCOPE__", "webapp.video-detail", "itemInfo", "item")
