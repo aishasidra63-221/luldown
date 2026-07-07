@@ -1,12 +1,12 @@
 /**
- * Luldown — TikTok Downloader Cloudflare Worker (v6.0)
+ * Luldown — TikTok Downloader Cloudflare Worker (v7.0)
  *
- * Direct TikTok HTML scraping — no third-party APIs, no mobile API.
- *   Step 1: Resolve video ID from any URL (full, short, vm., vt.)
- *   Step 2: Fetch tiktok.com/@_/video/{id} with rotating Chrome User-Agent
- *           + fixed en-US Accept-Language + 7 fixed headers (no session priming)
- *   Step 3: Parse __remixContext JSON (falls back to older formats if missing)
- *   Step 4: Return CDN URLs — browser downloads directly from TikTok CDN
+ * TikTok Android Private API — no browser, no HTML scraping, no Puppeteer.
+ * Fakes a real Android (Pixel 7) device making requests exactly like TikTok app.
+ *   Step 1: Resolve video ID from any URL (full, short, vm., vt., /t/)
+ *   Step 2: POST to TikTok's Android private API with fake device identity
+ *   Step 3: Parse aweme_details[0] from JSON response
+ *   Step 4: Cache metadata 7 days, video URLs 5 hours (in-memory)
  */
 
 const CORS_HEADERS = {
@@ -15,43 +15,46 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-// ── Language: FIXED — always en-US, matches competitor's approach ───────────
-function getLanguage() {
-  return "en-US,en;q=0.9";
+// ── In-memory cache ───────────────────────────────────────────────────────────
+// Cloudflare Worker isolates are long-lived within a colo — this cache persists
+// across requests hitting the same isolate. TTL enforced on read.
+
+const _cache = new Map();
+
+function cacheSet(key, value, ttlSeconds) {
+  _cache.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 });
 }
 
-// ── Rotating User-Agents — Chrome only ───────────────────────────────────────
-const USER_AGENTS = [
-  // Chrome — Windows 10 / 11
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Windows NT 11.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Windows NT 11.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-  // Chrome — macOS
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-  // Chrome — Linux
-  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-];
-
-function randomUA() {
-  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+function cacheGet(key) {
+  const entry = _cache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) { _cache.delete(key); return null; }
+  return entry.value;
 }
 
-// ── Step 1: Extract video ID ─────────────────────────────────────────────────
+const TTL_META = 7 * 24 * 60 * 60;   // 7 days  — title, author, avatar, thumbnail
+const TTL_URL  = 5 * 60 * 60;         // 5 hours — signed video URL (expires in 6h)
+
+// ── Random helpers ────────────────────────────────────────────────────────────
+
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randHex(len) {
+  let s = "";
+  while (s.length < len) s += Math.floor(Math.random() * 0x100000000).toString(16).padStart(8, "0");
+  return s.slice(0, len);
+}
+
+function randUUID() {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+    const r = (Math.random() * 16) | 0;
+    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
+// ── Step 1: Resolve video ID from any TikTok URL ─────────────────────────────
 
 function extractIdFromString(s) {
   const m = s.match(/\/video\/(\d{10,20})/);
@@ -61,26 +64,22 @@ function extractIdFromString(s) {
 async function resolveVideoId(rawUrl) {
   const url = rawUrl.trim();
 
-  // Fast path — video ID already in full URL
+  // Fast path — video ID already in URL
   const direct = extractIdFromString(url);
   if (direct) return direct;
 
-  // Short URL (vm., vt., /t/) — follow HTTP redirects
+  // Short URL (vm., vt., /t/) — follow redirects to get real URL
   const res = await fetch(url, {
     redirect: "follow",
     headers: {
-      "User-Agent":      randomUA(),
-      "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "User-Agent":      "com.zhiliaoapp.musically/2023501030 (Linux; U; Android 13; en_US; Pixel 7; Build/TD1A.220804.031; Cronet/58.0.2991.0)",
       "Accept-Language": "en-US,en;q=0.9",
-      "Referer":         "https://www.tiktok.com/",
     },
   });
 
-  // Check the resolved URL
   const fromUrl = extractIdFromString(res.url);
   if (fromUrl) return fromUrl;
 
-  // Scrape HTML for video ID
   const html = await res.text();
   const fromHtml = html.match(/\/video\/(\d{10,20})/);
   if (fromHtml) return fromHtml[1];
@@ -88,333 +87,201 @@ async function resolveVideoId(rawUrl) {
   throw new Error("Could not extract video ID. Make sure the link is a valid public TikTok video.");
 }
 
-// ── Step 2: Fetch TikTok HTML page ───────────────────────────────────────────
-// Fixed 7-header set — no session priming, no cookies. Cloudflare's anycast
-// network handles the outbound IP automatically, one IP per request.
+// ── Step 2: TikTok Android Private API call ───────────────────────────────────
+// Fakes a Pixel 7 Android device running TikTok app (com.zhiliaoapp.musically).
+// Static device identity + rotating per-request params to avoid fingerprinting.
 
-const BROWSER_HEADERS = {
-  "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-  "Accept-Language": "en-US,en;q=0.9",
-  "Accept-Encoding": "gzip, deflate, br",
-  "Referer":         "https://www.tiktok.com/",
-  "Sec-Fetch-Dest":  "document",
-  "Sec-Fetch-Mode":  "navigate",
-  "Sec-Fetch-Site":  "same-origin",
+const STATIC_DEVICE = {
+  device_type:     "Pixel 7",
+  os_version:      "13",
+  device_platform: "android",
+  app_name:        "musical_ly",
+  app_version:     "32.5.3",
+  version_code:    "2023501030",
+  channel:         "googleplay",
+  sys_region:      "US",
+  app_language:    "en",
+  timezone_name:   "America/New_York",
+  timezone_offset: "-14400",
+  host_abi:        "armeabi-v7a",
+  aid:             "1233",
+  // extra fixed params
+  ssmix:           "a",
+  residence:       "US",
+  app_type:        "normal",
+  iid:             "7023456789012345678",
 };
-// + "User-Agent" (set per-request below) = 7 headers total.
 
-// A single real Chrome browser tab always looks the same to the server — one
-// User-Agent + header fingerprint for the whole session. We only rotate the
-// fingerprint *between* attempts (not mid-request), and rely on Cloudflare's
-// anycast network routing each attempt through a different edge IP — the
-// browser itself never "closes", the network path underneath just changes.
-const PAGE_FETCH_ATTEMPTS = 3;
+function buildQueryParams(videoId) {
+  const ts               = Math.floor(Date.now() / 1000);
+  const _rticket         = Date.now();
+  const device_id        = String(randInt(7250000000000000000, 7325099899999994577));
+  const openudid         = randHex(16);
+  const cdid             = randUUID();
+  const last_install_time = ts - randInt(86400, 1123200);
 
-async function fetchTikTokPageOnce(videoId, lang) {
-  const url = `https://www.tiktok.com/@_/video/${videoId}`;
-  const ua    = randomUA();
-
-  const res = await fetch(url, {
-    redirect: "manual",
-    headers: {
-      "User-Agent": ua,
-      ...BROWSER_HEADERS,
-      "Accept-Language": lang || "en-US,en;q=0.9",
-    },
+  const params = new URLSearchParams({
+    ...STATIC_DEVICE,
+    device_id,
+    openudid,
+    cdid,
+    _rticket: String(_rticket),
+    ts:       String(ts),
+    last_install_time: String(last_install_time),
   });
 
-  // TikTok redirects datacenter IPs to /about — treat as block
-  if (res.status === 302 || res.status === 301) {
-    const loc = res.headers.get("location") || "";
-    if (loc.includes("/about") || loc.includes("/login")) {
-      throw new Error("TikTok blocked this datacenter IP (redirect detected).");
-    }
-  }
-
-  if (!res.ok && res.status !== 301 && res.status !== 302) {
-    throw new Error(`TikTok page returned HTTP ${res.status}`);
-  }
-
-  return res.text();
+  return params.toString();
 }
 
-async function fetchTikTokPage(videoId, lang) {
-  let lastErr;
-  for (let attempt = 0; attempt < PAGE_FETCH_ATTEMPTS; attempt++) {
-    try {
-      return await fetchTikTokPageOnce(videoId, lang);
-    } catch (e) {
-      lastErr = e;
-      // Cloudflare Workers run from a global anycast network — a retry can
-      // land on a completely different edge IP, so a block on one attempt
-      // doesn't mean the next one is blocked too.
-    }
+async function callAndroidAPI(videoId) {
+  const qs = buildQueryParams(videoId);
+  const endpoint = `https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/multi/aweme/detail/?${qs}`;
+
+  const body = new URLSearchParams({
+    aweme_ids:      `[${videoId}]`,
+    request_source: "0",
+  });
+
+  const odinToken = randHex(160);
+
+  const response = await fetch(endpoint, {
+    method:  "POST",
+    headers: {
+      "User-Agent":   "com.zhiliaoapp.musically/2023501030 (Linux; U; Android 13; en_US; Pixel 7; Build/TD1A.220804.031; Cronet/58.0.2991.0)",
+      "X-SS-TC":      "0",
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Cookie":       `odin_tt=${odinToken}`,
+    },
+    body: body.toString(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`TikTok API returned HTTP ${response.status}`);
   }
-  throw lastErr;
+
+  const data = await response.json();
+  return data;
 }
 
-// ── Step 3: Parse JSON from HTML ─────────────────────────────────────────────
+// ── Step 3: Parse aweme_details from API response ────────────────────────────
 
-function extractJsonFromHtml(html) {
-  // Try __remixContext first (primary format we target now)
-  const m0 = html.match(/<script[^>]*>\s*window\.__remixContext\s*=\s*({[\s\S]*?})\s*;?\s*<\/script>/);
-  if (m0) {
-    try { return { data: JSON.parse(m0[1]), source: "remix" }; } catch (_) {}
-  }
-  const m0b = html.match(/<script\s+id="__remixContext"[^>]*>([\s\S]*?)<\/script>/);
-  if (m0b) {
-    try { return { data: JSON.parse(m0b[1]), source: "remix" }; } catch (_) {}
-  }
-
-  // Try __UNIVERSAL_DATA_FOR_REHYDRATION__ (newer TikTok)
-  const m1 = html.match(/<script\s+id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([\s\S]*?)<\/script>/);
-  if (m1) {
-    try { return { data: JSON.parse(m1[1]), source: "universal" }; } catch (_) {}
-  }
-
-  // Try SIGI_STATE (older TikTok)
-  const m2 = html.match(/<script\s+id="SIGI_STATE"[^>]*>([\s\S]*?)<\/script>/);
-  if (m2) {
-    try { return { data: JSON.parse(m2[1]), source: "sigi" }; } catch (_) {}
-  }
-
-  // Try __NEXT_DATA__ (legacy)
-  const m3 = html.match(/<script\s+id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
-  if (m3) {
-    try { return { data: JSON.parse(m3[1]), source: "next" }; } catch (_) {}
-  }
-
-  return null;
+function firstUrl(urlList) {
+  if (!urlList || !Array.isArray(urlList)) return "";
+  return urlList.find(u => u && u.startsWith("http")) || "";
 }
 
-// ── Base64 URL decode ─────────────────────────────────────────────────────────
-// TikTok sometimes encodes CDN URLs in Base64 (e.g. ssscdn.io style responses).
-// If a "URL" doesn't start with http, try decoding it as Base64.
-// If the decoded result starts with http → use it. Otherwise keep original.
-
-function decodeUrl(raw) {
-  if (!raw || typeof raw !== "string") return raw;
-  if (raw.startsWith("http")) return raw; // already a real URL
-  try {
-    const decoded = atob(raw.replace(/-/g, "+").replace(/_/g, "/"));
-    if (decoded.startsWith("http")) return decoded;
-  } catch (_) {}
-  return raw;
-}
-
-function safeGet(obj, ...keys) {
-  let cur = obj;
-  for (const k of keys) {
-    if (cur == null || typeof cur !== "object") return undefined;
-    cur = cur[k];
-  }
-  return cur;
-}
-
-function firstStr(...vals) {
-  for (const v of vals) {
-    if (typeof v === "string" && v.length > 0) return v;
-  }
-  return "";
-}
-
-function firstNum(...vals) {
-  for (const v of vals) {
-    if (typeof v === "number") return v;
-  }
-  return 0;
-}
-
-function parseItemStruct(item) {
-  const video   = item.video   || {};
-  const music   = item.music   || {};
-  const author  = item.author  || {};
-  const stats   = item.stats   || item.statistics || {};
-  const imgPost = item.imagePost || item.image_post_info || null;
+function parseAweme(aweme) {
+  const author = aweme.author  || {};
+  const video  = aweme.video   || {};
+  const music  = aweme.music   || {};
+  const stats  = aweme.statistics || aweme.stats || {};
 
   // Photos (slideshow)
-  const images = [];
+  const imgPost = aweme.image_post_info || aweme.imagePost || null;
+  const images  = [];
   if (imgPost) {
-    const imgList = imgPost.images || [];
-    for (const img of imgList) {
-      const url = decodeUrl(
-        safeGet(img, "display_image", "url_list", 0) ||
-        safeGet(img, "displayImage", "urlList", 0) ||
-        safeGet(img, "ownerWatermarkImage", "urlList", 0) ||
-        "",
+    for (const img of (imgPost.images || [])) {
+      const u = firstUrl(
+        (img.display_image   || img.displayImage   || {}).url_list ||
+        (img.display_image   || img.displayImage   || {}).urlList  || [],
       );
-      if (url) images.push(url);
+      if (u) images.push(u);
     }
   }
 
   const isPhoto = images.length > 0;
 
-  // Video URLs — decodeUrl handles both plain URLs and Base64-encoded ones
-  const videoHd = decodeUrl(firstStr(
-    safeGet(video, "downloadAddr"),
-    safeGet(video, "download_addr"),
-    safeGet(video, "playAddr"),
-    safeGet(video, "play_addr"),
-  ));
-
-  const videoWm = decodeUrl(firstStr(
-    safeGet(video, "playAddr"),
-    safeGet(video, "play_addr"),
-    videoHd,
-  ));
-
-  // Audio
-  const audio = decodeUrl(firstStr(
-    safeGet(music, "playUrl"),
-    safeGet(music, "play_url"),
-  ));
+  // Video URLs
+  const videoUrl     = firstUrl((video.play_addr      || video.playAddr     || {}).url_list);
+  const downloadUrl  = firstUrl((video.download_addr   || video.downloadAddr || {}).url_list);
+  const audioUrl     = firstUrl((music.play_url        || music.playUrl      || {}).url_list);
 
   // Thumbnail
-  const thumbnail = decodeUrl(firstStr(
-    safeGet(video, "cover"),
-    safeGet(video, "originCover"),
-    safeGet(video, "origin_cover"),
-    safeGet(video, "dynamicCover"),
-  ));
-
-  // Author
-  const authorName = firstStr(
-    safeGet(author, "uniqueId"),
-    safeGet(author, "unique_id"),
-    safeGet(author, "nickname"),
+  const thumbnail = firstUrl(
+    (video.cover          || {}).url_list ||
+    (video.origin_cover   || {}).url_list ||
+    (video.dynamic_cover  || {}).url_list || [],
   );
 
-  const authorAvatar = decodeUrl(firstStr(
-    safeGet(author, "avatarMedium"),
-    safeGet(author, "avatar_medium"),
-    safeGet(author, "avatarThumb"),
-    safeGet(author, "avatar_thumb"),
-    safeGet(author, "avatarLarger"),
-    safeGet(author, "avatar_larger"),
-  ));
+  // Author
+  const username = author.unique_id || author.uniqueId || author.nickname || "";
+  const avatar   = firstUrl(
+    (author.avatar_thumb  || author.avatarThumb  || {}).url_list ||
+    (author.avatar_medium || author.avatarMedium || {}).url_list || [],
+  );
 
   return {
-    title:         item.desc || "TikTok Video",
-    author:        authorName ? `@${authorName}` : "",
-    author_avatar: authorAvatar || "",
-    duration:      firstNum(video.duration),
-    thumbnail,
-    view_count:    firstNum(stats.playCount,   stats.play_count),
-    like_count:    firstNum(stats.diggCount,   stats.digg_count),
-    comment_count: firstNum(stats.commentCount, stats.comment_count),
-    share_count:   firstNum(stats.shareCount,  stats.share_count),
+    title:         aweme.desc || "TikTok Video",
+    username:      username ? `@${username}` : "",
+    displayName:   author.nickname || "",
+    avatarUrl:     avatar,
+    videoUrl:      downloadUrl || videoUrl,
+    videoUrlWm:    videoUrl,
+    audioUrl,
+    thumbUrl:      thumbnail,
+    duration:      video.duration || 0,
+    view_count:    stats.play_count   || stats.playCount   || 0,
+    like_count:    stats.digg_count   || stats.diggCount   || 0,
+    comment_count: stats.comment_count || stats.commentCount || 0,
+    share_count:   stats.share_count  || stats.shareCount  || 0,
     is_photo:      isPhoto,
     images,
-    _hd_url:       videoHd,
-    _sd_url:       videoWm,
-    _audio_url:    audio,
   };
 }
 
-// Recursive search — finds an object that looks like a TikTok item
-// (has "video" or "author" key, and id matches when known). Used as a
-// robust fallback when the exact __remixContext path can't be predicted
-// (Remix route loader keys vary by build).
-function findItemDeep(node, videoId, depth = 0, seen = new Set()) {
-  if (!node || typeof node !== "object" || depth > 8 || seen.has(node)) return null;
-  seen.add(node);
+// ── Step 4: fetchTikTokVideo — cache → API → parse → cache → return ──────────
 
-  if (!Array.isArray(node)) {
-    const looksLikeItem =
-      (node.video || node.imagePost || node.image_post_info) &&
-      (node.author || node.stats || node.statistics);
-    if (looksLikeItem && (!videoId || node.id === videoId || node.itemId === videoId)) {
-      return node;
-    }
-  }
-
-  const values = Array.isArray(node) ? node : Object.values(node);
-  for (const v of values) {
-    if (v && typeof v === "object") {
-      const found = findItemDeep(v, videoId, depth + 1, seen);
-      if (found) return found;
-    }
-  }
-  return null;
-}
-
-function parsePageData(parsed, videoId) {
-  const { data, source } = parsed;
-
-  let item = null;
-
-  if (source === "remix") {
-    // __remixContext → state.loaderData.<route> → videoInfo/itemInfo/itemStruct
-    const loaderData = safeGet(data, "state", "loaderData") || safeGet(data, "loaderData") || {};
-    for (const routeData of Object.values(loaderData)) {
-      item =
-        safeGet(routeData, "videoInfo", "itemInfo", "itemStruct") ||
-        safeGet(routeData, "itemInfo", "itemStruct") ||
-        safeGet(routeData, "itemStruct");
-      if (item) break;
-    }
-    // Fall back to a deep scan of the whole remix payload
-    if (!item) item = findItemDeep(data, videoId);
-  }
-
-  if (!item && source === "universal") {
-    // __UNIVERSAL_DATA_FOR_REHYDRATION__ → __DEFAULT_SCOPE__ → webapp.video-detail
-    item =
-      safeGet(data, "__DEFAULT_SCOPE__", "webapp.video-detail", "itemInfo", "itemStruct") ||
-      safeGet(data, "__DEFAULT_SCOPE__", "webapp.video-detail", "itemInfo", "item");
-  }
-
-  if (!item && source === "sigi") {
-    // SIGI_STATE → ItemModule → {videoId}
-    const itemModule = safeGet(data, "ItemModule");
-    if (itemModule) {
-      item = itemModule[videoId] || Object.values(itemModule)[0];
-    }
-    // SIGI_STATE → itemInfo → itemStruct (mobile web)
-    if (!item) {
-      item = safeGet(data, "itemInfo", "itemStruct");
-    }
-  }
-
-  if (!item && source === "next") {
-    // __NEXT_DATA__ → props → pageProps → itemInfo → itemStruct
-    item =
-      safeGet(data, "props", "pageProps", "itemInfo", "itemStruct") ||
-      safeGet(data, "props", "pageProps", "videoData");
-  }
-
-  // Generic fallback — search any structure for video with matching id
-  if (!item) {
-    const candidates = [
-      safeGet(data, "webapp.video-detail", "itemInfo", "itemStruct"),
-      safeGet(data, "itemInfo", "itemStruct"),
-    ];
-    for (const c of candidates) {
-      if (c && (c.id === videoId || !videoId)) { item = c; break; }
-    }
-  }
-
-  if (!item) {
-    throw new Error("Video data not found in TikTok page. The video may be private or deleted.");
-  }
-
-  return parseItemStruct(item);
-}
-
-// ── Step 4: Full pipeline ─────────────────────────────────────────────────────
-
-async function getVideoData(tiktokUrl, lang) {
+async function fetchTikTokVideo(tiktokUrl) {
   const videoId = await resolveVideoId(tiktokUrl);
 
-  // Single path — fetch the TikTok page directly, like a real browser would.
-  const html   = await fetchTikTokPage(videoId, lang);
-  const parsed = extractJsonFromHtml(html);
+  // Check meta cache (has everything except signed URL)
+  const metaCached = cacheGet(`meta:${videoId}`);
+  const urlCached  = cacheGet(`url:${videoId}`);
 
-  if (!parsed) {
-    throw new Error("TikTok page structure changed — could not find embedded JSON. Please try again.");
+  if (metaCached && urlCached) {
+    return { ...metaCached, ...urlCached };
   }
 
-  return parsePageData(parsed, videoId);
+  // Cache miss — call TikTok Android API
+  let data;
+  try {
+    data = await callAndroidAPI(videoId);
+  } catch (e) {
+    throw new Error(`TikTok API request failed: ${e.message}`);
+  }
+
+  const details = data?.aweme_details;
+  if (!details || details.length === 0) {
+    const status = data?.status_code ?? data?.status ?? "unknown";
+    throw new Error(`Video not found or private (status: ${status}). The video may have been deleted or is region-restricted.`);
+  }
+
+  const parsed = parseAweme(details[0]);
+
+  // Cache meta (7 days) — title, username, avatar, thumbnail, stats, photos
+  const metaPayload = {
+    title:         parsed.title,
+    username:      parsed.username,
+    displayName:   parsed.displayName,
+    avatarUrl:     parsed.avatarUrl,
+    thumbUrl:      parsed.thumbUrl,
+    duration:      parsed.duration,
+    is_photo:      parsed.is_photo,
+    images:        parsed.images,
+  };
+  cacheSet(`meta:${videoId}`, metaPayload, TTL_META);
+
+  // Cache video/audio URLs (5 hours)
+  const urlPayload = {
+    videoUrl:   parsed.videoUrl,
+    videoUrlWm: parsed.videoUrlWm,
+    audioUrl:   parsed.audioUrl,
+  };
+  cacheSet(`url:${videoId}`, urlPayload, TTL_URL);
+
+  // NOTE: likes/comments/shares are NOT cached — always live from API
+
+  return { ...metaPayload, ...urlPayload };
 }
 
 // ── Response helpers ──────────────────────────────────────────────────────────
@@ -438,12 +305,8 @@ function validateTikTokUrl(raw) {
 }
 
 // ── HMAC Token System ─────────────────────────────────────────────────────────
-// Each page load gets a signed token (timestamp + HMAC-SHA256).
-// Worker validates it on every /api/info and /api/download request.
-// Bots hitting the API directly won't have a valid token → blocked.
-// If TOKEN_SECRET env var is not set, validation is skipped (dev mode).
 
-const TOKEN_TTL_SECONDS = 900; // 15 minutes
+const TOKEN_TTL_SECONDS = 900;
 
 async function hmacSign(secret, message) {
   const key = await crypto.subtle.importKey(
@@ -453,14 +316,8 @@ async function hmacSign(secret, message) {
     false,
     ["sign"],
   );
-  const sig = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(message),
-  );
-  return Array.from(new Uint8Array(sig))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message));
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
 async function generateToken(secret) {
@@ -479,7 +336,7 @@ async function validateToken(token, secret) {
   if (isNaN(timestamp)) return false;
   const now = Math.floor(Date.now() / 1000);
   if (now - timestamp > TOKEN_TTL_SECONDS) return false;
-  if (timestamp > now + 30) return false; // clock skew guard
+  if (timestamp > now + 30) return false;
   const expected = await hmacSign(secret, ts);
   return sig === expected;
 }
@@ -495,39 +352,31 @@ export default {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
-    // Cloudflare datacenter country → dynamic Accept-Language for TikTok requests
-    const cfCountry = request.cf?.country || null;
-    const lang      = getLanguage(cfCountry);
-
-    // Secret for token signing — set TOKEN_SECRET in Cloudflare Worker env vars.
-    // If not set, token validation is skipped (dev / local proxy mode).
     const secret = env.TOKEN_SECRET || null;
 
     // GET /health
     if (pathname === "/health" && method === "GET") {
       return json({
         status:        "ok",
-        version:       "5.2.0",
-        engine:        "tiktok-html-direct",
-        cf_colo:       request.cf?.colo || "?",
-        cf_country:    cfCountry        || "?",
-        lang_used:     lang,
-        ua_pool:       USER_AGENTS.length,
+        version:       "7.0.0",
+        engine:        "tiktok-android-api",
+        cf_colo:       request.cf?.colo    || "?",
+        cf_country:    request.cf?.country || "?",
         token_enabled: !!secret,
+        cache_size:    _cache.size,
       });
     }
 
-    // GET /api/token — generate a real HMAC-signed token
+    // GET /api/token
     if (pathname === "/api/token" && method === "GET") {
       if (!secret) {
-        // Dev mode — return empty token, validation will be skipped
         return json({ token: "", ttl_seconds: TOKEN_TTL_SECONDS, dev_mode: true });
       }
       const token = await generateToken(secret);
       return json({ token, ttl_seconds: TOKEN_TTL_SECONDS });
     }
 
-    // POST /api/info — fetch video metadata + CDN URLs
+    // POST /api/info — fetch video metadata + download URLs
     if (pathname === "/api/info" && method === "POST") {
       let body;
       try { body = await request.json(); } catch { return err("Invalid JSON", 400); }
@@ -542,7 +391,7 @@ export default {
 
       let p;
       try {
-        p = await getVideoData(tiktokUrl, lang);
+        p = await fetchTikTokVideo(tiktokUrl);
       } catch (e) {
         return err(e.message);
       }
@@ -550,28 +399,21 @@ export default {
       return json({
         success:       true,
         title:         p.title,
-        author:        p.author,
-        author_avatar: p.author_avatar,
+        author:        p.username,
+        author_avatar: p.avatarUrl,
         duration:      p.duration,
-        thumbnail:     p.thumbnail,
-        view_count:    p.view_count,
-        like_count:    p.like_count,
-        comment_count: p.comment_count,
-        share_count:   p.share_count,
+        thumbnail:     p.thumbUrl,
         is_photo:      p.is_photo,
         images:        p.images,
         download_urls: {
-          mp4_1080: p._hd_url,
-          mp4_720:  p._sd_url,
-          mp3:      p._audio_url,
+          mp4_1080: p.videoUrl,
+          mp4_720:  p.videoUrlWm,
+          mp3:      p.audioUrl,
         },
       });
     }
 
     // GET /api/proxy — stream TikTok CDN file
-    // If RENDER_URL is set → forward to Render proxy server (recommended for production).
-    // If RENDER_URL is not set → fetch CDN directly from Worker (fallback / local dev).
-    // Usage: /api/proxy?url=<encoded-cdn-url>&filename=<name.mp4>
     if (pathname === "/api/proxy" && method === "GET") {
       const params   = new URL(request.url).searchParams;
       const rawUrl   = params.get("url");
@@ -582,15 +424,12 @@ export default {
       let cdnUrl;
       try { cdnUrl = decodeURIComponent(rawUrl); } catch { return err("Invalid URL encoding", 400); }
 
-      // Safety: only proxy known TikTok CDN domains
       const allowed = ["tiktok.com", "tiktokcdn.com", "tiktokv.com", "musical.ly", "douyin.com", "bytecdn.cn", "snssdk.com"];
       if (!allowed.some(d => cdnUrl.includes(d))) {
         return err("Only TikTok CDN URLs are supported", 403);
       }
 
-      // ── Path A: Render proxy (production) ──────────────────────────────────
-      // Set RENDER_URL + PROXY_SECRET in Cloudflare Worker env vars to enable.
-      // Render fetches CDN with proper browser headers → streams to user.
+      // Path A: Render proxy (production)
       if (env.RENDER_URL) {
         const renderProxyUrl =
           `${env.RENDER_URL.replace(/\/$/, "")}/proxy` +
@@ -601,13 +440,11 @@ export default {
           upstream = await fetch(renderProxyUrl, {
             headers: { "x-proxy-secret": env.PROXY_SECRET || "" },
           });
-        } catch (e) {
+        } catch {
           return err("Failed to reach Render proxy server", 502);
         }
 
-        if (!upstream.ok) {
-          return err(`Render proxy returned ${upstream.status}`, upstream.status);
-        }
+        if (!upstream.ok) return err(`Render proxy returned ${upstream.status}`, upstream.status);
 
         const respHeaders = new Headers({
           ...CORS_HEADERS,
@@ -621,27 +458,23 @@ export default {
         return new Response(upstream.body, { status: 200, headers: respHeaders });
       }
 
-      // ── Path B: Direct CDN fetch from Worker (fallback / no Render) ─────────
+      // Path B: Direct CDN fetch from Worker
       let upstream;
       try {
         upstream = await fetch(cdnUrl, {
           headers: {
-            "User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "User-Agent":      "com.zhiliaoapp.musically/2023501030 (Linux; U; Android 13; en_US; Pixel 7; Build/TD1A.220804.031; Cronet/58.0.2991.0)",
             "Referer":         "https://www.tiktok.com/",
-            "Origin":          "https://www.tiktok.com",
             "Accept":          "*/*",
             "Accept-Encoding": "identity",
             "Range":           "bytes=0-",
-            "Sec-Fetch-Dest":  "video",
           },
         });
-      } catch (e) {
+      } catch {
         return err("Failed to fetch from TikTok CDN", 502);
       }
 
-      if (!upstream.ok) {
-        return err(`TikTok CDN returned ${upstream.status}`, upstream.status);
-      }
+      if (!upstream.ok) return err(`TikTok CDN returned ${upstream.status}`, upstream.status);
 
       const respHeaders = new Headers({
         ...CORS_HEADERS,
@@ -655,7 +488,7 @@ export default {
       return new Response(upstream.body, { status: 200, headers: respHeaders });
     }
 
-    // POST /api/download — return CDN URL (browser downloads direct from TikTok CDN)
+    // POST /api/download — return CDN URL for direct browser download
     if (pathname === "/api/download" && method === "POST") {
       let body;
       try { body = await request.json(); } catch { return err("Invalid JSON", 400); }
@@ -675,24 +508,24 @@ export default {
 
       let p;
       try {
-        p = await getVideoData(tiktokUrl, lang);
+        p = await fetchTikTokVideo(tiktokUrl);
       } catch (e) {
         return err(e.message);
       }
 
-      let cdnUrl    = "";
-      let filename  = "luldown";
-      let ext       = "mp4";
+      let cdnUrl   = "";
+      let filename = "luldown";
+      let ext      = "mp4";
       let mediaType = "video/mp4";
 
       if (format === "mp4_1080") {
-        cdnUrl   = p._hd_url;
+        cdnUrl = p.videoUrl;
         filename = "luldown_1080p";
       } else if (format === "mp4_720") {
-        cdnUrl   = p._sd_url;
+        cdnUrl = p.videoUrlWm;
         filename = "luldown_720p";
       } else if (format === "mp3") {
-        cdnUrl    = p._audio_url;
+        cdnUrl    = p.audioUrl;
         filename  = "luldown_audio";
         ext       = "mp3";
         mediaType = "audio/mpeg";
@@ -708,7 +541,7 @@ export default {
         filename:   `${filename}.${ext}`,
         media_type: mediaType,
         title:      p.title,
-        author:     p.author,
+        author:     p.username,
         format,
       });
     }
