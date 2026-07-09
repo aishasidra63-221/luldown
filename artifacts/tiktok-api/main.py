@@ -253,6 +253,7 @@ async def delete_history(request: Request):
 
 # ─── Render Proxy ──────────────────────────────────────────────────────────────
 
+@app.get("/api/proxy")
 @app.get("/proxy")
 @limiter.limit("30/minute")
 async def proxy_cdn(request: Request, url: str, filename: str = "luldown.mp4"):
@@ -268,12 +269,18 @@ async def proxy_cdn(request: Request, url: str, filename: str = "luldown.mp4"):
     if PROXY_SECRET and incoming != PROXY_SECRET:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    # Decode and validate CDN URL
+    # Decode and validate CDN URL — parse hostname to prevent SSRF via substring tricks
+    from urllib.parse import urlparse
     cdn_url = unquote(url)
-    if not cdn_url.startswith("http"):
-        raise HTTPException(status_code=400, detail="Invalid URL")
-    if not any(d in cdn_url for d in _ALLOWED_CDN_DOMAINS):
-        raise HTTPException(status_code=403, detail="Only TikTok CDN URLs are supported")
+    try:
+        parsed = urlparse(cdn_url)
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError("bad scheme")
+        host = parsed.netloc.lower().split(":")[0]
+        if not host or not any(host == d or host.endswith("." + d) for d in _ALLOWED_CDN_DOMAINS):
+            raise ValueError("disallowed host")
+    except ValueError as exc:
+        raise HTTPException(status_code=403, detail="Only TikTok CDN URLs are supported") from exc
 
     # Detect media type from filename
     if filename.endswith(".mp3"):

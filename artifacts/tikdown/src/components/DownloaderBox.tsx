@@ -210,7 +210,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                   display:"flex", alignItems:"center", justifyContent:"center",
                   fontWeight:800, fontSize:22, color:"#fff",
                   boxShadow:"0 0 0 2.5px rgba(124,58,237,0.4), 0 4px 14px rgba(124,58,237,0.4)",
-                  overflow:"hidden", flexShrink:0,
+                  overflow:"hidden",
                 }}>
                   {info.author_avatar ? (
                     <img
