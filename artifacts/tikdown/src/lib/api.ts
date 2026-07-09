@@ -1,7 +1,7 @@
 // If WORKER_URL is set at build time, use the Cloudflare Worker directly.
 // Otherwise fall back to the local Python API proxy (for dev).
 declare const __WORKER_URL__: string;
-const WORKER_URL = typeof __WORKER_URL__ !== "undefined" ? __WORKER_URL__ : "";
+const WORKER_URL = typeof __WORKER_URL__ !== "undefined" ? __WORKER_URL__.replace(/\/+$/, "") : "";
 const API_BASE = WORKER_URL || "/tikapi";
 
 const HISTORY_KEY = "luldown_history";
