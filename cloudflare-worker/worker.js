@@ -95,7 +95,7 @@ const STATIC_DEVICE = {
   device_type:     "Pixel 7",
   os_version:      "13",
   device_platform: "android",
-  app_name:        "musical_ly",
+  app_name:        "trill",
   app_version:     "32.5.3",
   version_code:    "2023501030",
   channel:         "googleplay",
@@ -104,7 +104,7 @@ const STATIC_DEVICE = {
   timezone_name:   "America/New_York",
   timezone_offset: "-14400",
   host_abi:        "armeabi-v7a",
-  aid:             "1233",
+  aid:             "1988",
   // extra fixed params
   ssmix:           "a",
   residence:       "US",
