@@ -61,28 +61,51 @@ function extractIdFromString(s) {
   return m ? m[1] : null;
 }
 
-async function resolveVideoId(rawUrl) {
+const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+
+async function resolveVideoId(rawUrl, depth = 0) {
+  if (depth > 5) throw new Error("Too many redirects resolving TikTok URL.");
   const url = rawUrl.trim();
 
   // Fast path — video ID already in URL
   const direct = extractIdFromString(url);
   if (direct) return direct;
 
-  // Short URL (vm., vt., /t/) — follow redirects to get real URL
+  // Step A: manual redirect — capture Location header directly (no body read needed)
+  // Browser UA works better than Android UA for short URL resolution
   const res = await fetch(url, {
-    redirect: "follow",
+    redirect: "manual",
     headers: {
-      "User-Agent":      "com.zhiliaoapp.musically/2023501030 (Linux; U; Android 13; en_US; Pixel 7; Build/TD1A.220804.031; Cronet/58.0.2991.0)",
+      "User-Agent":      BROWSER_UA,
       "Accept-Language": "en-US,en;q=0.9",
+      "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     },
   });
 
+  // 3xx — check Location header first (fastest, no body needed)
+  if (res.status >= 300 && res.status < 400) {
+    const location = res.headers.get("location") || "";
+    const fromLocation = extractIdFromString(location);
+    if (fromLocation) return fromLocation;
+    // Follow the redirect manually if still no ID
+    if (location.startsWith("http")) return resolveVideoId(location, depth + 1);
+    throw new Error("Could not extract video ID. Make sure the link is a valid public TikTok video.");
+  }
+
+  // 200 — try final URL then HTML body
   const fromUrl = extractIdFromString(res.url);
   if (fromUrl) return fromUrl;
 
   const html = await res.text();
   const fromHtml = html.match(/\/video\/(\d{10,20})/);
   if (fromHtml) return fromHtml[1];
+
+  // Also check canonical / og:url in HTML
+  const ogUrl = html.match(/(?:og:url|canonical)[^>]*content="([^"]+)"/);
+  if (ogUrl) {
+    const fromOg = extractIdFromString(ogUrl[1]);
+    if (fromOg) return fromOg;
+  }
 
   throw new Error("Could not extract video ID. Make sure the link is a valid public TikTok video.");
 }
@@ -345,6 +368,19 @@ async function validateToken(token, secret) {
 
 export default {
   async fetch(request, env) {
+    try {
+      return await handleRequest(request, env);
+    } catch (e) {
+      // Top-level catch — always return CORS headers so browser doesn't see "Failed to fetch"
+      return new Response(JSON.stringify({ detail: `Internal error: ${e.message}` }), {
+        status: 500,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+  },
+};
+
+async function handleRequest(request, env) {
     const { pathname } = new URL(request.url);
     const method = request.method;
 
