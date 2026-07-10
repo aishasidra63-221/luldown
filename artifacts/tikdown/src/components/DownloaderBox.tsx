@@ -1,6 +1,7 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { fetchVideoInfo, downloadVideo, downloadPhoto, VideoInfo, DownloadFormat } from "@/lib/api";
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
+import { useLocation, useSearch } from "wouter";
 import {
   Music, Clipboard, Download, Image, Video,
   AlertCircle, Loader2, X,
@@ -69,16 +70,33 @@ export default function DownloaderBox({ highlightFormat }: Props) {
   const [activeDownload, setActiveDownload] = useState<DownloadFormat | null>(null);
   const [photoDownloading, setPhotoDownloading] = useState<number | null>(null);
   const { executeRecaptcha } = useGoogleReCaptcha();
+  const [, navigate] = useLocation();
+  const search = useSearch();
+
+  // On mount — if ?url= is in the address bar, pre-fill and auto-fetch
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const initialUrl = params.get("url");
+    if (initialUrl) {
+      setUrl(initialUrl);
+      // slight delay so component is fully mounted
+      setTimeout(() => handleFetchUrl(initialUrl), 50);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const getToken = useCallback(async (action: string) => {
     if (!executeRecaptcha) return undefined;
     try { return await executeRecaptcha(action); } catch { return undefined; }
   }, [executeRecaptcha]);
 
-  const handleFetch = async () => {
-    const trimmed = url.trim();
+  // Core fetch logic — accepts explicit URL so auto-fetch on mount can pass it directly
+  const handleFetchUrl = async (fetchUrl: string) => {
+    const trimmed = fetchUrl.trim();
     if (!trimmed) return;
     setStep("loading-info"); setError(""); setInfo(null);
+    // Push ?url= to address bar so the link is shareable
+    navigate("?url=" + encodeURIComponent(trimmed), { replace: false });
     try {
       const token = await getToken("fetch_info");
       setInfo(await fetchVideoInfo(trimmed, token));
@@ -88,6 +106,8 @@ export default function DownloaderBox({ highlightFormat }: Props) {
       setStep("error");
     }
   };
+
+  const handleFetch = () => handleFetchUrl(url);
 
   const handleDownload = async (format: DownloadFormat) => {
     setActiveDownload(format);
@@ -118,7 +138,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
     inputRef.current?.focus();
   };
 
-  const reset = () => { setUrl(""); setStep("idle"); setInfo(null); setError(""); };
+  const reset = () => { setUrl(""); setStep("idle"); setInfo(null); setError(""); navigate("/", { replace: true }); };
 
   const isPhoto = info?.is_photo && (info.images?.length ?? 0) > 0;
   const fmts = highlightFormat
