@@ -86,17 +86,34 @@ async def _get_video_id(tiktok_url: str) -> str:
     if vid:
         return vid
 
-    # Short link (vm./vt./ /t/) — follow redirects like a real browser would
+    # Short link (vm.tiktok.com, vt.tiktok.com, tiktok.com/t/) —
+    # Step 1: HEAD request to follow redirects without downloading body.
+    # This is fast and sufficient in most cases.
     async with httpx.AsyncClient(
         timeout=httpx.Timeout(15.0, connect=8.0),
         follow_redirects=True,
         headers={"User-Agent": _random_ua(), **_BROWSER_HEADERS},
     ) as client:
         try:
-            resp = await client.get(tiktok_url)
+            head_resp = await client.head(tiktok_url)
+            final_url = str(head_resp.url)
+            vid = _extract_video_id_from_url(final_url)
+            if vid:
+                logger.info("Short URL resolved via HEAD: %s → %s", tiktok_url, final_url)
+                return vid
+        except Exception as e:
+            logger.debug("HEAD request failed for short URL (%s), falling back to GET: %s", tiktok_url, e)
+            final_url = tiktok_url  # reset so GET is attempted cleanly
+
+        # Step 2: HEAD didn't yield an ID (some servers block HEAD or don't
+        # redirect properly) — fall back to a full GET and search the HTML too.
+        try:
+            get_resp = await client.get(tiktok_url)
         except Exception as e:
             raise DownloadError(f"Could not resolve URL: {e}")
-        final_url, html = str(resp.url), resp.text
+
+        final_url = str(get_resp.url)
+        html      = get_resp.text
 
     if any(p in final_url for p in _REGION_BLOCK_PATHS):
         raise DownloadError(
