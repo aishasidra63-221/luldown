@@ -253,15 +253,17 @@ function parseAweme(aweme) {
 async function fetchTikTokVideo(tiktokUrl) {
   const videoId = await resolveVideoId(tiktokUrl);
 
-  // Check meta cache (has everything except signed URL)
+  // Check meta cache (static data — 30 days) and url cache (signed CDN URL — 5 hours)
   const metaCached = cacheGet(`meta:${videoId}`);
   const urlCached  = cacheGet(`url:${videoId}`);
 
+  // Both fresh — return immediately, no API call
   if (metaCached && urlCached) {
     return { ...metaCached, ...urlCached };
   }
 
-  // Cache miss — call TikTok Android API
+  // Call TikTok Android API — same request regardless of what expired.
+  // There is no TikTok endpoint that returns only the CDN URL.
   let data;
   try {
     data = await callAndroidAPI(videoId);
@@ -277,28 +279,28 @@ async function fetchTikTokVideo(tiktokUrl) {
 
   const parsed = parseAweme(details[0]);
 
-  // Cache meta (7 days) — title, username, avatar, thumbnail, stats, photos
-  const metaPayload = {
-    title:         parsed.title,
-    username:      parsed.username,
-    displayName:   parsed.displayName,
-    avatarUrl:     parsed.avatarUrl,
-    thumbUrl:      parsed.thumbUrl,
-    duration:      parsed.duration,
-    is_photo:      parsed.is_photo,
-    images:        parsed.images,
+  // Only re-cache meta if it was missing (URL-only expiry keeps meta untouched)
+  const metaPayload = metaCached || {
+    title:       parsed.title,
+    username:    parsed.username,
+    displayName: parsed.displayName,
+    avatarUrl:   parsed.avatarUrl,
+    thumbUrl:    parsed.thumbUrl,
+    duration:    parsed.duration,
+    is_photo:    parsed.is_photo,
+    images:      parsed.images,
   };
-  cacheSet(`meta:${videoId}`, metaPayload, TTL_META);
+  if (!metaCached) {
+    cacheSet(`meta:${videoId}`, metaPayload, TTL_META);
+  }
 
-  // Cache video/audio URLs (5 hours)
+  // Always refresh the signed CDN URL
   const urlPayload = {
     videoUrl:   parsed.videoUrl,
     videoUrlWm: parsed.videoUrlWm,
     audioUrl:   parsed.audioUrl,
   };
   cacheSet(`url:${videoId}`, urlPayload, TTL_URL);
-
-  // NOTE: likes/comments/shares are NOT cached — always live from API
 
   return { ...metaPayload, ...urlPayload };
 }
