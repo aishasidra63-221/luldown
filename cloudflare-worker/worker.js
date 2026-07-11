@@ -51,6 +51,35 @@ async function cacheGet(key) {
 const TTL_META = 30 * 24 * 60 * 60;  // 30 days — title, author, avatar, thumbnail (static)
 const TTL_URL  = 5  * 60 * 60;        // 5 hours — CDN URL expires in ~6h (1h safety buffer)
 
+// ── Cloudflare KV — globally-replicated metadata cache ────────────────────────
+// The Cache API above is per-datacenter: a user hitting the Mumbai PoP and a
+// user hitting the Singapore PoP do NOT share a cache entry. Metadata (title,
+// author, avatar, thumbnail) needs to be shared across every PoP worldwide —
+// once ANY user triggers a scrape, every other user anywhere should get the
+// cached copy instead of re-scraping. KV replicates globally, so it's used
+// for meta only. The CDN url (short-lived, 5h) stays on the per-PoP Cache API.
+
+async function kvGetMeta(env, videoId) {
+  if (!env.META_KV) return null;
+  try {
+    const raw = await env.META_KV.get(`meta:${videoId}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function kvSetMeta(env, videoId, value) {
+  if (!env.META_KV) return;
+  try {
+    await env.META_KV.put(`meta:${videoId}`, JSON.stringify(value), {
+      expirationTtl: TTL_META,
+    });
+  } catch (e) {
+    // Non-fatal — worst case, meta gets re-scraped next time.
+  }
+}
+
 // ── Random helpers ────────────────────────────────────────────────────────────
 
 function randInt(min, max) {
@@ -266,13 +295,17 @@ function parseAweme(aweme) {
 
 // ── Step 4: fetchTikTokVideo — cache → API → parse → cache → return ──────────
 
-async function fetchTikTokVideo(tiktokUrl) {
+async function fetchTikTokVideo(tiktokUrl, env) {
   const videoId = await resolveVideoId(tiktokUrl);
 
-  // Check meta cache (static data — 30 days) and url cache (signed CDN URL — 5 hours)
-  // Both are now Cloudflare Cache API — persistent across isolate restarts, per-PoP
+  // Meta (title/author/avatar/thumbnail) — Cloudflare KV, globally replicated.
+  // Once ANY PoP scrapes a video, every other PoP worldwide sees the same
+  // cached meta — no matter which datacenter the next user's request lands on.
+  //
+  // CDN url — Cache API, per-datacenter, short-lived (5h) so re-fetching it
+  // occasionally from a new PoP is cheap and expected.
   const [metaCached, urlCached] = await Promise.all([
-    cacheGet(`meta:${videoId}`),
+    kvGetMeta(env, videoId),
     cacheGet(`url:${videoId}`),
   ]);
 
@@ -319,7 +352,7 @@ async function fetchTikTokVideo(tiktokUrl) {
 
   // Write to cache (parallel)
   await Promise.all([
-    metaCached ? Promise.resolve() : cacheSet(`meta:${videoId}`, metaPayload, TTL_META),
+    metaCached ? Promise.resolve() : kvSetMeta(env, videoId, metaPayload),
     cacheSet(`url:${videoId}`, urlPayload, TTL_URL),
   ]);
 
@@ -446,7 +479,7 @@ async function handleRequest(request, env) {
 
       let p;
       try {
-        p = await fetchTikTokVideo(tiktokUrl);
+        p = await fetchTikTokVideo(tiktokUrl, env);
       } catch (e) {
         return err(e.message);
       }
@@ -565,7 +598,7 @@ async function handleRequest(request, env) {
 
       let p;
       try {
-        p = await fetchTikTokVideo(tiktokUrl);
+        p = await fetchTikTokVideo(tiktokUrl, env);
       } catch (e) {
         return err(e.message);
       }
