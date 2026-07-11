@@ -16,38 +16,6 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-// ── Cloudflare Cache API ──────────────────────────────────────────────────────
-// Replaces in-memory Map. Persists across isolate restarts within a PoP.
-// Keys are synthetic HTTPS URLs; TTL is stored in X-Expires-At header.
-
-const CACHE_NAME    = "luldown-v1";
-const CACHE_KEY_BASE = "https://luldown-cache.internal/";
-
-async function cacheSet(key, value, ttlSeconds) {
-  const cache     = await caches.open(CACHE_NAME);
-  const expiresAt = Date.now() + ttlSeconds * 1000;
-  const response  = new Response(JSON.stringify(value), {
-    headers: {
-      "Content-Type":  "application/json",
-      "X-Expires-At":  String(expiresAt),
-      "Cache-Control": `max-age=${ttlSeconds}`,
-    },
-  });
-  await cache.put(CACHE_KEY_BASE + key, response);
-}
-
-async function cacheGet(key) {
-  const cache  = await caches.open(CACHE_NAME);
-  const cached = await cache.match(CACHE_KEY_BASE + key);
-  if (!cached) return null;
-  const expiresAt = Number(cached.headers.get("X-Expires-At") || 0);
-  if (Date.now() > expiresAt) {
-    await cache.delete(CACHE_KEY_BASE + key);
-    return null;
-  }
-  return cached.json();
-}
-
 const TTL_META = 30 * 24 * 60 * 60;  // 30 days — title, author, avatar, thumbnail (static)
 const TTL_URL  = 5  * 60 * 60;        // 5 hours — CDN URL expires in ~6h (1h safety buffer)
 
@@ -77,6 +45,33 @@ async function kvSetMeta(env, videoId, value) {
     });
   } catch (e) {
     // Non-fatal — worst case, meta gets re-scraped next time.
+  }
+}
+
+// CDN url — same KV, shorter TTL (5h, matches TikTok's signed-URL expiry).
+// Previously this lived on the per-datacenter Cache API, which meant a
+// request landing on a different PoP than the one that scraped it would
+// ALWAYS miss and force a full re-scrape — defeating the point of caching
+// for anyone not hitting that exact datacenter. KV fixes that: once any
+// PoP scrapes a video, every PoP gets the fast cached URL for the next 5h.
+async function kvGetUrl(env, videoId) {
+  if (!env.META_KV) return null;
+  try {
+    const raw = await env.META_KV.get(`url:${videoId}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function kvSetUrl(env, videoId, value) {
+  if (!env.META_KV) return;
+  try {
+    await env.META_KV.put(`url:${videoId}`, JSON.stringify(value), {
+      expirationTtl: TTL_URL,
+    });
+  } catch (e) {
+    // Non-fatal — worst case, url gets re-scraped next time.
   }
 }
 
@@ -298,15 +293,13 @@ function parseAweme(aweme) {
 async function fetchTikTokVideo(tiktokUrl, env) {
   const videoId = await resolveVideoId(tiktokUrl);
 
-  // Meta (title/author/avatar/thumbnail) — Cloudflare KV, globally replicated.
+  // Both meta and url now live in Cloudflare KV — globally replicated.
   // Once ANY PoP scrapes a video, every other PoP worldwide sees the same
-  // cached meta — no matter which datacenter the next user's request lands on.
-  //
-  // CDN url — Cache API, per-datacenter, short-lived (5h) so re-fetching it
-  // occasionally from a new PoP is cheap and expected.
+  // cached meta AND url — no matter which datacenter the next user's
+  // request lands on. Url still expires faster (5h) since TikTok signs it.
   const [metaCached, urlCached] = await Promise.all([
     kvGetMeta(env, videoId),
-    cacheGet(`url:${videoId}`),
+    kvGetUrl(env, videoId),
   ]);
 
   // Both fresh — return immediately, zero API calls
@@ -353,7 +346,7 @@ async function fetchTikTokVideo(tiktokUrl, env) {
   // Write to cache (parallel)
   await Promise.all([
     metaCached ? Promise.resolve() : kvSetMeta(env, videoId, metaPayload),
-    cacheSet(`url:${videoId}`, urlPayload, TTL_URL),
+    kvSetUrl(env, videoId, urlPayload),
   ]);
 
   return { ...metaPayload, ...urlPayload };
