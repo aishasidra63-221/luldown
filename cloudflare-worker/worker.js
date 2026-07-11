@@ -637,5 +637,4 @@ async function handleRequest(request, env) {
     }
 
     return new Response("Not found", { status: 404, headers: CORS_HEADERS });
-  },
-};
+}
