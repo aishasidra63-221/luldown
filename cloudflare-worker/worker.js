@@ -63,18 +63,18 @@ function extractIdFromString(s) {
 
 const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 
-async function resolveVideoId(rawUrl, depth = 0) {
-  if (depth > 5) throw new Error("Too many redirects resolving TikTok URL.");
+async function resolveVideoId(rawUrl) {
   const url = rawUrl.trim();
 
   // Fast path — video ID already in URL
   const direct = extractIdFromString(url);
   if (direct) return direct;
 
-  // Step A: manual redirect — capture Location header directly (no body read needed)
-  // Browser UA works better than Android UA for short URL resolution
+  // Follow all redirects automatically — Cloudflare sets res.url to the FINAL URL.
+  // redirect:"manual" was previously used but it makes res.url unreliable and breaks
+  // relative-path Location headers (e.g. TikTok returning /en or /foryou).
   const res = await fetch(url, {
-    redirect: "manual",
+    redirect: "follow",
     headers: {
       "User-Agent":      BROWSER_UA,
       "Accept-Language": "en-US,en;q=0.9",
@@ -82,30 +82,26 @@ async function resolveVideoId(rawUrl, depth = 0) {
     },
   });
 
-  // 3xx — check Location header first (fastest, no body needed)
-  if (res.status >= 300 && res.status < 400) {
-    const location = res.headers.get("location") || "";
-    const fromLocation = extractIdFromString(location);
-    if (fromLocation) return fromLocation;
-    // Follow the redirect manually if still no ID
-    if (location.startsWith("http")) return resolveVideoId(location, depth + 1);
-    throw new Error("Could not extract video ID. Make sure the link is a valid public TikTok video.");
-  }
-
-  // 200 — try final URL then HTML body
+  // Check final URL first — fastest, no body read needed
   const fromUrl = extractIdFromString(res.url);
   if (fromUrl) return fromUrl;
 
+  // Read body and search for video ID in HTML / JSON
   const html = await res.text();
+
   const fromHtml = html.match(/\/video\/(\d{10,20})/);
   if (fromHtml) return fromHtml[1];
 
-  // Also check canonical / og:url in HTML
+  // Also check canonical / og:url meta tags
   const ogUrl = html.match(/(?:og:url|canonical)[^>]*content="([^"]+)"/);
   if (ogUrl) {
     const fromOg = extractIdFromString(ogUrl[1]);
     if (fromOg) return fromOg;
   }
+
+  // Check aweme_id in embedded JSON (TikTok __UNIVERSAL_DATA_FOR_REHYDRATION__)
+  const awemeId = html.match(/"aweme_id"\s*:\s*"(\d{10,20})"/);
+  if (awemeId) return awemeId[1];
 
   throw new Error("Could not extract video ID. Make sure the link is a valid public TikTok video.");
 }
