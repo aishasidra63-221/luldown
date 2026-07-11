@@ -34,8 +34,8 @@ TikTok video/audio downloader that gives users direct CDN links (no server bandw
 
 ## Architecture decisions
 
-- **Cloudflare Worker as backend** — No server needed in production. Cloudflare's global IPs replace the proxy pool. Rate limiting is CF built-in.
-- **tikwm.com API** — third-party TikTok extraction API. Worker calls it with 3 Chrome headers (UA + Referer + Language). No 4-layer bypass needed.
+- **Direct TikTok page fetch — no third-party extraction API.** The backend (`artifacts/tiktok-api/downloader.py`) hits `https://www.tiktok.com/@_/video/{id}` directly with rotating real Chrome/Android User-Agents and browser headers, then parses the embedded `__UNIVERSAL_DATA_FOR_REHYDRATION__` / `SIGI_STATE` JSON for title, author, stats, and CDN links. No mobile-app API, no tikwm.com or similar service.
+- **Cloudflare Worker as backend** — No server needed in production. Cloudflare's global IPs replace the proxy pool. Rate limiting is CF built-in. It should do the same direct page-fetch approach as the Python dev API, not call a third-party extraction service.
 - **CDN-direct downloads** — Server returns CDN URL only, browser fetches file directly from TikTok CDN. Zero server bandwidth.
 - **History in localStorage** — Fully private, no server storage needed.
 - **`WORKER_URL` env var** — Set this to your deployed worker URL. If empty, dev proxy (`/tikapi` → Python on 8000) is used automatically.
