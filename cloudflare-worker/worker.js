@@ -33,7 +33,7 @@ function cacheGet(key) {
 }
 
 const TTL_META = 30 * 24 * 60 * 60;  // 30 days — title, author, avatar, thumbnail, tags (static data)
-const TTL_URL  = 5 * 60 * 60;         // 5 hours — signed video URL (expires in ~6h, no permanent URL exists)
+const TTL_URL  = 11 * 60 * 60;        // 11 hours — download_addr (Type 2, no-watermark) expires in 12–24h
 
 // ── Random helpers ────────────────────────────────────────────────────────────
 
