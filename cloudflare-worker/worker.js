@@ -484,30 +484,63 @@ async function handleRequest(request, env) {
         return err("Only TikTok CDN URLs are supported", 403);
       }
 
-      // Direct CDN fetch from Worker — Render proxy removed (was down, not needed)
+      // Path A: Python proxy server (Render/any host) — REQUIRED.
+      // Cloudflare Worker IPs are blocked by TikTok CDN (403).
+      // The Python server uses non-Cloudflare IPs + browser-like headers, so CDN allows it.
+      if (env.RENDER_URL) {
+        const proxyUrl =
+          `${env.RENDER_URL.replace(/\/$/, "")}/proxy` +
+          `?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
+
+        let upstream;
+        try {
+          upstream = await fetch(proxyUrl, {
+            headers: { "x-proxy-secret": env.PROXY_SECRET || "" },
+          });
+        } catch {
+          return err("Proxy server unreachable. Please try again shortly.", 502);
+        }
+
+        if (!upstream.ok) return err(`Proxy server returned ${upstream.status}`, upstream.status);
+
+        const respHeaders = new Headers({
+          ...CORS_HEADERS,
+          "Content-Disposition": `attachment; filename="${filename}"`,
+          "Content-Type":        upstream.headers.get("Content-Type") || "video/mp4",
+          "Cache-Control":       "no-store",
+        });
+        const cl = upstream.headers.get("Content-Length");
+        if (cl) respHeaders.set("Content-Length", cl);
+
+        return new Response(upstream.body, { status: 200, headers: respHeaders });
+      }
+
+      // Path B: Direct CDN fetch — only works if TikTok CDN hasn't blocked this Worker's IP.
+      // Kept as fallback for dev/testing. In production RENDER_URL must be set.
       let upstream;
       try {
         upstream = await fetch(cdnUrl, {
           headers: {
-            "User-Agent":      "com.zhiliaoapp.musically/2023501030 (Linux; U; Android 13; en_US; Pixel 7; Build/TD1A.220804.031; Cronet/58.0.2991.0)",
+            "User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
             "Referer":         "https://www.tiktok.com/",
-            "Accept":          "*/*",
-            "Accept-Encoding": "identity",
+            "Accept":          "video/webm,video/mp4,video/*;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
           },
         });
       } catch {
         return err("Failed to fetch from TikTok CDN", 502);
       }
 
-      if (!upstream.ok) return err(`TikTok CDN returned ${upstream.status}`, upstream.status);
+      if (!upstream.ok) return err(`TikTok CDN returned ${upstream.status}. Set RENDER_URL in Worker env for reliable downloads.`, upstream.status);
 
       const respHeaders = new Headers({
         ...CORS_HEADERS,
         "Content-Disposition": `attachment; filename="${filename}"`,
         "Content-Type":        upstream.headers.get("Content-Type") || "video/mp4",
-        "Content-Length":      upstream.headers.get("Content-Length") || "",
         "Cache-Control":       "no-store",
       });
+      const cl2 = upstream.headers.get("Content-Length");
+      if (cl2) respHeaders.set("Content-Length", cl2);
 
       return new Response(upstream.body, { status: 200, headers: respHeaders });
     }
