@@ -1,12 +1,13 @@
 /**
- * Luldown — TikTok Downloader Cloudflare Worker (v7.0)
+ * Luldown — TikTok Downloader Cloudflare Worker (v8.0)
  *
  * TikTok Android Private API — no browser, no HTML scraping, no Puppeteer.
  * Fakes a real Android (Pixel 7) device making requests exactly like TikTok app.
  *   Step 1: Resolve video ID from any URL (full, short, vm., vt., /t/)
  *   Step 2: POST to TikTok's Android private API with fake device identity
  *   Step 3: Parse aweme_details[0] from JSON response
- *   Step 4: Cache metadata 7 days, video URLs 5 hours (in-memory)
+ *   Step 4: Cache via Cloudflare Cache API — global, persistent across isolate restarts
+ *           meta: 30 days  |  CDN URL: 5 hours (expires in ~6h, 1h buffer)
  */
 
 const CORS_HEADERS = {
@@ -15,25 +16,40 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-// ── In-memory cache ───────────────────────────────────────────────────────────
-// Cloudflare Worker isolates are long-lived within a colo — this cache persists
-// across requests hitting the same isolate. TTL enforced on read.
+// ── Cloudflare Cache API ──────────────────────────────────────────────────────
+// Replaces in-memory Map. Persists across isolate restarts within a PoP.
+// Keys are synthetic HTTPS URLs; TTL is stored in X-Expires-At header.
 
-const _cache = new Map();
+const CACHE_NAME    = "luldown-v1";
+const CACHE_KEY_BASE = "https://luldown-cache.internal/";
 
-function cacheSet(key, value, ttlSeconds) {
-  _cache.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 });
+async function cacheSet(key, value, ttlSeconds) {
+  const cache     = await caches.open(CACHE_NAME);
+  const expiresAt = Date.now() + ttlSeconds * 1000;
+  const response  = new Response(JSON.stringify(value), {
+    headers: {
+      "Content-Type":  "application/json",
+      "X-Expires-At":  String(expiresAt),
+      "Cache-Control": `max-age=${ttlSeconds}`,
+    },
+  });
+  await cache.put(CACHE_KEY_BASE + key, response);
 }
 
-function cacheGet(key) {
-  const entry = _cache.get(key);
-  if (!entry) return null;
-  if (Date.now() > entry.expiresAt) { _cache.delete(key); return null; }
-  return entry.value;
+async function cacheGet(key) {
+  const cache  = await caches.open(CACHE_NAME);
+  const cached = await cache.match(CACHE_KEY_BASE + key);
+  if (!cached) return null;
+  const expiresAt = Number(cached.headers.get("X-Expires-At") || 0);
+  if (Date.now() > expiresAt) {
+    await cache.delete(CACHE_KEY_BASE + key);
+    return null;
+  }
+  return cached.json();
 }
 
-const TTL_META = 30 * 24 * 60 * 60;  // 30 days — title, author, avatar, thumbnail, tags (static data)
-const TTL_URL  = 5 * 60 * 60;         // 5 hours — confirmed: download_addr expires in exactly ~6h (1h safety buffer)
+const TTL_META = 30 * 24 * 60 * 60;  // 30 days — title, author, avatar, thumbnail (static)
+const TTL_URL  = 5  * 60 * 60;        // 5 hours — CDN URL expires in ~6h (1h safety buffer)
 
 // ── Random helpers ────────────────────────────────────────────────────────────
 
@@ -254,10 +270,13 @@ async function fetchTikTokVideo(tiktokUrl) {
   const videoId = await resolveVideoId(tiktokUrl);
 
   // Check meta cache (static data — 30 days) and url cache (signed CDN URL — 5 hours)
-  const metaCached = cacheGet(`meta:${videoId}`);
-  const urlCached  = cacheGet(`url:${videoId}`);
+  // Both are now Cloudflare Cache API — persistent across isolate restarts, per-PoP
+  const [metaCached, urlCached] = await Promise.all([
+    cacheGet(`meta:${videoId}`),
+    cacheGet(`url:${videoId}`),
+  ]);
 
-  // Both fresh — return immediately, no API call
+  // Both fresh — return immediately, zero API calls
   if (metaCached && urlCached) {
     return { ...metaCached, ...urlCached };
   }
@@ -279,7 +298,7 @@ async function fetchTikTokVideo(tiktokUrl) {
 
   const parsed = parseAweme(details[0]);
 
-  // Only re-cache meta if it was missing (URL-only expiry keeps meta untouched)
+  // Only re-cache meta if it was missing — URL-only expiry keeps 30-day meta untouched
   const metaPayload = metaCached || {
     title:       parsed.title,
     username:    parsed.username,
@@ -290,9 +309,6 @@ async function fetchTikTokVideo(tiktokUrl) {
     is_photo:    parsed.is_photo,
     images:      parsed.images,
   };
-  if (!metaCached) {
-    cacheSet(`meta:${videoId}`, metaPayload, TTL_META);
-  }
 
   // Always refresh the signed CDN URL
   const urlPayload = {
@@ -300,7 +316,12 @@ async function fetchTikTokVideo(tiktokUrl) {
     videoUrlWm: parsed.videoUrlWm,
     audioUrl:   parsed.audioUrl,
   };
-  cacheSet(`url:${videoId}`, urlPayload, TTL_URL);
+
+  // Write to cache (parallel)
+  await Promise.all([
+    metaCached ? Promise.resolve() : cacheSet(`meta:${videoId}`, metaPayload, TTL_META),
+    cacheSet(`url:${videoId}`, urlPayload, TTL_URL),
+  ]);
 
   return { ...metaPayload, ...urlPayload };
 }
@@ -392,12 +413,12 @@ async function handleRequest(request, env) {
     if (pathname === "/health" && method === "GET") {
       return json({
         status:        "ok",
-        version:       "7.0.0",
+        version:       "8.0.0",
         engine:        "tiktok-android-api",
+        cache:         "cloudflare-cache-api",
         cf_colo:       request.cf?.colo    || "?",
         cf_country:    request.cf?.country || "?",
         token_enabled: !!secret,
-        cache_size:    _cache.size,
       });
     }
 
@@ -463,36 +484,7 @@ async function handleRequest(request, env) {
         return err("Only TikTok CDN URLs are supported", 403);
       }
 
-      // Path A: Render proxy (production)
-      if (env.RENDER_URL) {
-        const renderProxyUrl =
-          `${env.RENDER_URL.replace(/\/$/, "")}/proxy` +
-          `?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
-
-        let upstream;
-        try {
-          upstream = await fetch(renderProxyUrl, {
-            headers: { "x-proxy-secret": env.PROXY_SECRET || "" },
-          });
-        } catch {
-          return err("Failed to reach Render proxy server", 502);
-        }
-
-        if (!upstream.ok) return err(`Render proxy returned ${upstream.status}`, upstream.status);
-
-        const respHeaders = new Headers({
-          ...CORS_HEADERS,
-          "Content-Disposition": `attachment; filename="${filename}"`,
-          "Content-Type":        upstream.headers.get("Content-Type") || "video/mp4",
-          "Cache-Control":       "no-store",
-        });
-        const cl = upstream.headers.get("Content-Length");
-        if (cl) respHeaders.set("Content-Length", cl);
-
-        return new Response(upstream.body, { status: 200, headers: respHeaders });
-      }
-
-      // Path B: Direct CDN fetch from Worker
+      // Direct CDN fetch from Worker — Render proxy removed (was down, not needed)
       let upstream;
       try {
         upstream = await fetch(cdnUrl, {
@@ -501,7 +493,6 @@ async function handleRequest(request, env) {
             "Referer":         "https://www.tiktok.com/",
             "Accept":          "*/*",
             "Accept-Encoding": "identity",
-            "Range":           "bytes=0-",
           },
         });
       } catch {
@@ -514,10 +505,9 @@ async function handleRequest(request, env) {
         ...CORS_HEADERS,
         "Content-Disposition": `attachment; filename="${filename}"`,
         "Content-Type":        upstream.headers.get("Content-Type") || "video/mp4",
+        "Content-Length":      upstream.headers.get("Content-Length") || "",
         "Cache-Control":       "no-store",
       });
-      const ct = upstream.headers.get("Content-Length");
-      if (ct) respHeaders.set("Content-Length", ct);
 
       return new Response(upstream.body, { status: 200, headers: respHeaders });
     }
