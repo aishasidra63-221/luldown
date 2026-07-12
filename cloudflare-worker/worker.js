@@ -462,7 +462,7 @@ async function handleRequest(request, env) {
     if (pathname === "/health" && method === "GET") {
       return json({
         status:        "ok",
-        version:       "8.0.0",
+        version:       "8.1.0-debugtest",
         engine:        "tiktok-android-api",
         cache:         "cloudflare-cache-api",
         cf_colo:       request.cf?.colo    || "?",
