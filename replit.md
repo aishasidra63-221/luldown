@@ -1,69 +1,51 @@
-# Luldown — TikTok Downloader
+# LulDown — TikTok Downloader
 
-TikTok video/audio downloader that gives users direct CDN links (no server bandwidth used).
-
-## Run & Operate
-
-- `pnpm --filter @workspace/tikdown run dev` — React frontend (port 5000)
-- `cd artifacts/tiktok-api && PORT=8000 python main.py` — Python API (local dev fallback)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-
-## Workflows (Replit)
-
-- **artifacts/tikdown: web** — React frontend (webview, port assigned by Replit)
-- **TikTok API** — Python FastAPI on port 8000 (console, local dev only)
+A TikTok video and audio downloader that provides direct CDN links. Supports MP4 (1080p/720p), MP3 audio, and photo posts with no watermark.
 
 ## Stack
 
-- pnpm workspaces, Node.js 20, TypeScript 5.9
-- Frontend: React 19 + Vite + Tailwind CSS 4 + Radix UI
-- Backend: Cloudflare Worker (`cloudflare-worker/worker.js`) — production
-- Backend (dev): Python FastAPI (`artifacts/tiktok-api/`) — local dev proxy
-- DB: PostgreSQL + Drizzle ORM (schema currently empty — history is localStorage)
+- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS 4, Radix UI, Wouter, TanStack Query
+- **Dev API:** Python FastAPI (`artifacts/tiktok-api/`) — runs on port 8000, proxied via Vite at `/tikapi`
+- **Production API:** Cloudflare Worker (`cloudflare-worker/worker.js`) — deployed separately via Wrangler
+- **Monorepo:** pnpm workspaces
 
-## Where things live
+## How to run (dev mode)
 
-- `artifacts/tikdown/` — React frontend
-- `artifacts/tikdown/src/lib/api.ts` — all API calls (source of truth)
-- `artifacts/tikdown/vite.config.ts` — Vite config, proxy, env vars
-- `cloudflare-worker/worker.js` — Cloudflare Worker (production backend)
-- `cloudflare-worker/wrangler.toml` — Worker deployment config
-- `artifacts/tiktok-api/` — Python FastAPI (local dev only)
-- `lib/db/` — Drizzle schema
+Two workflows run in parallel:
 
-## Architecture decisions
+1. **TikTok API** — Python FastAPI server on port 8000
+   ```
+   cd artifacts/tiktok-api && pip install --user -r requirements.txt -q && PORT=8000 WORKERS=1 python3 main.py
+   ```
 
-- **Direct TikTok page fetch — no third-party extraction API.** The backend (`artifacts/tiktok-api/downloader.py`) hits `https://www.tiktok.com/@_/video/{id}` directly with rotating real Chrome/Android User-Agents and browser headers, then parses the embedded `__UNIVERSAL_DATA_FOR_REHYDRATION__` / `SIGI_STATE` JSON for title, author, stats, and CDN links. No mobile-app API, no tikwm.com or similar service.
-- **Cloudflare Worker as backend** — No server needed in production. Cloudflare's global IPs replace the proxy pool. Rate limiting is CF built-in. It should do the same direct page-fetch approach as the Python dev API, not call a third-party extraction service.
-- **CDN-direct downloads** — Server returns CDN URL only, browser fetches file directly from TikTok CDN. Zero server bandwidth.
-- **History in localStorage** — Fully private, no server storage needed.
-- **`WORKER_URL` env var** — Set this to your deployed worker URL. If empty, dev proxy (`/tikapi` → Python on 8000) is used automatically.
+2. **Start application** — React/Vite frontend on port 5000
+   ```
+   PORT=5000 pnpm --filter @workspace/tikdown run dev
+   ```
 
-## Deploying the Cloudflare Worker
+The Vite dev server proxies `/tikapi` → `http://localhost:8000`, so the frontend hits the local Python API in dev mode.
 
-```bash
-cd cloudflare-worker
-npx wrangler login
-npx wrangler deploy
-# Copy the *.workers.dev URL, set it as WORKER_URL env var in Replit Secrets
+## Environment variables (optional for dev)
+
+| Variable | Purpose |
+|---|---|
+| `WORKER_URL` | Points frontend to the deployed Cloudflare Worker (production only) |
+| `RENDER_URL` | Proxy server URL for CDN streaming (production only) |
+| `PROXY_SECRET` | HMAC secret for the proxy (production only) |
+| `TOKEN_SECRET` | API request validation token (production only) |
+| `RECAPTCHA_SITE_KEY` | Google reCAPTCHA v3 site key (optional) |
+
+Without `WORKER_URL` set, the frontend falls back to the local Python API automatically.
+
+## Project structure
+
+```
+artifacts/
+  tikdown/        # React frontend
+  tiktok-api/     # Python FastAPI dev backend
+cloudflare-worker/ # Production Cloudflare Worker
+lib/              # Shared packages (API specs, Zod schemas, DB)
+scripts/          # Workspace utilities
 ```
 
-## Product
-
-- Paste any TikTok URL → fetch video info (title, author, thumbnail, stats)
-- Download as MP4 1080p, MP4 720p (no watermark), or MP3 192kbps
-- Photo posts: download individual images or all at once
-- Download history saved locally (last 10, auto-FIFO)
-
 ## User preferences
-
-- Cloudflare Worker preferred over Python server for production backend
-- No proxy pool, no 4-layer bypass, no random delays — Cloudflare handles it
-- Keep things simple: 3 fake Chrome headers (UA + Referer + Language) only
-
-## Gotchas
-
-- `WORKER_URL` must be set in Replit Secrets after deploying the worker, otherwise dev uses Python API on port 8000
-- Python API uses in-memory cache (no Redis) and 0 healthy proxies — fine for local dev, not for production
-- Worker rate limit: 20 req/60s per IP (configured in `wrangler.toml`)
