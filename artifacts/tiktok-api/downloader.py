@@ -277,25 +277,34 @@ def _parse_item_struct(item: dict) -> dict:
 
     is_photo = len(images) > 0
 
-    video_hd = _first_str(
+    # 1080p no-watermark: extract from bit_rate array by gear_name
+    video_1080p = ""
+    bit_rate = video.get("bitRate") or video.get("bit_rate") or []
+    for entry in bit_rate:
+        gear_name = entry.get("gearName") or entry.get("gear_name") or ""
+        if "1080p" in gear_name:
+            play_addr = entry.get("playAddr") or entry.get("play_addr") or {}
+            url_list = play_addr.get("urlList") or play_addr.get("url_list") or []
+            if url_list:
+                video_1080p = url_list[0]
+            break
+
+    video_hd = video_1080p or _first_str(
         video.get("downloadAddr"), video.get("download_addr"),
         video.get("playAddr"), video.get("play_addr"),
     )
     video_sd = _first_str(
-        video.get("playAddr"), video.get("play_addr"), video_hd,
+        video.get("playAddr"), video.get("play_addr"),
     )
-    # music.play_url / music.playUrl is an object {url_list: [...], uri: "..."},
-    # NOT a bare string — _first_str would skip it. Extract correctly:
-    _play_url_obj = music.get("playUrl") or music.get("play_url") or {}
-    if isinstance(_play_url_obj, dict):
-        _url_list = _play_url_obj.get("url_list") or _play_url_obj.get("urlList") or []
-        audio_url = _first_str(
-            *(_url_list if isinstance(_url_list, list) else []),
-            _play_url_obj.get("uri", ""),
-        )
-    else:
-        # Fallback: some API versions may return a bare string
-        audio_url = _first_str(_play_url_obj)
+
+    # MP3: music.play_url.url_list[0]
+    _music_play_url = music.get("play_url") or music.get("playUrl") or {}
+    audio_url = ""
+    if isinstance(_music_play_url, dict):
+        _url_list = _music_play_url.get("url_list") or _music_play_url.get("urlList") or []
+        audio_url = _url_list[0] if _url_list else ""
+    elif isinstance(_music_play_url, str):
+        audio_url = _music_play_url
     thumbnail = _first_str(
         video.get("cover"), video.get("originCover"),
         video.get("origin_cover"), video.get("dynamicCover"),
