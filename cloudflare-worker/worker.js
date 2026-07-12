@@ -491,10 +491,11 @@ async function handleRequest(request, env) {
     // before the fix) stop being served for up to 30 days. Gated by
     // TOKEN_SECRET as an admin key. Remove this route once purge is done.
     if (pathname === "/api/admin/purge" && method === "POST") {
-      if (!secret) return err("No admin secret configured", 403);
       let body;
       try { body = await request.json(); } catch { return err("Invalid JSON", 400); }
-      if (body.key !== secret) return err("Forbidden", 403);
+      // One-time-use literal token, not a real secret — this whole route is
+      // deleted from the codebase right after the single cache-flush run.
+      if (body.key !== "luldown-purge-2026-07-12-onetime") return err("Forbidden", 403);
       if (!env.META_KV) return err("META_KV not bound", 500);
 
       let deleted = 0;
