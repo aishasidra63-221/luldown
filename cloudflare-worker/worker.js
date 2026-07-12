@@ -199,34 +199,61 @@ function buildQueryParams(videoId) {
   return params.toString();
 }
 
-async function callAndroidAPI(videoId) {
-  const qs = buildQueryParams(videoId);
-  const endpoint = `https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/multi/aweme/detail/?${qs}`;
+// Multiple endpoints — same US East datacenter, different servers.
+// If one is slow or rate-limiting, next one is tried automatically.
+const TIKTOK_API_ENDPOINTS = [
+  "api16-normal-c-useast1a.tiktokv.com",
+  "api19-normal-c-useast1a.tiktokv.com",
+  "api21-normal-c-useast1a.tiktokv.com",
+  "api16-normal-useast5.tiktokv.com",
+];
 
+async function callAndroidAPI(videoId) {
   const body = new URLSearchParams({
     aweme_ids:      `[${videoId}]`,
     request_source: "0",
   });
 
-  const odinToken = randHex(160);
+  let lastError = null;
 
-  const response = await fetch(endpoint, {
-    method:  "POST",
-    headers: {
-      "User-Agent":   "com.zhiliaoapp.musically/2023501030 (Linux; U; Android 13; en_US; Pixel 7; Build/TD1A.220804.031; Cronet/58.0.2991.0)",
-      "X-SS-TC":      "0",
-      "Content-Type": "application/x-www-form-urlencoded",
-      "Cookie":       `odin_tt=${odinToken}`,
-    },
-    body: body.toString(),
-  });
+  for (const host of TIKTOK_API_ENDPOINTS) {
+    const qs       = buildQueryParams(videoId);
+    const endpoint = `https://${host}/aweme/v1/multi/aweme/detail/?${qs}`;
+    const odinToken = randHex(160);
 
-  if (!response.ok) {
-    throw new Error(`TikTok API returned HTTP ${response.status}`);
+    try {
+      const response = await fetch(endpoint, {
+        method:  "POST",
+        headers: {
+          "User-Agent":   "com.zhiliaoapp.musically/2023501030 (Linux; U; Android 13; en_US; Pixel 7; Build/TD1A.220804.031; Cronet/58.0.2991.0)",
+          "X-SS-TC":      "0",
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Cookie":       `odin_tt=${odinToken}`,
+        },
+        body: body.toString(),
+      });
+
+      if (!response.ok) {
+        lastError = new Error(`TikTok API ${host} returned HTTP ${response.status}`);
+        continue; // try next endpoint
+      }
+
+      const data = await response.json();
+
+      // If TikTok returned an error status in the body, try next endpoint
+      if (data?.status_code && data.status_code !== 0) {
+        lastError = new Error(`TikTok API ${host} body status: ${data.status_code}`);
+        continue;
+      }
+
+      return data; // success
+    } catch (e) {
+      lastError = new Error(`TikTok API ${host} failed: ${e.message}`);
+      // network error — try next endpoint
+    }
   }
 
-  const data = await response.json();
-  return data;
+  throw lastError || new Error("All TikTok API endpoints failed");
 }
 
 // ── Step 3: Parse aweme_details from API response ────────────────────────────
