@@ -10,11 +10,23 @@
  *           meta: 30 days  |  CDN URL: 5 hours (expires in ~6h, 1h buffer)
  */
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin":  "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
+const ALLOWED_ORIGINS = [
+  "https://luldown.com",
+  "https://www.luldown.com",
+];
+
+function corsHeaders(request) {
+  const origin = request?.headers?.get("Origin") || "";
+  const allowed =
+    ALLOWED_ORIGINS.includes(origin) ||
+    origin.startsWith("http://localhost") ||
+    origin.startsWith("http://127.0.0.1");
+  return {
+    "Access-Control-Allow-Origin":  allowed ? origin : "https://luldown.com",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
+}
 
 const TTL_META = 30 * 24 * 60 * 60;  // 30 days — title, author, avatar, thumbnail (static)
 const TTL_URL  = 5  * 60 * 60;        // 5 hours — CDN URL expires in ~6h (1h safety buffer)
@@ -109,6 +121,8 @@ function extractIdFromString(s) {
 
 const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 
+const TIKTOK_ALLOWED_HOSTS = ["tiktok.com", "douyin.com", "musical.ly"];
+
 async function resolveVideoId(rawUrl) {
   const url = rawUrl.trim();
 
@@ -117,8 +131,6 @@ async function resolveVideoId(rawUrl) {
   if (direct) return direct;
 
   // Follow all redirects automatically — Cloudflare sets res.url to the FINAL URL.
-  // redirect:"manual" was previously used but it makes res.url unreliable and breaks
-  // relative-path Location headers (e.g. TikTok returning /en or /foryou).
   const res = await fetch(url, {
     redirect: "follow",
     headers: {
@@ -127,6 +139,12 @@ async function resolveVideoId(rawUrl) {
       "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     },
   });
+
+  // SSRF guard — final URL after redirects must land on TikTok/Douyin
+  const finalHost = new URL(res.url).hostname;
+  if (!TIKTOK_ALLOWED_HOSTS.some(d => finalHost === d || finalHost.endsWith("." + d))) {
+    throw new Error("URL did not resolve to a TikTok domain.");
+  }
 
   // Check final URL first — fastest, no body read needed
   const fromUrl = extractIdFromString(res.url);
@@ -208,6 +226,20 @@ const TIKTOK_API_ENDPOINTS = [
   "api16-normal-useast5.tiktokv.com",
 ];
 
+// Rotating User-Agents — different TikTok app versions
+// Prevents fingerprinting on a single static UA string
+const TIKTOK_USER_AGENTS = [
+  "com.zhiliaoapp.musically/2023501030 (Linux; U; Android 13; en_US; Pixel 7; Build/TD1A.220804.031; Cronet/58.0.2991.0)",
+  "com.zhiliaoapp.musically/2024100030 (Linux; U; Android 14; en_US; Pixel 8; Build/AD1A.240405.004; Cronet/113.0.5672.129)",
+  "com.zhiliaoapp.musically/2025300040 (Linux; U; Android 14; en_US; Pixel 8 Pro; Build/AP2A.240805.005; Cronet/119.0.6045.163)",
+  "com.zhiliaoapp.musically/2023200020 (Linux; U; Android 12; en_US; SM-G991B; Build/SP1A.210812.016; Cronet/58.0.2991.0)",
+  "com.zhiliaoapp.musically/2024200035 (Linux; U; Android 13; en_US; SM-S901B; Build/TP1A.220624.014; Cronet/108.0.5359.128)",
+];
+
+function randUserAgent() {
+  return TIKTOK_USER_AGENTS[Math.floor(Math.random() * TIKTOK_USER_AGENTS.length)];
+}
+
 async function callAndroidAPI(videoId) {
   const body = new URLSearchParams({
     aweme_ids:      `[${videoId}]`,
@@ -217,15 +249,15 @@ async function callAndroidAPI(videoId) {
   let lastError = null;
 
   for (const host of TIKTOK_API_ENDPOINTS) {
-    const qs       = buildQueryParams(videoId);
-    const endpoint = `https://${host}/aweme/v1/multi/aweme/detail/?${qs}`;
+    const qs        = buildQueryParams(videoId);
+    const endpoint  = `https://${host}/aweme/v1/multi/aweme/detail/?${qs}`;
     const odinToken = randHex(160);
 
     try {
       const response = await fetch(endpoint, {
         method:  "POST",
         headers: {
-          "User-Agent":   "com.zhiliaoapp.musically/2023501030 (Linux; U; Android 13; en_US; Pixel 7; Build/TD1A.220804.031; Cronet/58.0.2991.0)",
+          "User-Agent":   randUserAgent(),
           "X-SS-TC":      "0",
           "Content-Type": "application/x-www-form-urlencoded",
           "Cookie":       `odin_tt=${odinToken}`,
@@ -428,15 +460,15 @@ async function fetchTikTokVideo(tiktokUrl, env) {
 
 // ── Response helpers ──────────────────────────────────────────────────────────
 
-function json(data, status = 200) {
+function json(data, status = 200, cors = {}) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    headers: { ...cors, "Content-Type": "application/json" },
   });
 }
 
-function err(detail, status = 422) {
-  return json({ detail }, status);
+function err(detail, status = 422, cors = {}) {
+  return json({ detail }, status, cors);
 }
 
 function validateTikTokUrl(raw) {
@@ -480,7 +512,13 @@ async function validateToken(token, secret) {
   if (now - timestamp > TOKEN_TTL_SECONDS) return false;
   if (timestamp > now + 30) return false;
   const expected = await hmacSign(secret, ts);
-  return sig === expected;
+  // Timing-safe comparison — prevents HMAC timing attacks
+  const sigBytes      = new TextEncoder().encode(sig);
+  const expectedBytes = new TextEncoder().encode(expected);
+  if (sigBytes.length !== expectedBytes.length) return false;
+  return crypto.subtle.timingSafeEqual
+    ? crypto.subtle.timingSafeEqual(sigBytes, expectedBytes)
+    : sig === expected; // fallback for envs without timingSafeEqual
 }
 
 // ── Main handler ──────────────────────────────────────────────────────────────
@@ -490,65 +528,76 @@ export default {
     try {
       return await handleRequest(request, env);
     } catch (e) {
-      // Top-level catch — always return CORS headers so browser doesn't see "Failed to fetch"
+      const cors = corsHeaders(request);
       return new Response(JSON.stringify({ detail: `Internal error: ${e.message}` }), {
         status: 500,
-        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
   },
 };
 
+// ── Rate limiting — KV-based, 20 requests/min per IP ─────────────────────────
+async function checkRateLimit(env, ip) {
+  if (!env.META_KV) return true; // KV not bound — allow
+  const key = `rl:${ip}`;
+  try {
+    const raw  = await env.META_KV.get(key);
+    const count = raw ? parseInt(raw, 10) : 0;
+    if (count >= 20) return false; // blocked
+    await env.META_KV.put(key, String(count + 1), { expirationTtl: 60 });
+    return true;
+  } catch {
+    return true; // KV error — allow rather than block real users
+  }
+}
+
 async function handleRequest(request, env) {
     const { pathname } = new URL(request.url);
     const method = request.method;
+    const cors   = corsHeaders(request);
 
     if (method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: CORS_HEADERS });
+      return new Response(null, { status: 204, headers: cors });
     }
 
     const secret = env.TOKEN_SECRET || null;
 
     // GET /health
     if (pathname === "/health" && method === "GET") {
-      return json({
-        status:        "ok",
-        version:       "8.2.0",
-        engine:        "tiktok-android-api",
-        cache:         "cloudflare-cache-api",
-        cf_colo:       request.cf?.colo    || "?",
-        cf_country:    request.cf?.country || "?",
-        token_enabled: !!secret,
-      });
+      return json({ status: "ok", version: "8.2.0", engine: "tiktok-android-api", token_enabled: !!secret }, 200, cors);
     }
 
     // GET /api/token
     if (pathname === "/api/token" && method === "GET") {
       if (!secret) {
-        return json({ token: "", ttl_seconds: TOKEN_TTL_SECONDS, dev_mode: true });
+        return json({ token: "", ttl_seconds: TOKEN_TTL_SECONDS, dev_mode: true }, 200, cors);
       }
       const token = await generateToken(secret);
-      return json({ token, ttl_seconds: TOKEN_TTL_SECONDS });
+      return json({ token, ttl_seconds: TOKEN_TTL_SECONDS }, 200, cors);
     }
 
     // POST /api/info — fetch video metadata + download URLs
     if (pathname === "/api/info" && method === "POST") {
+      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+      if (!await checkRateLimit(env, ip)) return err("Too many requests. Please slow down.", 429, cors);
+
       let body;
-      try { body = await request.json(); } catch { return err("Invalid JSON", 400); }
+      try { body = await request.json(); } catch { return err("Invalid JSON", 400, cors); }
 
       if (secret) {
         const ok = await validateToken(body.token, secret);
-        if (!ok) return err("Invalid or expired token. Please refresh the page.", 401);
+        if (!ok) return err("Invalid or expired token. Please refresh the page.", 401, cors);
       }
 
       const tiktokUrl = validateTikTokUrl(body.url);
-      if (!tiktokUrl) return err("Invalid TikTok URL. Please copy the link from TikTok app.", 400);
+      if (!tiktokUrl) return err("Invalid TikTok URL. Please copy the link from TikTok app.", 400, cors);
 
       let p;
       try {
         p = await fetchTikTokVideo(tiktokUrl, env);
       } catch (e) {
-        return err(e.message);
+        return err(e.message, 422, cors);
       }
 
       return json({
@@ -565,7 +614,7 @@ async function handleRequest(request, env) {
           mp4_720:  p.videoUrl720,
           mp3:      p.audioUrl,
         },
-      });
+      }, 200, cors);
     }
 
     // GET /api/proxy — stream TikTok CDN file
@@ -574,16 +623,16 @@ async function handleRequest(request, env) {
       const rawUrl   = params.get("url");
       const filename = params.get("filename") || "luldown.mp4";
 
-      if (!rawUrl) return err("Missing url parameter", 400);
+      if (!rawUrl) return err("Missing url parameter", 400, cors);
 
       let cdnUrl;
-      try { cdnUrl = decodeURIComponent(rawUrl); } catch { return err("Invalid URL encoding", 400); }
+      try { cdnUrl = decodeURIComponent(rawUrl); } catch { return err("Invalid URL encoding", 400, cors); }
 
       const allowed = ["tiktok.com", "tiktokcdn.com", "tiktokv.com", "musical.ly", "douyin.com", "bytecdn.cn", "snssdk.com"];
       let cdnHostname;
-      try { cdnHostname = new URL(cdnUrl).hostname; } catch { return err("Invalid CDN URL", 400); }
+      try { cdnHostname = new URL(cdnUrl).hostname; } catch { return err("Invalid CDN URL", 400, cors); }
       if (!allowed.some(d => cdnHostname === d || cdnHostname.endsWith("." + d))) {
-        return err("Only TikTok CDN URLs are supported", 403);
+        return err("Only TikTok CDN URLs are supported", 403, cors);
       }
 
       // Path A: Python proxy server (Render/any host) — REQUIRED.
@@ -600,13 +649,13 @@ async function handleRequest(request, env) {
             headers: { "x-proxy-secret": env.PROXY_SECRET || "" },
           });
         } catch {
-          return err("Proxy server unreachable. Please try again shortly.", 502);
+          return err("Proxy server unreachable. Please try again shortly.", 502, cors);
         }
 
-        if (!upstream.ok) return err(`Proxy server returned ${upstream.status}`, upstream.status);
+        if (!upstream.ok) return err(`Proxy server returned ${upstream.status}`, upstream.status, cors);
 
         const respHeaders = new Headers({
-          ...CORS_HEADERS,
+          ...cors,
           "Content-Disposition": `attachment; filename="${filename}"`,
           "Content-Type":        upstream.headers.get("Content-Type") || "video/mp4",
           "Cache-Control":       "no-store",
@@ -630,46 +679,49 @@ async function handleRequest(request, env) {
           },
         });
       } catch {
-        return err("Failed to fetch from TikTok CDN", 502);
+        return err("Failed to fetch from TikTok CDN", 502, cors);
       }
 
-      if (!upstream.ok) return err(`TikTok CDN returned ${upstream.status}. Set RENDER_URL in Worker env for reliable downloads.`, upstream.status);
+      if (!upstream.ok) return err(`TikTok CDN returned ${upstream.status}. Set RENDER_URL in Worker env for reliable downloads.`, upstream.status, cors);
 
-      const respHeaders = new Headers({
-        ...CORS_HEADERS,
+      const respHeaders2 = new Headers({
+        ...cors,
         "Content-Disposition": `attachment; filename="${filename}"`,
         "Content-Type":        upstream.headers.get("Content-Type") || "video/mp4",
         "Cache-Control":       "no-store",
       });
       const cl2 = upstream.headers.get("Content-Length");
-      if (cl2) respHeaders.set("Content-Length", cl2);
+      if (cl2) respHeaders2.set("Content-Length", cl2);
 
-      return new Response(upstream.body, { status: 200, headers: respHeaders });
+      return new Response(upstream.body, { status: 200, headers: respHeaders2 });
     }
 
     // POST /api/download — return CDN URL for direct browser download
     if (pathname === "/api/download" && method === "POST") {
+      const ip2 = request.headers.get("CF-Connecting-IP") || "unknown";
+      if (!await checkRateLimit(env, ip2)) return err("Too many requests. Please slow down.", 429, cors);
+
       let body;
-      try { body = await request.json(); } catch { return err("Invalid JSON", 400); }
+      try { body = await request.json(); } catch { return err("Invalid JSON", 400, cors); }
 
       if (secret) {
         const ok = await validateToken(body.token, secret);
-        if (!ok) return err("Invalid or expired token. Please refresh the page.", 401);
+        if (!ok) return err("Invalid or expired token. Please refresh the page.", 401, cors);
       }
 
       const tiktokUrl = validateTikTokUrl(body.url);
-      if (!tiktokUrl) return err("Invalid TikTok URL", 400);
+      if (!tiktokUrl) return err("Invalid TikTok URL", 400, cors);
 
       const format = body.format || "mp4_1080";
       if (!["mp4_720", "mp4_1080", "mp3"].includes(format)) {
-        return err(`Unknown format: ${format}`, 400);
+        return err(`Unknown format: ${format}`, 400, cors);
       }
 
       let p;
       try {
         p = await fetchTikTokVideo(tiktokUrl, env);
       } catch (e) {
-        return err(e.message);
+        return err(e.message, 422, cors);
       }
 
       let cdnUrl   = "";
@@ -678,32 +730,17 @@ async function handleRequest(request, env) {
       let mediaType = "video/mp4";
 
       if (format === "mp4_1080") {
-        cdnUrl = p.videoUrl;
-        filename = "luldown_1080p";
+        cdnUrl = p.videoUrl;   filename = "luldown_1080p";
       } else if (format === "mp4_720") {
-        cdnUrl = p.videoUrl720;
-        filename = "luldown_720p";
+        cdnUrl = p.videoUrl720; filename = "luldown_720p";
       } else if (format === "mp3") {
-        cdnUrl    = p.audioUrl;
-        filename  = "luldown_audio";
-        ext       = "mp3";
-        mediaType = "audio/mpeg";
+        cdnUrl = p.audioUrl; filename = "luldown_audio"; ext = "mp3"; mediaType = "audio/mpeg";
       }
 
-      if (!cdnUrl) {
-        return err("Download URL not available. The video may be private or region-restricted.");
-      }
+      if (!cdnUrl) return err("Download URL not available. The video may be private or region-restricted.", 422, cors);
 
-      return json({
-        success:    true,
-        cdn_url:    cdnUrl,
-        filename:   `${filename}.${ext}`,
-        media_type: mediaType,
-        title:      p.title,
-        author:     p.username,
-        format,
-      });
+      return json({ success: true, cdn_url: cdnUrl, filename: `${filename}.${ext}`, media_type: mediaType, title: p.title, author: p.username, format }, 200, cors);
     }
 
-    return new Response("Not found", { status: 404, headers: CORS_HEADERS });
+    return new Response("Not found", { status: 404, headers: cors });
 }
