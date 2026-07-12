@@ -313,14 +313,14 @@ function parseAweme(aweme) {
 
 // ── Step 4: fetchTikTokVideo — cache → API → parse → cache → return ──────────
 
-async function fetchTikTokVideo(tiktokUrl, env) {
+async function fetchTikTokVideo(tiktokUrl, env, forceFresh = false) {
   const videoId = await resolveVideoId(tiktokUrl);
 
   // Both meta and url now live in Cloudflare KV — globally replicated.
   // Once ANY PoP scrapes a video, every other PoP worldwide sees the same
   // cached meta AND url — no matter which datacenter the next user's
   // request lands on. Url still expires faster (5h) since TikTok signs it.
-  const [metaCached, urlCached] = await Promise.all([
+  const [metaCached, urlCached] = forceFresh ? [null, null] : await Promise.all([
     kvGetMeta(env, videoId),
     kvGetUrl(env, videoId),
   ]);
@@ -495,7 +495,7 @@ async function handleRequest(request, env) {
 
       let p;
       try {
-        p = await fetchTikTokVideo(tiktokUrl, env);
+        p = await fetchTikTokVideo(tiktokUrl, env, body.debug === true);
       } catch (e) {
         return err(e.message);
       }
