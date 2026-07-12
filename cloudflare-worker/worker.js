@@ -229,6 +229,15 @@ function firstUrl(urlList) {
   return urlList.find(u => u && u.startsWith("http")) || "";
 }
 
+// Each url_list usually holds 2 direct CDN links (tiktokcdn.com, time-signed
+// with bt=/ft=, expire in hours) followed by ONE resolver link
+// (.../aweme/v1/play/?...&signaturev3=...) that resolves live on every hit
+// and does not expire. Always prefer the resolver link when present.
+function resolverUrl(urlList) {
+  if (!urlList || !Array.isArray(urlList)) return "";
+  return urlList.find(u => u && u.includes("signaturev3")) || firstUrl(urlList);
+}
+
 function parseAweme(aweme) {
   const author = aweme.author  || {};
   const video  = aweme.video   || {};
@@ -250,31 +259,24 @@ function parseAweme(aweme) {
 
   const isPhoto = images.length > 0;
 
-  // Video URLs
-  // video.play_addr        → direct CDN link (tiktokcdn.com/...), signed with a
-  //                           short-lived time token (bt=/ft=) — EXPIRES in hours.
-  // video.download_addr    → api16.tiktokv.com resolver link (signaturev3=...) —
-  //                           PERMANENT, resolves live on every hit, no expiry.
-  // video.bit_rate[]       → per-quality gears (normal_1080_0, normal_720_0, ...),
-  //                           each with its OWN play_addr that is also a permanent
-  //                           resolver link (signaturev3=...), not the expiring one.
-  const videoUrlExpiring = firstUrl((video.play_addr    || video.playAddr     || {}).url_list);
-  const downloadUrl      = firstUrl((video.download_addr || video.downloadAddr || {}).url_list);
-  const audioUrl         = firstUrl((music.play_url      || music.playUrl      || {}).url_list);
+  // Video URLs — each url_list has 2 direct CDN links (expire in hours) plus
+  // one resolver link (.../aweme/v1/play/?...&signaturev3=...) that never
+  // expires. resolverUrl() always picks that one when present.
+  const downloadUrl = resolverUrl((video.download_addr || video.downloadAddr || {}).url_list);
+  const videoUrlAny = resolverUrl((video.play_addr      || video.playAddr     || {}).url_list);
+  const audioUrl    = resolverUrl((music.play_url        || music.playUrl      || {}).url_list);
 
+  // video.bit_rate[] holds lower-quality gears (e.g. "adapt_lower_720_1",
+  // "adapt_540_1") for when the viewer's connection is throttled — no
+  // guaranteed "1080" gear exists. download_addr is already TikTok's
+  // best-quality no-watermark link, so it's used for both slots unless a
+  // real 720-labelled gear is present (then that becomes the lighter option).
   const bitRates = video.bit_rate || video.bitRate || [];
-  const gearUrl = (needle) => {
-    const gear = bitRates.find(g => String(g.gear_name || g.gearName || "").includes(needle));
-    if (!gear) return "";
-    return firstUrl((gear.play_addr || gear.playAddr || {}).url_list);
-  };
-  const url1080 = gearUrl("1080") || downloadUrl || videoUrlExpiring;
-  const url720   = gearUrl("720")   || downloadUrl || videoUrlExpiring;
-  const _debugBitRate = bitRates.map(g => ({
-    gear_name: g.gear_name || g.gearName || "",
-    urls: (g.play_addr || g.playAddr || {}).url_list || [],
-  }));
-  const _debugVideoKeys = Object.keys(video);
+  const gear720 = bitRates.find(g => String(g.gear_name || g.gearName || "").includes("720"));
+  const url720FromGear = gear720 ? resolverUrl((gear720.play_addr || gear720.playAddr || {}).url_list) : "";
+
+  const url1080 = downloadUrl || videoUrlAny;
+  const url720   = url720FromGear || downloadUrl || videoUrlAny;
 
   // Thumbnail
   const thumbnail = firstUrl(
@@ -298,8 +300,6 @@ function parseAweme(aweme) {
     videoUrl:      url1080,
     videoUrl720:   url720,
     audioUrl,
-    _debugBitRate,
-    _debugVideoKeys,
     thumbUrl:      thumbnail,
     duration:      video.duration || 0,
     view_count:    stats.play_count   || stats.playCount   || 0,
@@ -313,14 +313,14 @@ function parseAweme(aweme) {
 
 // ── Step 4: fetchTikTokVideo — cache → API → parse → cache → return ──────────
 
-async function fetchTikTokVideo(tiktokUrl, env, forceFresh = false) {
+async function fetchTikTokVideo(tiktokUrl, env) {
   const videoId = await resolveVideoId(tiktokUrl);
 
   // Both meta and url now live in Cloudflare KV — globally replicated.
   // Once ANY PoP scrapes a video, every other PoP worldwide sees the same
   // cached meta AND url — no matter which datacenter the next user's
   // request lands on. Url still expires faster (5h) since TikTok signs it.
-  const [metaCached, urlCached] = forceFresh ? [null, null] : await Promise.all([
+  const [metaCached, urlCached] = await Promise.all([
     kvGetMeta(env, videoId),
     kvGetUrl(env, videoId),
   ]);
@@ -372,7 +372,7 @@ async function fetchTikTokVideo(tiktokUrl, env, forceFresh = false) {
     kvSetUrl(env, videoId, urlPayload),
   ]);
 
-  return { ...metaPayload, ...urlPayload, _debugBitRate: parsed._debugBitRate, _debugVideoKeys: parsed._debugVideoKeys };
+  return { ...metaPayload, ...urlPayload };
 }
 
 // ── Response helpers ──────────────────────────────────────────────────────────
@@ -462,7 +462,7 @@ async function handleRequest(request, env) {
     if (pathname === "/health" && method === "GET") {
       return json({
         status:        "ok",
-        version:       "8.1.0-debugtest",
+        version:       "8.2.0",
         engine:        "tiktok-android-api",
         cache:         "cloudflare-cache-api",
         cf_colo:       request.cf?.colo    || "?",
@@ -495,7 +495,7 @@ async function handleRequest(request, env) {
 
       let p;
       try {
-        p = await fetchTikTokVideo(tiktokUrl, env, body.debug === true);
+        p = await fetchTikTokVideo(tiktokUrl, env);
       } catch (e) {
         return err(e.message);
       }
@@ -514,8 +514,6 @@ async function handleRequest(request, env) {
           mp4_720:  p.videoUrl720,
           mp3:      p.audioUrl,
         },
-        _debugBitRate: p._debugBitRate,
-        _debugVideoKeys: p._debugVideoKeys,
       });
     }
 
