@@ -168,13 +168,13 @@ const STATIC_DEVICE = {
   ssmix:           "a",
   residence:       "US",
   app_type:        "normal",
-  iid:             "7023456789012345678",
 };
 
 function buildQueryParams(videoId) {
   const ts               = Math.floor(Date.now() / 1000);
   const _rticket         = Date.now();
   const device_id        = String(randInt(7250000000000000000, 7325099899999994577));
+  const iid              = String(randInt(7023000000000000000, 7999999999999999999));
   const openudid         = randHex(16);
   const cdid             = randUUID();
   const last_install_time = ts - randInt(86400, 1123200);
@@ -182,6 +182,7 @@ function buildQueryParams(videoId) {
   const params = new URLSearchParams({
     ...STATIC_DEVICE,
     device_id,
+    iid,
     openudid,
     cdid,
     _rticket: String(_rticket),
