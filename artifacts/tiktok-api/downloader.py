@@ -397,6 +397,71 @@ async def _get_video_data(url: str) -> dict:
 
 # ── Public interface ──────────────────────────────────────────────────────────
 
+async def get_raw_item(url: str) -> dict:
+    """Return the raw itemStruct from TikTok page — no custom parsing."""
+    video_id = await _get_video_id(url)
+    html     = await _fetch_tiktok_page(video_id)
+    parsed   = _extract_json_from_html(html)
+    if not parsed:
+        raise DownloadError("Could not find embedded JSON in TikTok page.")
+    data, source = parsed["data"], parsed["source"]
+    item = None
+    if source == "remix":
+        loader_data = (_safe_get(data, "state", "loaderData") or _safe_get(data, "loaderData") or {})
+        for route_data in (loader_data or {}).values():
+            item = (_safe_get(route_data, "videoInfo", "itemInfo", "itemStruct")
+                    or _safe_get(route_data, "itemInfo", "itemStruct")
+                    or _safe_get(route_data, "itemStruct"))
+            if item: break
+    if not item and source == "universal":
+        item = (_safe_get(data, "__DEFAULT_SCOPE__", "webapp.video-detail", "itemInfo", "itemStruct")
+                or _safe_get(data, "__DEFAULT_SCOPE__", "webapp.video-detail", "itemInfo", "item"))
+    if not item and source == "sigi":
+        item_module = _safe_get(data, "ItemModule")
+        if item_module:
+            item = item_module.get(video_id) or next(iter(item_module.values()), None)
+        if not item:
+            item = _safe_get(data, "itemInfo", "itemStruct")
+    if not item and source == "next":
+        item = (_safe_get(data, "props", "pageProps", "itemInfo", "itemStruct")
+                or _safe_get(data, "props", "pageProps", "videoData"))
+    if not item:
+        raise DownloadError("Video data not found.")
+
+    video = item.get("video") or {}
+    music = item.get("music") or {}
+
+    def summarise_url_obj(obj):
+        if not obj: return None
+        return {
+            "keys":     list(obj.keys()) if isinstance(obj, dict) else type(obj).__name__,
+            "url_list": obj.get("url_list", []) if isinstance(obj, dict) else [],
+            "urlList":  obj.get("urlList",  []) if isinstance(obj, dict) else [],
+            "uri":      obj.get("uri",       "") if isinstance(obj, dict) else "",
+        }
+
+    bit_rate_raw = video.get("bit_rate") or video.get("bitRate") or []
+
+    return {
+        "source": source,
+        "video_top_keys": list(video.keys()),
+        "music_top_keys": list(music.keys()),
+        "download_addr":  summarise_url_obj(video.get("download_addr") or video.get("downloadAddr")),
+        "play_addr":      summarise_url_obj(video.get("play_addr")      or video.get("playAddr")),
+        "bit_rate_count": len(bit_rate_raw),
+        "bit_rate_gears": [
+            {
+                "gear_name": g.get("gear_name") or g.get("gearName"),
+                "bit_rate":  g.get("bit_rate")  or g.get("bitRate"),
+                "play_addr": summarise_url_obj(g.get("play_addr") or g.get("playAddr")),
+            }
+            for g in bit_rate_raw
+        ],
+        "music_play_url":  summarise_url_obj(music.get("play_url") or music.get("playUrl")),
+        "music_play_url_raw_type": type(music.get("play_url") or music.get("playUrl")).__name__,
+    }
+
+
 async def get_video_info(url: str) -> dict:
     result = await _get_video_data(url)
 

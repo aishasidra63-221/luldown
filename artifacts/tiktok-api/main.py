@@ -14,7 +14,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from cache import init_redis, cache_get, cache_set, make_cache_key, cache_stats, cache_flush, _mem_cache
-from downloader import DownloadError, get_video_info, get_cdn_url, stream_download
+from downloader import DownloadError, get_video_info, get_cdn_url, stream_download, get_raw_item
 from history import add_to_history, get_history, clear_history, history_stats
 from proxy_pool import build_proxy_pool, pool_stats
 from recaptcha import verify_token as verify_recaptcha, is_enabled as recaptcha_enabled
@@ -151,6 +151,16 @@ async def health():
 async def get_session_token():
     token = generate_token()
     return {"token": token, "ttl_seconds": 300}
+
+
+@app.post("/api/debug/raw")
+async def debug_raw(body: InfoRequest):
+    """Returns raw itemStruct summary — for dev debugging only."""
+    url = validate_tiktok_url(body.url)
+    try:
+        return await get_raw_item(url)
+    except DownloadError as e:
+        raise HTTPException(status_code=422, detail=str(e))
 
 
 @app.post("/api/info")
