@@ -274,6 +274,7 @@ function parseAweme(aweme) {
     gear_name: g.gear_name || g.gearName || "",
     urls: (g.play_addr || g.playAddr || {}).url_list || [],
   }));
+  const _debugVideoKeys = Object.keys(video);
 
   // Thumbnail
   const thumbnail = firstUrl(
@@ -298,6 +299,7 @@ function parseAweme(aweme) {
     videoUrl720:   url720,
     audioUrl,
     _debugBitRate,
+    _debugVideoKeys,
     thumbUrl:      thumbnail,
     duration:      video.duration || 0,
     view_count:    stats.play_count   || stats.playCount   || 0,
@@ -513,6 +515,7 @@ async function handleRequest(request, env) {
           mp3:      p.audioUrl,
         },
         _debugBitRate: p._debugBitRate,
+        _debugVideoKeys: p._debugVideoKeys,
       });
     }
 
