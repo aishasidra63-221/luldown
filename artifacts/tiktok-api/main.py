@@ -13,7 +13,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from cache import init_redis, cache_get, cache_set, make_cache_key, cache_stats
+from cache import init_redis, cache_get, cache_set, make_cache_key, cache_stats, cache_flush, _mem_cache
 from downloader import DownloadError, get_video_info, get_cdn_url, stream_download
 from history import add_to_history, get_history, clear_history, history_stats
 from proxy_pool import build_proxy_pool, pool_stats
@@ -249,6 +249,36 @@ async def delete_history(request: Request):
     ip = get_client_ip(request)
     clear_history(ip)
     return {"success": True, "message": "History cleared"}
+
+
+# ─── Admin ────────────────────────────────────────────────────────────────────
+
+@app.post("/api/admin/flush")
+async def admin_flush_cache(request: Request):
+    """Flush all in-memory (and Redis if available) cache entries.
+    Use after deploying a fix so stale cached CDN URLs stop being served.
+    Gated by SESSION_SECRET env var if set."""
+    from session import SECRET_KEY
+    admin_key = os.environ.get("SESSION_SECRET", "")
+    auth = request.headers.get("x-admin-key", "")
+    if admin_key and auth != admin_key:
+        raise HTTPException(status_code=403, detail="Forbidden — set x-admin-key header")
+    before = len(_mem_cache)
+    await cache_flush()
+    return {"flushed": True, "entries_cleared": before, "backend": cache_stats()["backend"]}
+
+
+@app.get("/api/admin/cache-check")
+async def admin_cache_check(request: Request):
+    """Return current cache state: backend, entry count, and a sample of keys.
+    Useful to confirm a fresh request stored a new URL correctly."""
+    admin_key = os.environ.get("SESSION_SECRET", "")
+    auth = request.headers.get("x-admin-key", "")
+    if admin_key and auth != admin_key:
+        raise HTTPException(status_code=403, detail="Forbidden — set x-admin-key header")
+    stats = cache_stats()
+    sample_keys = list(_mem_cache.keys())[:20]
+    return {**stats, "sample_keys": sample_keys}
 
 
 # ─── Render Proxy ──────────────────────────────────────────────────────────────

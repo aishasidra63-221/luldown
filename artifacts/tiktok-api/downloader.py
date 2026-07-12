@@ -284,7 +284,18 @@ def _parse_item_struct(item: dict) -> dict:
     video_sd = _first_str(
         video.get("playAddr"), video.get("play_addr"), video_hd,
     )
-    audio_url = _first_str(music.get("playUrl"), music.get("play_url"))
+    # music.play_url / music.playUrl is an object {url_list: [...], uri: "..."},
+    # NOT a bare string — _first_str would skip it. Extract correctly:
+    _play_url_obj = music.get("playUrl") or music.get("play_url") or {}
+    if isinstance(_play_url_obj, dict):
+        _url_list = _play_url_obj.get("url_list") or _play_url_obj.get("urlList") or []
+        audio_url = _first_str(
+            *(_url_list if isinstance(_url_list, list) else []),
+            _play_url_obj.get("uri", ""),
+        )
+    else:
+        # Fallback: some API versions may return a bare string
+        audio_url = _first_str(_play_url_obj)
     thumbnail = _first_str(
         video.get("cover"), video.get("originCover"),
         video.get("origin_cover"), video.get("dynamicCover"),
