@@ -97,16 +97,14 @@ interface Props {
 }
 
 export default function LangPage({ lang, pageKey, highlightFormat }: Props) {
-  const [_loc, navigate] = useLocation();
   const tr = T[lang][pageKey];
   const meta = LANG_META[lang];
   const dir = meta.dir;
 
   useLangSEO(lang, pageKey, tr);
 
-  const switchLang = (targetLang: Lang) => {
-    const url = buildPageUrl(targetLang, pageKey) || "/";
-    navigate(url);
+  const switchLang = (_targetLang: Lang) => {
+    // URL navigation disabled — address bar stays on luldown.com
   };
 
   return (

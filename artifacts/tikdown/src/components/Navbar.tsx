@@ -65,15 +65,14 @@ function CloseIcon() {
 }
 
 export default function Navbar() {
-  const [loc, navigate] = useLocation();
+  const [loc] = useLocation();
   const [open, setOpen] = useState(false);
 
   const { lang, pageSlug } = getLangFromPath(loc);
   const pageKey = getPageKeyFromSlug(pageSlug);
 
-  const switchLang = (targetLang: Lang) => {
-    const url = buildPageUrl(targetLang, pageKey) || "/";
-    navigate(url);
+  const switchLang = (_targetLang: Lang) => {
+    // URL navigation disabled — address bar stays on luldown.com
     setOpen(false);
   };
 
