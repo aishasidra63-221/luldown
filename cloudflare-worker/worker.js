@@ -270,6 +270,10 @@ function parseAweme(aweme) {
   };
   const url1080 = gearUrl("1080") || downloadUrl || videoUrlExpiring;
   const url720   = gearUrl("720")   || downloadUrl || videoUrlExpiring;
+  const _debugBitRate = bitRates.map(g => ({
+    gear_name: g.gear_name || g.gearName || "",
+    urls: (g.play_addr || g.playAddr || {}).url_list || [],
+  }));
 
   // Thumbnail
   const thumbnail = firstUrl(
@@ -293,6 +297,7 @@ function parseAweme(aweme) {
     videoUrl:      url1080,
     videoUrl720:   url720,
     audioUrl,
+    _debugBitRate,
     thumbUrl:      thumbnail,
     duration:      video.duration || 0,
     view_count:    stats.play_count   || stats.playCount   || 0,
@@ -507,6 +512,7 @@ async function handleRequest(request, env) {
           mp4_720:  p.videoUrl720,
           mp3:      p.audioUrl,
         },
+        _debugBitRate: p._debugBitRate,
       });
     }
 
