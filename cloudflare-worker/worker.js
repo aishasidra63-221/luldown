@@ -742,5 +742,38 @@ async function handleRequest(request, env) {
       return json({ success: true, cdn_url: cdnUrl, filename: `${filename}.${ext}`, media_type: mediaType, title: p.title, author: p.username, format }, 200, cors);
     }
 
+    // POST /api/cache/purge — delete all cached url:* entries from KV
+    // Useful after a parser fix to force fresh fetches on next request.
+    // Protected by TOKEN_SECRET (same token as other endpoints).
+    if (pathname === "/api/cache/purge" && method === "POST") {
+      if (!env.META_KV) return err("KV not bound", 500, cors);
+
+      let body = {};
+      try { body = await request.json(); } catch {}
+
+      if (secret) {
+        const ok = await validateToken(body.token, secret);
+        if (!ok) return err("Invalid or expired token.", 401, cors);
+      }
+
+      // If videoId provided — purge just that one video's URL cache
+      if (body.videoId) {
+        await env.META_KV.delete(`url:${body.videoId}`);
+        return json({ success: true, deleted: 1, videoId: body.videoId }, 200, cors);
+      }
+
+      // Otherwise — list and delete all url:* keys
+      let deleted = 0;
+      let cursor  = undefined;
+      do {
+        const listed = await env.META_KV.list({ prefix: "url:", cursor, limit: 1000 });
+        await Promise.all(listed.keys.map(k => env.META_KV.delete(k.name)));
+        deleted += listed.keys.length;
+        cursor = listed.list_complete ? undefined : listed.cursor;
+      } while (cursor);
+
+      return json({ success: true, deleted }, 200, cors);
+    }
+
     return new Response("Not found", { status: 404, headers: cors });
 }
