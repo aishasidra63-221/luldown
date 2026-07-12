@@ -259,24 +259,38 @@ function parseAweme(aweme) {
 
   const isPhoto = images.length > 0;
 
-  // Video URLs — each url_list has 2 direct CDN links (expire in hours) plus
-  // one resolver link (.../aweme/v1/play/?...&signaturev3=...) that never
-  // expires. resolverUrl() always picks that one when present.
+  // Video URLs — each url_list has 2 direct tiktokcdn.com links (expire in
+  // hours, bt=/ft= tokens) plus one tiktokv.com/tiktok.com resolver link
+  // (.../aweme/v1/play/?...&signaturev3=...) that never expires — that's
+  // the domain check that decides "clean" vs "wrong" per gear.
+  const isCleanDomain = (u) => /aweme\/v1\/play\//.test(u || "");
+
   const downloadUrl = resolverUrl((video.download_addr || video.downloadAddr || {}).url_list);
   const videoUrlAny = resolverUrl((video.play_addr      || video.playAddr     || {}).url_list);
   const audioUrl    = resolverUrl((music.play_url        || music.playUrl      || {}).url_list);
 
-  // video.bit_rate[] holds lower-quality gears (e.g. "adapt_lower_720_1",
-  // "adapt_540_1") for when the viewer's connection is throttled — no
-  // guaranteed "1080" gear exists. download_addr is already TikTok's
-  // best-quality no-watermark link, so it's used for both slots unless a
-  // real 720-labelled gear is present (then that becomes the lighter option).
+  // video.bit_rate[] holds per-quality gears (e.g. "adapt_lower_720_1",
+  // "adapt_540_1") — no guaranteed "1080" gear exists, but every gear's own
+  // url_list also carries a resolver link. If download_addr didn't have a
+  // resolver entry (still landed on tiktokcdn.com), fall back to whichever
+  // bit_rate gear DOES have a clean tiktokv.com resolver link.
   const bitRates = video.bit_rate || video.bitRate || [];
+  const gearResolverUrls = bitRates
+    .map(g => resolverUrl((g.play_addr || g.playAddr || {}).url_list))
+    .filter(isCleanDomain);
+
   const gear720 = bitRates.find(g => String(g.gear_name || g.gearName || "").includes("720"));
   const url720FromGear = gear720 ? resolverUrl((gear720.play_addr || gear720.playAddr || {}).url_list) : "";
 
-  const url1080 = downloadUrl || videoUrlAny;
-  const url720   = url720FromGear || downloadUrl || videoUrlAny;
+  // 1080 slot: keep download_addr's URL if it's already a clean tiktokv.com
+  // resolver link (watermark=1 query param on it is irrelevant — the domain
+  // is what matters). Only if it's still a tiktokcdn.com link, replace it
+  // with the first clean resolver link found among the bit_rate gears.
+  const url1080 = isCleanDomain(downloadUrl)
+    ? downloadUrl
+    : (gearResolverUrls[0] || downloadUrl || videoUrlAny);
+
+  const url720 = url720FromGear || downloadUrl || videoUrlAny;
 
   // Thumbnail
   const thumbnail = firstUrl(
