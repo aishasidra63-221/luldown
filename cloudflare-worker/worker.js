@@ -251,9 +251,25 @@ function parseAweme(aweme) {
   const isPhoto = images.length > 0;
 
   // Video URLs
-  const videoUrl     = firstUrl((video.play_addr      || video.playAddr     || {}).url_list);
-  const downloadUrl  = firstUrl((video.download_addr   || video.downloadAddr || {}).url_list);
-  const audioUrl     = firstUrl((music.play_url        || music.playUrl      || {}).url_list);
+  // video.play_addr        → direct CDN link (tiktokcdn.com/...), signed with a
+  //                           short-lived time token (bt=/ft=) — EXPIRES in hours.
+  // video.download_addr    → api16.tiktokv.com resolver link (signaturev3=...) —
+  //                           PERMANENT, resolves live on every hit, no expiry.
+  // video.bit_rate[]       → per-quality gears (normal_1080_0, normal_720_0, ...),
+  //                           each with its OWN play_addr that is also a permanent
+  //                           resolver link (signaturev3=...), not the expiring one.
+  const videoUrlExpiring = firstUrl((video.play_addr    || video.playAddr     || {}).url_list);
+  const downloadUrl      = firstUrl((video.download_addr || video.downloadAddr || {}).url_list);
+  const audioUrl         = firstUrl((music.play_url      || music.playUrl      || {}).url_list);
+
+  const bitRates = video.bit_rate || video.bitRate || [];
+  const gearUrl = (needle) => {
+    const gear = bitRates.find(g => String(g.gear_name || g.gearName || "").includes(needle));
+    if (!gear) return "";
+    return firstUrl((gear.play_addr || gear.playAddr || {}).url_list);
+  };
+  const url1080 = gearUrl("1080") || downloadUrl || videoUrlExpiring;
+  const url720   = gearUrl("720")   || downloadUrl || videoUrlExpiring;
 
   // Thumbnail
   const thumbnail = firstUrl(
@@ -274,8 +290,8 @@ function parseAweme(aweme) {
     username:      username ? `@${username}` : "",
     displayName:   author.nickname || "",
     avatarUrl:     avatar,
-    videoUrl:      downloadUrl || videoUrl,
-    videoUrlWm:    videoUrl,
+    videoUrl:      url1080,
+    videoUrl720:   url720,
     audioUrl,
     thumbUrl:      thumbnail,
     duration:      video.duration || 0,
@@ -338,8 +354,8 @@ async function fetchTikTokVideo(tiktokUrl, env) {
 
   // Always refresh the signed CDN URL
   const urlPayload = {
-    videoUrl:   parsed.videoUrl,
-    videoUrlWm: parsed.videoUrlWm,
+    videoUrl:    parsed.videoUrl,
+    videoUrl720: parsed.videoUrl720,
     audioUrl:   parsed.audioUrl,
   };
 
@@ -488,7 +504,7 @@ async function handleRequest(request, env) {
         images:        p.images,
         download_urls: {
           mp4_1080: p.videoUrl,
-          mp4_720:  p.videoUrlWm,
+          mp4_720:  p.videoUrl720,
           mp3:      p.audioUrl,
         },
       });
@@ -605,7 +621,7 @@ async function handleRequest(request, env) {
         cdnUrl = p.videoUrl;
         filename = "luldown_1080p";
       } else if (format === "mp4_720") {
-        cdnUrl = p.videoUrlWm;
+        cdnUrl = p.videoUrl720;
         filename = "luldown_720p";
       } else if (format === "mp3") {
         cdnUrl    = p.audioUrl;
