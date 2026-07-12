@@ -78,7 +78,13 @@ async function kvSetUrl(env, videoId, value) {
 // ── Random helpers ────────────────────────────────────────────────────────────
 
 function randInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  // Use crypto.getRandomValues for full 64-bit precision on large numbers
+  // (Math.random only has 53-bit precision — last digits of 19-digit IDs would be 0)
+  const range = BigInt(max) - BigInt(min) + 1n;
+  const buf = new Uint32Array(2);
+  crypto.getRandomValues(buf);
+  const rand = (BigInt(buf[0]) << 32n) | BigInt(buf[1]);
+  return Number(BigInt(min) + (rand % range));
 }
 
 function randHex(len) {
@@ -489,30 +495,6 @@ async function handleRequest(request, env) {
       });
     }
 
-    // POST /api/admin/purge — TEMPORARY: flush all cached video meta/url KV
-    // entries after the resolver-URL fix, so old dead/expiring URLs (from
-    // before the fix) stop being served for up to 30 days. Gated by
-    // TOKEN_SECRET as an admin key. Remove this route once purge is done.
-    if (pathname === "/api/admin/purge" && method === "POST") {
-      let body;
-      try { body = await request.json(); } catch { return err("Invalid JSON", 400); }
-      // One-time-use literal token, not a real secret — this whole route is
-      // deleted from the codebase right after the single cache-flush run.
-      if (body.key !== "luldown-purge-2026-07-12-onetime") return err("Forbidden", 403);
-      if (!env.META_KV) return err("META_KV not bound", 500);
-
-      let deleted = 0;
-      let cursor;
-      do {
-        const page = await env.META_KV.list({ cursor });
-        await Promise.all(page.keys.map(k => env.META_KV.delete(k.name)));
-        deleted += page.keys.length;
-        cursor = page.list_complete ? undefined : page.cursor;
-      } while (cursor);
-
-      return json({ purged: deleted });
-    }
-
     // GET /api/token
     if (pathname === "/api/token" && method === "GET") {
       if (!secret) {
@@ -556,7 +538,6 @@ async function handleRequest(request, env) {
           mp4_720:  p.videoUrl720,
           mp3:      p.audioUrl,
         },
-        _debugMusic: p._debugMusic,
       });
     }
 
@@ -572,7 +553,9 @@ async function handleRequest(request, env) {
       try { cdnUrl = decodeURIComponent(rawUrl); } catch { return err("Invalid URL encoding", 400); }
 
       const allowed = ["tiktok.com", "tiktokcdn.com", "tiktokv.com", "musical.ly", "douyin.com", "bytecdn.cn", "snssdk.com"];
-      if (!allowed.some(d => cdnUrl.includes(d))) {
+      let cdnHostname;
+      try { cdnHostname = new URL(cdnUrl).hostname; } catch { return err("Invalid CDN URL", 400); }
+      if (!allowed.some(d => cdnHostname === d || cdnHostname.endsWith("." + d))) {
         return err("Only TikTok CDN URLs are supported", 403);
       }
 
