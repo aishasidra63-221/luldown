@@ -372,7 +372,7 @@ async function fetchTikTokVideo(tiktokUrl, env, forceFresh = false) {
     kvSetUrl(env, videoId, urlPayload),
   ]);
 
-  return { ...metaPayload, ...urlPayload };
+  return { ...metaPayload, ...urlPayload, _debugBitRate: parsed._debugBitRate, _debugVideoKeys: parsed._debugVideoKeys };
 }
 
 // ── Response helpers ──────────────────────────────────────────────────────────
