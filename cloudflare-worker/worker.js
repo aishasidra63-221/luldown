@@ -334,7 +334,7 @@ function parseAweme(aweme) {
   const downloadUrl = resolverUrl((video.download_addr || video.downloadAddr || {}).url_list);
   const videoUrlAny = resolverUrl((video.play_addr      || video.playAddr     || {}).url_list);
   const musicPlayUrl = music.play_url || music.playUrl || {};
-  const audioUrl = resolverUrl(musicPlayUrl.url_list) || musicPlayUrl.uri || "";
+  const audioUrl = resolverUrl(musicPlayUrl.url_list || musicPlayUrl.urlList) || musicPlayUrl.uri || "";
   const _debugMusic = { keys: Object.keys(music), playUrl: musicPlayUrl, multiBitRate: music.multi_bit_rate_play_info };
 
   // video.bit_rate[] holds per-quality gears (e.g. "adapt_lower_720_1",
