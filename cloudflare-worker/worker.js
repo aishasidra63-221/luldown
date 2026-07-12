@@ -269,6 +269,7 @@ function parseAweme(aweme) {
   const videoUrlAny = resolverUrl((video.play_addr      || video.playAddr     || {}).url_list);
   const musicPlayUrl = music.play_url || music.playUrl || {};
   const audioUrl = resolverUrl(musicPlayUrl.url_list) || musicPlayUrl.uri || "";
+  const _debugMusic = { keys: Object.keys(music), playUrl: musicPlayUrl };
 
   // video.bit_rate[] holds per-quality gears (e.g. "adapt_lower_720_1",
   // "adapt_540_1") — no guaranteed "1080" gear exists, but every gear's own
@@ -315,6 +316,7 @@ function parseAweme(aweme) {
     videoUrl:      url1080,
     videoUrl720:   url720,
     audioUrl,
+    _debugMusic,
     thumbUrl:      thumbnail,
     duration:      video.duration || 0,
     view_count:    stats.play_count   || stats.playCount   || 0,
@@ -387,7 +389,7 @@ async function fetchTikTokVideo(tiktokUrl, env) {
     kvSetUrl(env, videoId, urlPayload),
   ]);
 
-  return { ...metaPayload, ...urlPayload };
+  return { ...metaPayload, ...urlPayload, _debugMusic: parsed._debugMusic };
 }
 
 // ── Response helpers ──────────────────────────────────────────────────────────
@@ -553,6 +555,7 @@ async function handleRequest(request, env) {
           mp4_720:  p.videoUrl720,
           mp3:      p.audioUrl,
         },
+        _debugMusic: p._debugMusic,
       });
     }
 
