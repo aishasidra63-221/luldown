@@ -267,7 +267,8 @@ function parseAweme(aweme) {
 
   const downloadUrl = resolverUrl((video.download_addr || video.downloadAddr || {}).url_list);
   const videoUrlAny = resolverUrl((video.play_addr      || video.playAddr     || {}).url_list);
-  const audioUrl    = resolverUrl((music.play_url        || music.playUrl      || {}).url_list);
+  const musicPlayUrl = music.play_url || music.playUrl || {};
+  const audioUrl = resolverUrl(musicPlayUrl.url_list) || musicPlayUrl.uri || "";
 
   // video.bit_rate[] holds per-quality gears (e.g. "adapt_lower_720_1",
   // "adapt_540_1") — no guaranteed "1080" gear exists, but every gear's own
@@ -483,6 +484,29 @@ async function handleRequest(request, env) {
         cf_country:    request.cf?.country || "?",
         token_enabled: !!secret,
       });
+    }
+
+    // POST /api/admin/purge — TEMPORARY: flush all cached video meta/url KV
+    // entries after the resolver-URL fix, so old dead/expiring URLs (from
+    // before the fix) stop being served for up to 30 days. Gated by
+    // TOKEN_SECRET as an admin key. Remove this route once purge is done.
+    if (pathname === "/api/admin/purge" && method === "POST") {
+      if (!secret) return err("No admin secret configured", 403);
+      let body;
+      try { body = await request.json(); } catch { return err("Invalid JSON", 400); }
+      if (body.key !== secret) return err("Forbidden", 403);
+      if (!env.META_KV) return err("META_KV not bound", 500);
+
+      let deleted = 0;
+      let cursor;
+      do {
+        const page = await env.META_KV.list({ cursor });
+        await Promise.all(page.keys.map(k => env.META_KV.delete(k.name)));
+        deleted += page.keys.length;
+        cursor = page.list_complete ? undefined : page.cursor;
+      } while (cursor);
+
+      return json({ purged: deleted });
     }
 
     // GET /api/token
