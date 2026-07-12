@@ -325,40 +325,48 @@ function parseAweme(aweme) {
 
   const isPhoto = images.length > 0;
 
-  // Video URLs — each url_list has 2 direct tiktokcdn.com links (expire in
-  // hours, bt=/ft= tokens) plus one tiktokv.com/tiktok.com resolver link
-  // (.../aweme/v1/play/?...&signaturev3=...) that never expires — that's
-  // the domain check that decides "clean" vs "wrong" per gear.
-  const isCleanDomain = (u) => /aweme\/v1\/play\//.test(u || "");
+  // ── Video URL helpers ────────────────────────────────────────────────────────
+  // Prefer the play_addr (no watermark) over download_addr (watermarked).
+  // bit_rate[] contains per-quality gears; sort descending by bit_rate value
+  // so [0] = highest quality (1080p), [1] = next (720p), etc.
+  const getPlayUrl = (obj) =>
+    resolverUrl((obj.play_addr || obj.playAddr || {}).url_list ||
+                (obj.play_addr || obj.playAddr || {}).urlList);
 
-  const downloadUrl = resolverUrl((video.download_addr || video.downloadAddr || {}).url_list);
-  const videoUrlAny = resolverUrl((video.play_addr      || video.playAddr     || {}).url_list);
+  const bitRates = (video.bit_rate || video.bitRate || [])
+    .filter(g => g && (g.play_addr || g.playAddr))
+    .sort((a, b) => (b.bit_rate || b.bitRate || 0) - (a.bit_rate || a.bitRate || 0));
+
+  // 1080p — prefer gear_name "1080", else highest-bitrate gear, else play_addr
+  const gear1080 = bitRates.find(g => /1080/i.test(g.gear_name || g.gearName || ""))
+    || bitRates[0];
+  const url1080 = (gear1080 ? getPlayUrl(gear1080) : "")
+    || resolverUrl((video.play_addr || video.playAddr || {}).url_list)
+    || resolverUrl((video.download_addr || video.downloadAddr || {}).url_list);
+
+  // 720p — prefer gear_name "720", else second-highest gear, else play_addr
+  const gear720 = bitRates.find(g => /720/i.test(g.gear_name || g.gearName || ""))
+    || bitRates[1] || bitRates[0];
+  const url720 = (gear720 ? getPlayUrl(gear720) : "")
+    || resolverUrl((video.play_addr || video.playAddr || {}).url_list)
+    || resolverUrl((video.download_addr || video.downloadAddr || {}).url_list);
+
+  // ── Audio URL ────────────────────────────────────────────────────────────────
+  // music.play_url (snake) or music.playUrl (camel) → url_list / urlList array
   const musicPlayUrl = music.play_url || music.playUrl || {};
-  const audioUrl = resolverUrl(musicPlayUrl.url_list || musicPlayUrl.urlList) || musicPlayUrl.uri || "";
-  const _debugMusic = { keys: Object.keys(music), playUrl: musicPlayUrl, multiBitRate: music.multi_bit_rate_play_info };
+  const audioUrlList = musicPlayUrl.url_list || musicPlayUrl.urlList || [];
+  const audioUrl = resolverUrl(Array.isArray(audioUrlList) ? audioUrlList : [])
+    || (typeof musicPlayUrl === "string" ? musicPlayUrl : "")
+    || musicPlayUrl.uri || "";
 
-  // video.bit_rate[] holds per-quality gears (e.g. "adapt_lower_720_1",
-  // "adapt_540_1") — no guaranteed "1080" gear exists, but every gear's own
-  // url_list also carries a resolver link. If download_addr didn't have a
-  // resolver entry (still landed on tiktokcdn.com), fall back to whichever
-  // bit_rate gear DOES have a clean tiktokv.com resolver link.
-  const bitRates = video.bit_rate || video.bitRate || [];
-  const gearResolverUrls = bitRates
-    .map(g => resolverUrl((g.play_addr || g.playAddr || {}).url_list))
-    .filter(isCleanDomain);
-
-  const gear720 = bitRates.find(g => String(g.gear_name || g.gearName || "").includes("720"));
-  const url720FromGear = gear720 ? resolverUrl((gear720.play_addr || gear720.playAddr || {}).url_list) : "";
-
-  // 1080 slot: keep download_addr's URL if it's already a clean tiktokv.com
-  // resolver link (watermark=1 query param on it is irrelevant — the domain
-  // is what matters). Only if it's still a tiktokcdn.com link, replace it
-  // with the first clean resolver link found among the bit_rate gears.
-  const url1080 = isCleanDomain(downloadUrl)
-    ? downloadUrl
-    : (gearResolverUrls[0] || downloadUrl || videoUrlAny);
-
-  const url720 = url720FromGear || downloadUrl || videoUrlAny;
+  const _debug = {
+    bitRateGears:   bitRates.map(g => ({ gear_name: g.gear_name || g.gearName, bit_rate: g.bit_rate || g.bitRate })),
+    musicKeys:      Object.keys(music),
+    musicPlayUrl,
+    audioUrl,
+    url1080,
+    url720,
+  };
 
   // Thumbnail
   const thumbnail = firstUrl(
@@ -382,7 +390,7 @@ function parseAweme(aweme) {
     videoUrl:      url1080,
     videoUrl720:   url720,
     audioUrl,
-    _debugMusic,
+    _debug,
     thumbUrl:      thumbnail,
     duration:      video.duration || 0,
     view_count:    stats.play_count   || stats.playCount   || 0,
@@ -455,7 +463,7 @@ async function fetchTikTokVideo(tiktokUrl, env) {
     kvSetUrl(env, videoId, urlPayload),
   ]);
 
-  return { ...metaPayload, ...urlPayload, _debugMusic: parsed._debugMusic };
+  return { ...metaPayload, ...urlPayload, _debug: parsed._debug };
 }
 
 // ── Response helpers ──────────────────────────────────────────────────────────
@@ -575,6 +583,37 @@ async function handleRequest(request, env) {
       }
       const token = await generateToken(secret);
       return json({ token, ttl_seconds: TOKEN_TTL_SECONDS }, 200, cors);
+    }
+
+    // POST /api/debug — returns raw TikTok API response for a video (no cache)
+    if (pathname === "/api/debug" && method === "POST") {
+      let body = {};
+      try { body = await request.json(); } catch { return err("Invalid JSON", 400, cors); }
+      const tiktokUrl = validateTikTokUrl(body.url);
+      if (!tiktokUrl) return err("Invalid TikTok URL", 400, cors);
+      const videoId = await resolveVideoId(tiktokUrl);
+      let data;
+      try { data = await callAndroidAPI(videoId); } catch (e) { return err(e.message, 422, cors); }
+      const aweme = data?.aweme_details?.[0];
+      if (!aweme) return err("No aweme_details in response", 422, cors);
+      const vid = aweme.video || {};
+      const mus = aweme.music || {};
+      const musicPlayUrl = mus.play_url || mus.playUrl || {};
+      return json({
+        video_keys:       Object.keys(vid),
+        bit_rate_gears:   (vid.bit_rate || vid.bitRate || []).map(g => ({
+          gear_name: g.gear_name || g.gearName,
+          bit_rate:  g.bit_rate  || g.bitRate,
+          play_addr_url0: ((g.play_addr || g.playAddr || {}).url_list || [])[0] || "",
+        })),
+        play_addr_url0:    ((vid.play_addr     || vid.playAddr     || {}).url_list || [])[0] || "",
+        download_addr_url0:((vid.download_addr  || vid.downloadAddr || {}).url_list || [])[0] || "",
+        music_keys:        Object.keys(mus),
+        music_play_url_type: typeof musicPlayUrl,
+        music_play_url_keys: typeof musicPlayUrl === "object" ? Object.keys(musicPlayUrl) : [],
+        music_url_list:    musicPlayUrl.url_list || musicPlayUrl.urlList || [],
+        music_uri:         musicPlayUrl.uri || "",
+      }, 200, cors);
     }
 
     // POST /api/info — fetch video metadata + download URLs
