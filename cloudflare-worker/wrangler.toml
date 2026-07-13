@@ -15,6 +15,12 @@ zone_name = "luldown.com"
 # Workers free plan: 100,000 req/day
 # Upgrade to Paid ($5/mo) for 10M req/day
 
+# ── Keep-alive — pings Render's /health every 10 min so the free-tier ────────
+# instance never hits its 15-min idle sleep threshold. Cron Triggers run on
+# Cloudflare's free plan at no extra cost.
+[triggers]
+crons = ["*/10 * * * *"]
+
 # ── Environment Variables ─────────────────────────────────────────────────────
 # Set these in Cloudflare Dashboard → Workers → luldown → Settings → Variables
 #

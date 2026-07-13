@@ -550,6 +550,20 @@ export default {
       });
     }
   },
+
+  // Cron Trigger (every 10 min) — pings Render's /health as REAL external
+  // traffic so its free-tier instance never crosses the 15-min idle-sleep
+  // threshold. A self-ping from inside the Render process doesn't count
+  // toward Render's activity detection — it has to come from the outside.
+  async scheduled(_event, env, ctx) {
+    if (!env.RENDER_URL) return;
+    const url = `${env.RENDER_URL.replace(/\/$/, "")}/health`;
+    ctx.waitUntil(
+      fetch(url, { headers: { "x-proxy-secret": env.PROXY_SECRET || "" } })
+        .then(r => console.log(`keep-alive ping: ${r.status}`))
+        .catch(e => console.log(`keep-alive ping failed: ${e.message}`))
+    );
+  },
 };
 
 // ── Rate limiting — KV-based, 20 requests/min per IP ─────────────────────────
