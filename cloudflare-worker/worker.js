@@ -7,7 +7,7 @@
  *   Step 2: POST to TikTok's Android private API with fake device identity
  *   Step 3: Parse aweme_details[0] from JSON response
  *   Step 4: Cache via Cloudflare Cache API — global, persistent across isolate restarts
- *           meta: 30 days  |  CDN URL: 5 hours (expires in ~6h, 1h buffer)
+ *           meta: 30 days  |  CDN URL (resolver link): 30 days
  */
 
 const ALLOWED_ORIGINS = [
@@ -29,7 +29,11 @@ function corsHeaders(request) {
 }
 
 const TTL_META = 30 * 24 * 60 * 60;  // 30 days — title, author, avatar, thumbnail (static)
-const TTL_URL  = 5  * 60 * 60;        // 5 hours — CDN URL expires in ~6h (1h safety buffer)
+const TTL_URL  = 30 * 24 * 60 * 60;  // 30 days — resolver link (aweme/v1/play/?...signaturev3=...)
+                                       // signs on video_id/file_id/item_id, not on time, so it
+                                       // resolves fresh live on every hit and doesn't time-expire.
+                                       // Matches TTL_META; same staleness risk as meta (deleted/
+                                       // private video), nothing new introduced by the longer TTL.
 
 // ── Cloudflare KV — globally-replicated metadata cache ────────────────────────
 // The Cache API above is per-datacenter: a user hitting the Mumbai PoP and a
@@ -37,7 +41,7 @@ const TTL_URL  = 5  * 60 * 60;        // 5 hours — CDN URL expires in ~6h (1h 
 // author, avatar, thumbnail) needs to be shared across every PoP worldwide —
 // once ANY user triggers a scrape, every other user anywhere should get the
 // cached copy instead of re-scraping. KV replicates globally, so it's used
-// for meta only. The CDN url (short-lived, 5h) stays on the per-PoP Cache API.
+// for meta only. The CDN url (now also 30 days, resolver link) is stored here too.
 
 async function kvGetMeta(env, videoId) {
   if (!env.META_KV) return null;
@@ -60,12 +64,15 @@ async function kvSetMeta(env, videoId, value) {
   }
 }
 
-// CDN url — same KV, shorter TTL (5h, matches TikTok's signed-URL expiry).
-// Previously this lived on the per-datacenter Cache API, which meant a
-// request landing on a different PoP than the one that scraped it would
-// ALWAYS miss and force a full re-scrape — defeating the point of caching
-// for anyone not hitting that exact datacenter. KV fixes that: once any
-// PoP scrapes a video, every PoP gets the fast cached URL for the next 5h.
+// CDN url — same KV, now 30 days (matches TTL_META). The cached value is the
+// resolver link (aweme/v1/play/?...&signaturev3=...), which signs on stable
+// video_id/file_id/item_id rather than time, so it resolves fresh live on
+// every hit and doesn't time-expire. Previously this lived on the per-
+// datacenter Cache API, which meant a request landing on a different PoP
+// than the one that scraped it would ALWAYS miss and force a full re-scrape
+// — defeating the point of caching for anyone not hitting that exact
+// datacenter. KV fixes that: once any PoP scrapes a video, every PoP gets
+// the fast cached URL for the next 30 days.
 async function kvGetUrl(env, videoId) {
   if (!env.META_KV) return null;
   try {
@@ -410,7 +417,7 @@ async function fetchTikTokVideo(tiktokUrl, env) {
   // Both meta and url now live in Cloudflare KV — globally replicated.
   // Once ANY PoP scrapes a video, every other PoP worldwide sees the same
   // cached meta AND url — no matter which datacenter the next user's
-  // request lands on. Url still expires faster (5h) since TikTok signs it.
+  // request lands on. Url now shares meta's 30-day TTL (resolver link).
   const [metaCached, urlCached] = await Promise.all([
     kvGetMeta(env, videoId),
     kvGetUrl(env, videoId),
