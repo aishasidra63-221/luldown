@@ -130,6 +130,8 @@ const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
 
 const TIKTOK_ALLOWED_HOSTS = ["tiktok.com", "douyin.com", "musical.ly"];
 
+const MAX_MANUAL_REDIRECTS = 5;
+
 async function resolveVideoId(rawUrl) {
   const url = rawUrl.trim();
 
@@ -137,7 +139,49 @@ async function resolveVideoId(rawUrl) {
   const direct = extractIdFromString(url);
   if (direct) return direct;
 
-  // Follow all redirects automatically — Cloudflare sets res.url to the FINAL URL.
+  // ── Fast path for short links (vm./vt.tiktok.com) ───────────────────────────
+  // Follow redirects ONE HOP AT A TIME, reading only the `Location` header —
+  // never download the actual HTML page. TikTok's short-link redirect puts
+  // the numeric video ID straight in the Location header on the very first
+  // hop, so this is a single lightweight round-trip (~0.3-0.5s) instead of a
+  // full page fetch + HTML parse (~3s+, and more likely to hit bot checks
+  // since it looks like a real page visit rather than a plain redirect check).
+  let current = url;
+  for (let hop = 0; hop < MAX_MANUAL_REDIRECTS; hop++) {
+    let res;
+    try {
+      res = await fetch(current, {
+        redirect: "manual",
+        headers: {
+          "User-Agent":      BROWSER_UA,
+          "Accept-Language": "en-US,en;q=0.9",
+          "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        },
+      });
+    } catch {
+      break; // network error — fall through to full-page fallback
+    }
+
+    const location = res.headers.get("Location") || res.headers.get("location");
+
+    // Redirect hop — check the Location header for the ID before following it
+    if (res.status >= 300 && res.status < 400 && location) {
+      const resolved = new URL(location, current).toString();
+      const fromLocation = extractIdFromString(resolved);
+      if (fromLocation) return fromLocation;
+      current = resolved;
+      continue;
+    }
+
+    // Not a redirect (200 or otherwise) — the URL itself may already carry the ID
+    const fromCurrent = extractIdFromString(current);
+    if (fromCurrent) return fromCurrent;
+    break; // no more redirects and no ID found this way — fall back below
+  }
+
+  // ── Fallback: full page fetch + HTML parse ──────────────────────────────────
+  // Only reached if the header-only redirect chain didn't reveal the ID
+  // (e.g. TikTok changed the redirect shape, or served a page directly).
   const res = await fetch(url, {
     redirect: "follow",
     headers: {
