@@ -220,10 +220,10 @@ function buildQueryParams(videoId) {
 // Multiple endpoints — same US East datacenter, different servers.
 // If one is slow or rate-limiting, next one is tried automatically.
 const TIKTOK_API_ENDPOINTS = [
+  "api16-normal-c-alisg.tiktokv.com",
   "api16-normal-c-useast1a.tiktokv.com",
-  "api19-normal-c-useast1a.tiktokv.com",
-  "api21-normal-c-useast1a.tiktokv.com",
-  "api16-normal-useast5.tiktokv.com",
+  "api22-normal-c-useast1a.tiktokv.com",
+  "api22-normal-c-useast2a.tiktokv.com",
 ];
 
 // Rotating User-Agents — different TikTok app versions
