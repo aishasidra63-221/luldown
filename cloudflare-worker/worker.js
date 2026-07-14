@@ -116,7 +116,7 @@ function generatePhone(id) {
     iid:          String(randInt(7023000000000000000, 7999999999999999999)),
     openudid:     randHex(16),
     cdid:         randUUID(),
-    odin_tt:      randHex(64),
+    odin_tt:      randHex(160),
     install_time: now - randInt(2592000, 31536000), // 30 days–1 year ago
     // Fixed device profile — same model/OS/UA for this phone forever
     device_type:  profile.device_type,
