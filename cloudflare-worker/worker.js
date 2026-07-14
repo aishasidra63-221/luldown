@@ -118,9 +118,10 @@ function generatePhone(id) {
     cdid:         randUUID(),
     odin_tt:      randHex(160),
     install_time: now - randInt(2592000, 31536000), // 30 days–1 year ago
-    // Fixed device profile — same model/OS/UA for this phone forever
+    // Fixed device profile — same model/OS/resolution/UA for this phone forever
     device_type:  profile.device_type,
     os_version:   profile.os_version,
+    resolution:   profile.resolution,
     app_version:  profile.app_version,
     version_code: profile.version_code,
     user_agent:   profile.user_agent,
@@ -263,6 +264,102 @@ function randUUID() {
   });
 }
 
+// ── MD5 (pure JS — Web Crypto API does not support MD5) ───────────────────────
+function md5(data /* Uint8Array */) {
+  function add(x, y) { const l=(x&0xFFFF)+(y&0xFFFF); return (((x>>16)+(y>>16)+(l>>16))<<16)|(l&0xFFFF); }
+  function rol(n,c) { return (n<<c)|(n>>>(32-c)); }
+  function cmn(q,a,b,x,s,t) { return add(rol(add(add(a,q),add(x,t)),s),b); }
+  function ff(a,b,c,d,x,s,t){return cmn((b&c)|(~b&d),a,b,x,s,t);}
+  function gg(a,b,c,d,x,s,t){return cmn((b&d)|(c&~d),a,b,x,s,t);}
+  function hh(a,b,c,d,x,s,t){return cmn(b^c^d,a,b,x,s,t);}
+  function ii(a,b,c,d,x,s,t){return cmn(c^(b|~d),a,b,x,s,t);}
+
+  const len = data.length;
+  const blocks = Math.ceil((len+9)/64)*16;
+  const M = new Int32Array(blocks);
+  for (let i=0;i<len;i++) M[i>>2]|=data[i]<<((i&3)*8);
+  M[len>>2]|=0x80<<((len&3)*8);
+  M[blocks-2]=len*8;
+
+  let a=0x67452301,b=0xEFCDAB89,c=0x98BADCFE,d=0x10325476;
+  for (let i=0;i<blocks;i+=16) {
+    const [A,B,C,D]=[a,b,c,d];
+    a=ff(a,b,c,d,M[i],7,-680876936);    b=ff(d,a,b,c,M[i+1],12,-389564586);
+    c=ff(c,d,a,b,M[i+2],17,606105819);  d=ff(b,c,d,a,M[i+3],22,-1044525330);
+    a=ff(a,b,c,d,M[i+4],7,-176418897);  b=ff(d,a,b,c,M[i+5],12,1200080426);
+    c=ff(c,d,a,b,M[i+6],17,-1473231341);d=ff(b,c,d,a,M[i+7],22,-45705983);
+    a=ff(a,b,c,d,M[i+8],7,1770035416);  b=ff(d,a,b,c,M[i+9],12,-1958414417);
+    c=ff(c,d,a,b,M[i+10],17,-42063);    d=ff(b,c,d,a,M[i+11],22,-1990404162);
+    a=ff(a,b,c,d,M[i+12],7,1804603682); b=ff(d,a,b,c,M[i+13],12,-40341101);
+    c=ff(c,d,a,b,M[i+14],17,-1502002290);d=ff(b,c,d,a,M[i+15],22,1236535329);
+    a=gg(a,b,c,d,M[i+1],5,-165796510);  b=gg(d,a,b,c,M[i+6],9,-1069501632);
+    c=gg(c,d,a,b,M[i+11],14,643717713); d=gg(b,c,d,a,M[i],20,-373897302);
+    a=gg(a,b,c,d,M[i+5],5,-701558691);  b=gg(d,a,b,c,M[i+10],9,38016083);
+    c=gg(c,d,a,b,M[i+15],14,-660478335);d=gg(b,c,d,a,M[i+4],20,-405537848);
+    a=gg(a,b,c,d,M[i+9],5,568446438);   b=gg(d,a,b,c,M[i+14],9,-1019803690);
+    c=gg(c,d,a,b,M[i+3],14,-187363961); d=gg(b,c,d,a,M[i+8],20,1163531501);
+    a=gg(a,b,c,d,M[i+13],5,-1444681467);b=gg(d,a,b,c,M[i+2],9,-51403784);
+    c=gg(c,d,a,b,M[i+7],14,1735328473); d=gg(b,c,d,a,M[i+12],20,-1926607734);
+    a=hh(a,b,c,d,M[i+5],4,-378558);     b=hh(d,a,b,c,M[i+8],11,-2022574463);
+    c=hh(c,d,a,b,M[i+11],16,1839030562);d=hh(b,c,d,a,M[i+14],23,-35309556);
+    a=hh(a,b,c,d,M[i+1],4,-1530992060); b=hh(d,a,b,c,M[i+4],11,1272893353);
+    c=hh(c,d,a,b,M[i+7],16,-155497632); d=hh(b,c,d,a,M[i+10],23,-1094730640);
+    a=hh(a,b,c,d,M[i+13],4,681279174);  b=hh(d,a,b,c,M[i],11,-358537222);
+    c=hh(c,d,a,b,M[i+3],16,-722521979); d=hh(b,c,d,a,M[i+6],23,76029189);
+    a=hh(a,b,c,d,M[i+9],4,-640364487);  b=hh(d,a,b,c,M[i+12],11,-421815835);
+    c=hh(c,d,a,b,M[i+15],16,530742520); d=hh(b,c,d,a,M[i+2],23,-995338651);
+    a=ii(a,b,c,d,M[i],6,-198630844);    b=ii(d,a,b,c,M[i+7],10,1126891415);
+    c=ii(c,d,a,b,M[i+14],15,-1416354905);d=ii(b,c,d,a,M[i+5],21,-57434055);
+    a=ii(a,b,c,d,M[i+12],6,1700485571); b=ii(d,a,b,c,M[i+3],10,-1894986606);
+    c=ii(c,d,a,b,M[i+10],15,-1051523);  d=ii(b,c,d,a,M[i+1],21,-2054922799);
+    a=ii(a,b,c,d,M[i+8],6,1873313359);  b=ii(d,a,b,c,M[i+15],10,-30611744);
+    c=ii(c,d,a,b,M[i+6],15,-1560198380);d=ii(b,c,d,a,M[i+13],21,1309151649);
+    a=ii(a,b,c,d,M[i+4],6,-145523070);  b=ii(d,a,b,c,M[i+11],10,-1120210379);
+    c=ii(c,d,a,b,M[i+2],15,718787259);  d=ii(b,c,d,a,M[i+9],21,-343485551);
+    a=add(a,A);b=add(b,B);c=add(c,C);d=add(d,D);
+  }
+  const out=new Uint8Array(16),v=new DataView(out.buffer);
+  v.setInt32(0,a,true);v.setInt32(4,b,true);v.setInt32(8,c,true);v.setInt32(12,d,true);
+  return out;
+}
+
+// ── X-Gorgon + X-Khronos signing ─────────────────────────────────────────────
+// Reverse-engineered TikTok request signing. Without valid X-Gorgon, TikTok
+// returns HTTP 200 but Content-Length: 0 (empty body — bot detected).
+//
+// Algorithm (as documented by the reverse-engineering community):
+//   1. MD5(query_string_bytes + body_bytes) → 16 raw bytes
+//   2. XOR each byte with TikTok's known 16-byte key
+//   3. X-Gorgon = "0404b0d300000000" + xored_hex(32) + timestamp_hex(8)
+//   4. X-Khronos = unix timestamp as decimal string
+function buildGorgon(queryString, bodyString) {
+  const ts  = Math.floor(Date.now() / 1000);
+  const enc = new TextEncoder();
+
+  // Step 1 — MD5(params + body)
+  const qsBytes   = enc.encode(queryString);
+  const bodyBytes = enc.encode(bodyString || "");
+  const combined  = new Uint8Array(qsBytes.length + bodyBytes.length);
+  combined.set(qsBytes);
+  combined.set(bodyBytes, qsBytes.length);
+  const hash = md5(combined); // 16 bytes
+
+  // Step 2 — XOR with TikTok's known key
+  const KEY   = [0x72,0x47,0x62,0x4B,0x72,0x53,0x77,0x72,
+                 0x4D,0x4E,0x78,0x5A,0x79,0x71,0x6B,0x66];
+  const xored = Array.from(hash).map((b, i) => b ^ KEY[i]);
+
+  // Step 3 — assemble header value
+  const xoredHex = xored.map(b => b.toString(16).padStart(2,"0")).join("");
+  const tsHex    = ts.toString(16).padStart(8, "0");
+  const gorgon   = `0404b0d300000000${xoredHex}${tsHex}`;
+
+  return {
+    "X-Gorgon":  gorgon,
+    "X-Khronos": String(ts),
+  };
+}
+
 // ── Step 1: Resolve video ID from any TikTok URL ─────────────────────────────
 
 function extractIdFromString(s) {
@@ -384,6 +481,7 @@ const STATIC_DEVICE_BASE = {
   ssmix:           "a",
   residence:       "US",
   app_type:        "normal",
+  ac:              "wifi",
 };
 
 // Device profiles — each phone is assigned one at creation and keeps it forever.
@@ -392,6 +490,7 @@ const PHONE_PROFILES = [
   {
     device_type:  "Pixel 7",
     os_version:   "13",
+    resolution:   "1080*2400",
     app_version:  "32.5.3",
     version_code: "2023501030",
     user_agent:   "com.zhiliaoapp.musically/2023501030 (Linux; U; Android 13; en_US; Pixel 7; Build/TD1A.220804.031; Cronet/58.0.2991.0)",
@@ -399,6 +498,7 @@ const PHONE_PROFILES = [
   {
     device_type:  "Pixel 7 Pro",
     os_version:   "13",
+    resolution:   "1440*3120",
     app_version:  "32.5.3",
     version_code: "2023501030",
     user_agent:   "com.zhiliaoapp.musically/2023501030 (Linux; U; Android 13; en_US; Pixel 7 Pro; Build/TD1A.220804.031; Cronet/58.0.2991.0)",
@@ -406,6 +506,7 @@ const PHONE_PROFILES = [
   {
     device_type:  "Pixel 8",
     os_version:   "14",
+    resolution:   "1080*2400",
     app_version:  "34.1.0",
     version_code: "2024100030",
     user_agent:   "com.zhiliaoapp.musically/2024100030 (Linux; U; Android 14; en_US; Pixel 8; Build/AD1A.240405.004; Cronet/113.0.5672.129)",
@@ -413,6 +514,7 @@ const PHONE_PROFILES = [
   {
     device_type:  "Pixel 8 Pro",
     os_version:   "14",
+    resolution:   "1344*2992",
     app_version:  "35.3.0",
     version_code: "2025300040",
     user_agent:   "com.zhiliaoapp.musically/2025300040 (Linux; U; Android 14; en_US; Pixel 8 Pro; Build/AP2A.240805.005; Cronet/119.0.6045.163)",
@@ -420,6 +522,7 @@ const PHONE_PROFILES = [
   {
     device_type:  "SM-G991B",
     os_version:   "12",
+    resolution:   "1080*2400",
     app_version:  "32.2.0",
     version_code: "2023200020",
     user_agent:   "com.zhiliaoapp.musically/2023200020 (Linux; U; Android 12; en_US; SM-G991B; Build/SP1A.210812.016; Cronet/58.0.2991.0)",
@@ -427,6 +530,7 @@ const PHONE_PROFILES = [
   {
     device_type:  "SM-S901B",
     os_version:   "13",
+    resolution:   "1080*2340",
     app_version:  "34.2.0",
     version_code: "2024200035",
     user_agent:   "com.zhiliaoapp.musically/2024200035 (Linux; U; Android 13; en_US; SM-S901B; Build/TP1A.220624.014; Cronet/108.0.5359.128)",
@@ -434,6 +538,7 @@ const PHONE_PROFILES = [
   {
     device_type:  "SM-S918B",
     os_version:   "14",
+    resolution:   "1080*2340",
     app_version:  "35.3.0",
     version_code: "2025300040",
     user_agent:   "com.zhiliaoapp.musically/2025300040 (Linux; U; Android 14; en_US; SM-S918B; Build/UP1A.231005.007; Cronet/119.0.6045.163)",
@@ -441,6 +546,7 @@ const PHONE_PROFILES = [
   {
     device_type:  "SM-A546B",
     os_version:   "13",
+    resolution:   "1080*2340",
     app_version:  "34.1.0",
     version_code: "2024100030",
     user_agent:   "com.zhiliaoapp.musically/2024100030 (Linux; U; Android 13; en_US; SM-A546B; Build/TP1A.220624.014; Cronet/113.0.5672.129)",
@@ -448,6 +554,7 @@ const PHONE_PROFILES = [
   {
     device_type:  "Redmi Note 12",
     os_version:   "13",
+    resolution:   "1080*2400",
     app_version:  "34.2.0",
     version_code: "2024200035",
     user_agent:   "com.zhiliaoapp.musically/2024200035 (Linux; U; Android 13; en_US; Redmi Note 12; Build/TP1A.220624.014; Cronet/108.0.5359.128)",
@@ -455,6 +562,7 @@ const PHONE_PROFILES = [
   {
     device_type:  "OnePlus 11",
     os_version:   "13",
+    resolution:   "1080*2412",
     app_version:  "34.1.0",
     version_code: "2024100030",
     user_agent:   "com.zhiliaoapp.musically/2024100030 (Linux; U; Android 13; en_US; OnePlus 11; Build/TP1A.220624.014; Cronet/113.0.5672.129)",
@@ -475,11 +583,13 @@ function buildQueryParams(videoId, phone = null) {
   const profileFields = phone ? {
     device_type:  phone.device_type,
     os_version:   phone.os_version,
+    resolution:   phone.resolution,
     app_version:  phone.app_version,
     version_code: phone.version_code,
   } : {
     device_type:  "Pixel 7",
     os_version:   "13",
+    resolution:   "1080*2400",
     app_version:  "32.5.3",
     version_code: "2023501030",
   };
@@ -529,15 +639,19 @@ async function callAndroidAPI(videoId, phone = null) {
     const odinToken = phone ? phone.odin_tt : randHex(160);
 
     try {
+      const bodyStr  = body.toString();
+      const gorgon   = buildGorgon(qs, bodyStr);
       const response = await fetch(endpoint, {
         method:  "POST",
         headers: {
           "User-Agent":   phone ? phone.user_agent : randUserAgent(),
           "X-SS-TC":      "0",
+          "X-Gorgon":     gorgon["X-Gorgon"],
+          "X-Khronos":    gorgon["X-Khronos"],
           "Content-Type": "application/x-www-form-urlencoded",
           "Cookie":       `odin_tt=${odinToken}`,
         },
-        body: body.toString(),
+        body: bodyStr,
       });
 
       // 404 = TikTok moved the endpoint (API change) — not a phone problem
