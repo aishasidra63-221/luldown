@@ -237,7 +237,7 @@ const STATIC_DEVICE = {
   app_language:    "en",
   timezone_name:   "America/New_York",
   timezone_offset: "-14400",
-  host_abi:        "armeabi-v7a",
+  host_abi:        "arm64-v8a",
   aid:             "1988",
   // extra fixed params
   ssmix:           "a",
