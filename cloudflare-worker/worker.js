@@ -584,6 +584,16 @@ async function validateToken(token, secret) {
 
 export default {
   async fetch(request, env) {
+    // ── Country geo-block — must run before ANY other logic ──────────────────
+    // Blocks RU and IR with HTTP 451 (Unavailable For Legal Reasons).
+    const blockedCountry = request.cf?.country;
+    if (blockedCountry === "RU" || blockedCountry === "IR") {
+      return new Response(
+        JSON.stringify({ error: "Service not available in your region." }),
+        { status: 451, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     try {
       return await handleRequest(request, env);
     } catch (e) {

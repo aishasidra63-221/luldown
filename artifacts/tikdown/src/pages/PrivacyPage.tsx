@@ -32,6 +32,30 @@ const SECTIONS = [
     content: "Luldown is not directed at children under the age of 13. We do not knowingly collect any information from children. If you are under 13, please do not use this service.",
   },
   {
+    title: "No Hosting of Video Content",
+    content: "We do not host, store, or upload any videos on our servers. All video content remains on TikTok's servers. We only provide a technical link to publicly available content.",
+  },
+  {
+    title: "No Personal Data Collection",
+    content: "We do not store any personally identifiable information. We do not know your name, email, or any other personal details unless you voluntarily provide them.",
+  },
+  {
+    title: "User Responsibility for Content",
+    content: "We are not responsible for the content of videos downloaded by users. Users must ensure they have the right to download and use the content.",
+  },
+  {
+    title: "Direct CDN Streaming",
+    content: "Videos are streamed directly from TikTok's CDN to the user. No video data is ever stored on our infrastructure.",
+  },
+  {
+    title: "Temporary Metadata Caching",
+    content: "We only temporarily cache video metadata (title, author, download links) for performance purposes. No actual video files are stored.",
+  },
+  {
+    title: "Copyright Compliance",
+    content: "Our service is provided as a technical tool only. We comply with applicable copyright laws and will respond to valid legal notices.",
+  },
+  {
     title: "Changes to This Policy",
     content: "We may update this Privacy Policy from time to time. Any changes will be posted on this page with an updated effective date. Continued use of the service after changes are posted constitutes your acceptance of the revised policy.",
   },
