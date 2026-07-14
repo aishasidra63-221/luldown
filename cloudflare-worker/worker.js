@@ -107,15 +107,24 @@ const PHONE_YEAR    = 365 * 24 * 60 * 60; // 1 year in seconds
 const PHONE_GAP_SEC = 60;                  // min seconds between same-phone reuse
 
 function generatePhone(id) {
-  const now = Math.floor(Date.now() / 1000);
+  const now     = Math.floor(Date.now() / 1000);
+  const profile = PHONE_PROFILES[Math.floor(Math.random() * PHONE_PROFILES.length)];
   return {
     id,
+    // Fixed device identity — unique per phone, never changes
     device_id:    String(randInt(7250000000000000000, 7325099899999994577)),
     iid:          String(randInt(7023000000000000000, 7999999999999999999)),
     openudid:     randHex(16),
     cdid:         randUUID(),
     odin_tt:      randHex(64),
     install_time: now - randInt(2592000, 31536000), // 30 days–1 year ago
+    // Fixed device profile — same model/OS/UA for this phone forever
+    device_type:  profile.device_type,
+    os_version:   profile.os_version,
+    app_version:  profile.app_version,
+    version_code: profile.version_code,
+    user_agent:   profile.user_agent,
+    // Lifecycle
     created_at:   now,
     expires_at:   now + PHONE_YEAR,
     last_used:    0,
@@ -357,16 +366,14 @@ async function resolveVideoId(rawUrl) {
 }
 
 // ── Step 2: TikTok Android Private API call ───────────────────────────────────
-// Fakes a Pixel 7 Android device running TikTok app (com.zhiliaoapp.musically).
-// Static device identity + rotating per-request params to avoid fingerprinting.
+// Each phone in the pool gets ONE profile assigned at birth — model, OS,
+// app version, and User-Agent are all consistent for that phone forever.
+// TikTok cannot see a phone "changing model" between requests.
 
-const STATIC_DEVICE = {
-  device_type:     "Pixel 7",
-  os_version:      "13",
+// Fields that never change across any phone
+const STATIC_DEVICE_BASE = {
   device_platform: "android",
   app_name:        "trill",
-  app_version:     "32.5.3",
-  version_code:    "2023501030",
   channel:         "googleplay",
   sys_region:      "US",
   app_language:    "en",
@@ -374,11 +381,85 @@ const STATIC_DEVICE = {
   timezone_offset: "-14400",
   host_abi:        "arm64-v8a",
   aid:             "1988",
-  // extra fixed params
   ssmix:           "a",
   residence:       "US",
   app_type:        "normal",
 };
+
+// Device profiles — each phone is assigned one at creation and keeps it forever.
+// Every field in a profile is internally consistent (model ↔ OS ↔ build ↔ UA).
+const PHONE_PROFILES = [
+  {
+    device_type:  "Pixel 7",
+    os_version:   "13",
+    app_version:  "32.5.3",
+    version_code: "2023501030",
+    user_agent:   "com.zhiliaoapp.musically/2023501030 (Linux; U; Android 13; en_US; Pixel 7; Build/TD1A.220804.031; Cronet/58.0.2991.0)",
+  },
+  {
+    device_type:  "Pixel 7 Pro",
+    os_version:   "13",
+    app_version:  "32.5.3",
+    version_code: "2023501030",
+    user_agent:   "com.zhiliaoapp.musically/2023501030 (Linux; U; Android 13; en_US; Pixel 7 Pro; Build/TD1A.220804.031; Cronet/58.0.2991.0)",
+  },
+  {
+    device_type:  "Pixel 8",
+    os_version:   "14",
+    app_version:  "34.1.0",
+    version_code: "2024100030",
+    user_agent:   "com.zhiliaoapp.musically/2024100030 (Linux; U; Android 14; en_US; Pixel 8; Build/AD1A.240405.004; Cronet/113.0.5672.129)",
+  },
+  {
+    device_type:  "Pixel 8 Pro",
+    os_version:   "14",
+    app_version:  "35.3.0",
+    version_code: "2025300040",
+    user_agent:   "com.zhiliaoapp.musically/2025300040 (Linux; U; Android 14; en_US; Pixel 8 Pro; Build/AP2A.240805.005; Cronet/119.0.6045.163)",
+  },
+  {
+    device_type:  "SM-G991B",
+    os_version:   "12",
+    app_version:  "32.2.0",
+    version_code: "2023200020",
+    user_agent:   "com.zhiliaoapp.musically/2023200020 (Linux; U; Android 12; en_US; SM-G991B; Build/SP1A.210812.016; Cronet/58.0.2991.0)",
+  },
+  {
+    device_type:  "SM-S901B",
+    os_version:   "13",
+    app_version:  "34.2.0",
+    version_code: "2024200035",
+    user_agent:   "com.zhiliaoapp.musically/2024200035 (Linux; U; Android 13; en_US; SM-S901B; Build/TP1A.220624.014; Cronet/108.0.5359.128)",
+  },
+  {
+    device_type:  "SM-S918B",
+    os_version:   "14",
+    app_version:  "35.3.0",
+    version_code: "2025300040",
+    user_agent:   "com.zhiliaoapp.musically/2025300040 (Linux; U; Android 14; en_US; SM-S918B; Build/UP1A.231005.007; Cronet/119.0.6045.163)",
+  },
+  {
+    device_type:  "SM-A546B",
+    os_version:   "13",
+    app_version:  "34.1.0",
+    version_code: "2024100030",
+    user_agent:   "com.zhiliaoapp.musically/2024100030 (Linux; U; Android 13; en_US; SM-A546B; Build/TP1A.220624.014; Cronet/113.0.5672.129)",
+  },
+  {
+    device_type:  "Redmi Note 12",
+    os_version:   "13",
+    app_version:  "34.2.0",
+    version_code: "2024200035",
+    user_agent:   "com.zhiliaoapp.musically/2024200035 (Linux; U; Android 13; en_US; Redmi Note 12; Build/TP1A.220624.014; Cronet/108.0.5359.128)",
+  },
+  {
+    device_type:  "OnePlus 11",
+    os_version:   "13",
+    app_version:  "34.1.0",
+    version_code: "2024100030",
+    user_agent:   "com.zhiliaoapp.musically/2024100030 (Linux; U; Android 13; en_US; OnePlus 11; Build/TP1A.220624.014; Cronet/113.0.5672.129)",
+  },
+];
 
 function buildQueryParams(videoId, phone = null) {
   const ts               = Math.floor(Date.now() / 1000);
@@ -389,8 +470,23 @@ function buildQueryParams(videoId, phone = null) {
   const cdid             = phone ? phone.cdid      : randUUID();
   const last_install_time = phone ? String(phone.install_time) : String(ts - randInt(86400, 1123200));
 
+  // Use phone's fixed profile fields so every request from this phone
+  // sends the same model/OS/version — consistent with a real device.
+  const profileFields = phone ? {
+    device_type:  phone.device_type,
+    os_version:   phone.os_version,
+    app_version:  phone.app_version,
+    version_code: phone.version_code,
+  } : {
+    device_type:  "Pixel 7",
+    os_version:   "13",
+    app_version:  "32.5.3",
+    version_code: "2023501030",
+  };
+
   const params = new URLSearchParams({
-    ...STATIC_DEVICE,
+    ...STATIC_DEVICE_BASE,
+    ...profileFields,
     device_id,
     iid,
     openudid,
@@ -412,18 +508,10 @@ const TIKTOK_API_ENDPOINTS = [
   "api22-normal-c-useast2a.tiktokv.com",
 ];
 
-// Rotating User-Agents — different TikTok app versions
-// Prevents fingerprinting on a single static UA string
-const TIKTOK_USER_AGENTS = [
-  "com.zhiliaoapp.musically/2023501030 (Linux; U; Android 13; en_US; Pixel 7; Build/TD1A.220804.031; Cronet/58.0.2991.0)",
-  "com.zhiliaoapp.musically/2024100030 (Linux; U; Android 14; en_US; Pixel 8; Build/AD1A.240405.004; Cronet/113.0.5672.129)",
-  "com.zhiliaoapp.musically/2025300040 (Linux; U; Android 14; en_US; Pixel 8 Pro; Build/AP2A.240805.005; Cronet/119.0.6045.163)",
-  "com.zhiliaoapp.musically/2023200020 (Linux; U; Android 12; en_US; SM-G991B; Build/SP1A.210812.016; Cronet/58.0.2991.0)",
-  "com.zhiliaoapp.musically/2024200035 (Linux; U; Android 13; en_US; SM-S901B; Build/TP1A.220624.014; Cronet/108.0.5359.128)",
-];
-
+// User-Agent is now fixed per phone (from phone.user_agent).
+// randUserAgent is only used as a fallback when no phone is passed (e.g. /api/debug).
 function randUserAgent() {
-  return TIKTOK_USER_AGENTS[Math.floor(Math.random() * TIKTOK_USER_AGENTS.length)];
+  return PHONE_PROFILES[Math.floor(Math.random() * PHONE_PROFILES.length)].user_agent;
 }
 
 async function callAndroidAPI(videoId, phone = null) {
@@ -444,7 +532,7 @@ async function callAndroidAPI(videoId, phone = null) {
       const response = await fetch(endpoint, {
         method:  "POST",
         headers: {
-          "User-Agent":   randUserAgent(),
+          "User-Agent":   phone ? phone.user_agent : randUserAgent(),
           "X-SS-TC":      "0",
           "Content-Type": "application/x-www-form-urlencoded",
           "Cookie":       `odin_tt=${odinToken}`,
