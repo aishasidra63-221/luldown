@@ -148,14 +148,28 @@ async function savePool(env, pool) {
   try { await env.META_KV.put(POOL_KV_KEY, JSON.stringify(pool)); } catch {}
 }
 
+const POOL_BATCH = 50; // phones generated per run (first request + each cron tick)
+
 async function getOrInitPool(env) {
   let pool = await loadPool(env);
-  if (pool && pool.length >= POOL_SIZE) return pool;
-  // First run — generate the full pool
+  if (pool && pool.length > 0) return pool;
+  // First ever request — generate first batch only so user sees no delay
   pool = [];
-  for (let i = 1; i <= POOL_SIZE; i++) pool.push(generatePhone(i));
+  for (let i = 1; i <= POOL_BATCH; i++) pool.push(generatePhone(i));
   await savePool(env, pool);
   return pool;
+}
+
+// Called from cron every 10 min — adds one batch until pool is full
+async function growPool(env) {
+  if (!env.META_KV) return;
+  const pool = await loadPool(env);
+  if (!pool || pool.length >= POOL_SIZE) return; // already full
+  const start = pool.length + 1;
+  const end   = Math.min(pool.length + POOL_BATCH, POOL_SIZE);
+  for (let i = start; i <= end; i++) pool.push(generatePhone(i));
+  await savePool(env, pool);
+  console.log(`Pool grew: ${start - 1} → ${pool.length}/${POOL_SIZE}`);
 }
 
 // Pick the phone that has rested the longest (LRU).
@@ -988,13 +1002,18 @@ export default {
   // threshold. A self-ping from inside the Render process doesn't count
   // toward Render's activity detection — it has to come from the outside.
   async scheduled(_event, env, ctx) {
-    if (!env.RENDER_URL) return;
-    const url = `${env.RENDER_URL.replace(/\/$/, "")}/health`;
-    ctx.waitUntil(
-      fetch(url, { headers: { "x-proxy-secret": env.PROXY_SECRET || "" } })
-        .then(r => console.log(`keep-alive ping: ${r.status}`))
-        .catch(e => console.log(`keep-alive ping failed: ${e.message}`))
-    );
+    // 1. Keep Render alive (ping /health so free-tier doesn't sleep)
+    if (env.RENDER_URL) {
+      const url = `${env.RENDER_URL.replace(/\/$/, "")}/health`;
+      ctx.waitUntil(
+        fetch(url, { headers: { "x-proxy-secret": env.PROXY_SECRET || "" } })
+          .then(r => console.log(`keep-alive ping: ${r.status}`))
+          .catch(e => console.log(`keep-alive ping failed: ${e.message}`))
+      );
+    }
+    // 2. Grow phone pool — adds 50 phones per cron run until 500 reached
+    // Cron runs every 10 min → full 500-phone pool ready in ~100 min
+    ctx.waitUntil(growPool(env));
   },
 };
 
