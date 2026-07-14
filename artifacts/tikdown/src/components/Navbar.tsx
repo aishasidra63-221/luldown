@@ -102,10 +102,7 @@ export default function Navbar() {
               </svg>
             </div>
             <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: "-0.02em", color: "#111827" }}>
-              Lul<span style={{
-                background: "linear-gradient(90deg, #7c3aed, #06b6d4)",
-                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
-              }}>Down</span>
+              LulDown
             </span>
           </div>
         </Link>

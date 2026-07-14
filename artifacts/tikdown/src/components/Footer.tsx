@@ -51,10 +51,7 @@ export default function Footer() {
                 </svg>
               </div>
               <span style={{ fontWeight: 800, fontSize: 16, color: "#fff" }}>
-                Lul<span style={{
-                  background: "linear-gradient(90deg,#7c3aed,#06b6d4)",
-                  WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
-                }}>Down</span>
+                LulDown
               </span>
             </div>
             <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", lineHeight: 1.7, maxWidth: 230 }}>
