@@ -322,20 +322,57 @@ async def proxy_cdn(request: Request, url: str, filename: str = "luldown.mp4"):
     except ValueError as exc:
         raise HTTPException(status_code=403, detail="Only TikTok CDN URLs are supported") from exc
 
-    # Detect media type from filename
-    if filename.endswith(".mp3"):
-        media_type = "audio/mpeg"
+    # Fallback media type guessed from the filename extension — only used if
+    # the CDN response doesn't send a usable Content-Type header of its own.
+    lower_name = filename.lower()
+    if lower_name.endswith(".mp3"):
+        fallback_media_type = "audio/mpeg"
+    elif lower_name.endswith(".webp"):
+        fallback_media_type = "image/webp"
+    elif lower_name.endswith(".jpg") or lower_name.endswith(".jpeg"):
+        fallback_media_type = "image/jpeg"
+    elif lower_name.endswith(".png"):
+        fallback_media_type = "image/png"
     else:
-        media_type = "video/mp4"
+        fallback_media_type = "video/mp4"
+
+    # StreamingResponse needs its media_type up front, before any bytes are
+    # sent — so open the upstream connection first (this returns headers as
+    # soon as the CDN responds, before the body is read) to learn the real
+    # Content-Type, then stream the body through afterwards.
+    client = httpx.AsyncClient(
+        follow_redirects=True,
+        timeout=httpx.Timeout(120.0, connect=15.0),
+    )
+    try:
+        req = client.build_request("GET", cdn_url, headers=_CDN_FETCH_HEADERS)
+        resp = await client.send(req, stream=True)
+    except Exception as exc:
+        await client.aclose()
+        raise HTTPException(status_code=502, detail="Failed to fetch from TikTok CDN") from exc
+
+    if resp.is_error:
+        await resp.aclose()
+        await client.aclose()
+        raise HTTPException(status_code=resp.status_code, detail="TikTok CDN returned an error")
+
+    cdn_content_type = resp.headers.get("content-type", "").split(";")[0].strip()
+    # Ignore generic/unhelpful upstream types so the filename-based fallback
+    # still wins for those cases.
+    if cdn_content_type and not cdn_content_type.startswith(
+        ("application/octet-stream", "text/html", "text/plain")
+    ):
+        media_type = cdn_content_type
+    else:
+        media_type = fallback_media_type
 
     async def _stream():
-        async with httpx.AsyncClient(
-            follow_redirects=True,
-            timeout=httpx.Timeout(120.0, connect=15.0),
-        ) as client:
-            async with client.stream("GET", cdn_url, headers=_CDN_FETCH_HEADERS) as resp:
-                async for chunk in resp.aiter_bytes(chunk_size=65536):
-                    yield chunk
+        try:
+            async for chunk in resp.aiter_bytes(chunk_size=65536):
+                yield chunk
+        finally:
+            await resp.aclose()
+            await client.aclose()
 
     return StreamingResponse(
         _stream(),

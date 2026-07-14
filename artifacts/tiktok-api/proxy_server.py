@@ -36,13 +36,49 @@ def proxy():
     if not any(d in url for d in CDN_DOMAINS):
         return "Forbidden", 403
 
-    media_type = "audio/mpeg" if filename.endswith(".mp3") else "video/mp4"
+    lower_name = filename.lower()
+    if lower_name.endswith(".mp3"):
+        fallback_media_type = "audio/mpeg"
+    elif lower_name.endswith(".webp"):
+        fallback_media_type = "image/webp"
+    elif lower_name.endswith(".jpg") or lower_name.endswith(".jpeg"):
+        fallback_media_type = "image/jpeg"
+    elif lower_name.endswith(".png"):
+        fallback_media_type = "image/png"
+    else:
+        fallback_media_type = "video/mp4"
+
+    # Open the upstream connection before building the Flask Response so we
+    # know the real Content-Type (from the CDN) up front, instead of always
+    # forwarding a hardcoded/guessed type.
+    client = httpx.Client(follow_redirects=True, timeout=httpx.Timeout(120.0, connect=15.0))
+    try:
+        req = client.build_request("GET", url, headers=CDN_HEADERS)
+        resp = client.send(req, stream=True)
+    except Exception:
+        client.close()
+        return "Failed to fetch from TikTok CDN", 502
+
+    if resp.is_error:
+        resp.close()
+        client.close()
+        return "TikTok CDN returned an error", resp.status_code
+
+    cdn_content_type = resp.headers.get("content-type", "").split(";")[0].strip()
+    if cdn_content_type and not cdn_content_type.startswith(
+        ("application/octet-stream", "text/html", "text/plain")
+    ):
+        media_type = cdn_content_type
+    else:
+        media_type = fallback_media_type
 
     def generate():
-        with httpx.Client(follow_redirects=True, timeout=httpx.Timeout(120.0, connect=15.0)) as client:
-            with client.stream("GET", url, headers=CDN_HEADERS) as resp:
-                for chunk in resp.iter_bytes(65536):
-                    yield chunk
+        try:
+            for chunk in resp.iter_bytes(65536):
+                yield chunk
+        finally:
+            resp.close()
+            client.close()
 
     headers = {
         "Content-Disposition": f'attachment; filename="{filename}"',
