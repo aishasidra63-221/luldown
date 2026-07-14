@@ -333,8 +333,16 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                       </div>
 
                       {/* Arrow indicator */}
-                      <div style={{ paddingRight:14, color:"rgba(255,255,255,0.6)", fontSize:18, fontWeight:300 }}>
-                        {isActive ? "" : "↓"}
+                      <div style={{ paddingRight:14, flexShrink:0 }}>
+                        {!isActive && (
+                          <div style={{
+                            width:32, height:32, borderRadius:"50%",
+                            background:"rgba(0,0,0,0.22)",
+                            display:"flex", alignItems:"center", justifyContent:"center",
+                          }}>
+                            <Download size={15} color="#fff" strokeWidth={2.4} />
+                          </div>
+                        )}
                       </div>
                     </button>
                   );
