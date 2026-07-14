@@ -374,14 +374,19 @@ async def proxy_cdn(request: Request, url: str, filename: str = "luldown.mp4"):
             await resp.aclose()
             await client.aclose()
 
+    response_headers = {
+        "Content-Disposition": f'attachment; filename="{filename}"',
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "no-store",
+    }
+    content_length = resp.headers.get("content-length")
+    if content_length:
+        response_headers["Content-Length"] = content_length
+
     return StreamingResponse(
         _stream(),
         media_type=media_type,
-        headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
-            "Access-Control-Allow-Origin": "*",
-            "Cache-Control": "no-store",
-        },
+        headers=response_headers,
     )
 
 

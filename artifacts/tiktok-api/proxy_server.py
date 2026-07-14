@@ -85,6 +85,9 @@ def proxy():
         "Access-Control-Allow-Origin": "*",
         "Cache-Control": "no-store",
     }
+    content_length = resp.headers.get("content-length")
+    if content_length:
+        headers["Content-Length"] = content_length
     return Response(stream_with_context(generate()), content_type=media_type, headers=headers)
 
 
