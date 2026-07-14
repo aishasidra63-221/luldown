@@ -94,6 +94,141 @@ async function kvSetUrl(env, videoId, value) {
   }
 }
 
+// ── Phone Pool ────────────────────────────────────────────────────────────────
+// 500 persistent phones stored in KV — each lives exactly 1 year.
+// Phones rotate via LRU with a 60-second gap between reuses.
+// Failure types are distinguished: a 404 (API endpoint change) never
+// penalises the phone; only status_code -1/8 (device block) counts as a
+// real phone failure and retires it after 3 strikes, replacing with a fresh phone.
+
+const POOL_SIZE     = 500;
+const POOL_KV_KEY   = "pool:phones";
+const PHONE_YEAR    = 365 * 24 * 60 * 60; // 1 year in seconds
+const PHONE_GAP_SEC = 60;                  // min seconds between same-phone reuse
+
+function generatePhone(id) {
+  const now = Math.floor(Date.now() / 1000);
+  return {
+    id,
+    device_id:    String(randInt(7250000000000000000, 7325099899999994577)),
+    iid:          String(randInt(7023000000000000000, 7999999999999999999)),
+    openudid:     randHex(16),
+    cdid:         randUUID(),
+    odin_tt:      randHex(64),
+    install_time: now - randInt(2592000, 31536000), // 30 days–1 year ago
+    created_at:   now,
+    expires_at:   now + PHONE_YEAR,
+    last_used:    0,
+    failures:     0,
+    skip_until:   0,
+    status:       "active",
+  };
+}
+
+async function loadPool(env) {
+  if (!env.META_KV) return null;
+  try {
+    const raw = await env.META_KV.get(POOL_KV_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+async function savePool(env, pool) {
+  if (!env.META_KV) return;
+  try { await env.META_KV.put(POOL_KV_KEY, JSON.stringify(pool)); } catch {}
+}
+
+async function getOrInitPool(env) {
+  let pool = await loadPool(env);
+  if (pool && pool.length >= POOL_SIZE) return pool;
+  // First run — generate the full pool
+  pool = [];
+  for (let i = 1; i <= POOL_SIZE; i++) pool.push(generatePhone(i));
+  await savePool(env, pool);
+  return pool;
+}
+
+// Pick the phone that has rested the longest (LRU).
+// Prefers phones that have passed the 60s gap. Falls back to absolute LRU
+// during traffic bursts so no request is ever blocked.
+function pickPhone(pool) {
+  const now    = Math.floor(Date.now() / 1000);
+  const active = pool.filter(p => p.status === "active");
+  if (active.length === 0) return pool[0]; // safety fallback
+
+  const rested = active.filter(
+    p => now - (p.last_used || 0) >= PHONE_GAP_SEC && now >= (p.skip_until || 0),
+  );
+  const source = rested.length > 0 ? rested : active;
+  return source.slice().sort((a, b) => (a.last_used || 0) - (b.last_used || 0))[0];
+}
+
+async function applyPhoneUpdate(env, pool, updated) {
+  const idx = pool.findIndex(p => p.id === updated.id);
+  if (idx !== -1) pool[idx] = updated;
+  await savePool(env, pool);
+}
+
+// Record outcome of a TikTok API call for a specific phone.
+// errorType: "ok" | "device_block" | "rate_limit" | "api_change" | "network"
+async function recordPhoneResult(env, pool, phone, errorType) {
+  const now = Math.floor(Date.now() / 1000);
+  const p   = { ...phone, last_used: now };
+
+  if (errorType === "ok") {
+    p.failures = 0;
+
+  } else if (errorType === "api_change") {
+    // HTTP 404 = TikTok moved the endpoint — phone is innocent, no penalty
+
+  } else if (errorType === "rate_limit") {
+    p.skip_until = now + 600; // skip this phone for 10 minutes
+
+  } else if (errorType === "device_block") {
+    p.failures = (p.failures || 0) + 1;
+    if (p.failures >= 3) {
+      // Retire and replace with a brand-new phone in the same slot
+      await applyPhoneUpdate(env, pool, generatePhone(p.id));
+      return;
+    }
+  }
+
+  // Auto-replace expired phones (1-year lifespan)
+  if (p.expires_at && now > p.expires_at) {
+    await applyPhoneUpdate(env, pool, generatePhone(p.id));
+    return;
+  }
+
+  await applyPhoneUpdate(env, pool, p);
+}
+
+// Track 5-minute failure rate. If >50% of recent calls fail → set api_degraded.
+// This separates "many phones blocked" from "TikTok changed their API".
+async function trackFailureWindow(env, failed) {
+  if (!env.META_KV) return;
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const raw = await env.META_KV.get("pool:fail_window");
+    let   win = raw ? JSON.parse(raw) : { total: 0, failed: 0, reset_at: now + 300 };
+
+    if (now > win.reset_at) win = { total: 0, failed: 0, reset_at: now + 300 };
+    win.total  += 1;
+    win.failed += failed ? 1 : 0;
+    await env.META_KV.put("pool:fail_window", JSON.stringify(win), { expirationTtl: 600 });
+
+    const rate = win.total >= 5 ? win.failed / win.total : 0;
+    if (rate > 0.5) {
+      await env.META_KV.put(
+        "pool:api_degraded",
+        JSON.stringify({ since: now }),
+        { expirationTtl: 3600 },
+      );
+    } else if (!failed && rate < 0.1 && win.total >= 5) {
+      await env.META_KV.delete("pool:api_degraded").catch(() => {});
+    }
+  } catch {}
+}
+
 // ── Random helpers ────────────────────────────────────────────────────────────
 
 function randInt(min, max) {
@@ -245,14 +380,14 @@ const STATIC_DEVICE = {
   app_type:        "normal",
 };
 
-function buildQueryParams(videoId) {
+function buildQueryParams(videoId, phone = null) {
   const ts               = Math.floor(Date.now() / 1000);
   const _rticket         = Date.now();
-  const device_id        = String(randInt(7250000000000000000, 7325099899999994577));
-  const iid              = String(randInt(7023000000000000000, 7999999999999999999));
-  const openudid         = randHex(16);
-  const cdid             = randUUID();
-  const last_install_time = ts - randInt(86400, 1123200);
+  const device_id        = phone ? phone.device_id : String(randInt(7250000000000000000, 7325099899999994577));
+  const iid              = phone ? phone.iid       : String(randInt(7023000000000000000, 7999999999999999999));
+  const openudid         = phone ? phone.openudid  : randHex(16);
+  const cdid             = phone ? phone.cdid      : randUUID();
+  const last_install_time = phone ? String(phone.install_time) : String(ts - randInt(86400, 1123200));
 
   const params = new URLSearchParams({
     ...STATIC_DEVICE,
@@ -262,7 +397,7 @@ function buildQueryParams(videoId) {
     cdid,
     _rticket: String(_rticket),
     ts:       String(ts),
-    last_install_time: String(last_install_time),
+    last_install_time,
   });
 
   return params.toString();
@@ -291,18 +426,19 @@ function randUserAgent() {
   return TIKTOK_USER_AGENTS[Math.floor(Math.random() * TIKTOK_USER_AGENTS.length)];
 }
 
-async function callAndroidAPI(videoId) {
+async function callAndroidAPI(videoId, phone = null) {
   const body = new URLSearchParams({
     aweme_ids:      `[${videoId}]`,
     request_source: "0",
   });
 
-  let lastError = null;
+  let lastError     = null;
+  let lastErrorType = "network";
 
   for (const host of TIKTOK_API_ENDPOINTS) {
-    const qs        = buildQueryParams(videoId);
+    const qs        = buildQueryParams(videoId, phone);
     const endpoint  = `https://${host}/aweme/v1/multi/aweme/detail/?${qs}`;
-    const odinToken = randHex(160);
+    const odinToken = phone ? phone.odin_tt : randHex(160);
 
     try {
       const response = await fetch(endpoint, {
@@ -316,27 +452,52 @@ async function callAndroidAPI(videoId) {
         body: body.toString(),
       });
 
+      // 404 = TikTok moved the endpoint (API change) — not a phone problem
+      if (response.status === 404) {
+        lastError     = new Error(`TikTok API ${host} returned HTTP 404 — endpoint may have changed`);
+        lastErrorType = "api_change";
+        continue;
+      }
+
       if (!response.ok) {
-        lastError = new Error(`TikTok API ${host} returned HTTP ${response.status}`);
-        continue; // try next endpoint
+        lastError     = new Error(`TikTok API ${host} returned HTTP ${response.status}`);
+        lastErrorType = "network";
+        continue;
       }
 
       const data = await response.json();
 
-      // If TikTok returned an error status in the body, try next endpoint
-      if (data?.status_code && data.status_code !== 0) {
-        lastError = new Error(`TikTok API ${host} body status: ${data.status_code}`);
+      // Device flagged / banned by TikTok
+      if (data?.status_code === -1 || data?.status_code === 8) {
+        lastError     = new Error(`TikTok API device blocked (status: ${data.status_code})`);
+        lastErrorType = "device_block";
         continue;
       }
 
-      return data; // success
+      // Rate limited
+      if (data?.status_code === 2048) {
+        lastError     = new Error(`TikTok API rate limited (status: 2048)`);
+        lastErrorType = "rate_limit";
+        continue;
+      }
+
+      // Any other non-zero body status
+      if (data?.status_code && data.status_code !== 0) {
+        lastError     = new Error(`TikTok API ${host} body status: ${data.status_code}`);
+        lastErrorType = "network";
+        continue;
+      }
+
+      return { data, errorType: "ok" }; // ✅ success
     } catch (e) {
-      lastError = new Error(`TikTok API ${host} failed: ${e.message}`);
-      // network error — try next endpoint
+      lastError     = new Error(`TikTok API ${host} failed: ${e.message}`);
+      lastErrorType = "network";
     }
   }
 
-  throw lastError || new Error("All TikTok API endpoints failed");
+  const e = lastError || new Error("All TikTok API endpoints failed");
+  e.errorType = lastErrorType;
+  throw e;
 }
 
 // ── Step 3: Parse aweme_details from API response ────────────────────────────
@@ -472,18 +633,31 @@ async function fetchTikTokVideo(tiktokUrl, env) {
     return { ...metaCached, ...urlCached };
   }
 
-  // Call TikTok Android API — same request regardless of what expired.
-  // There is no TikTok endpoint that returns only the CDN URL.
+  // Select a persistent phone from the pool for this API call
+  const pool  = await getOrInitPool(env);
+  const phone = pickPhone(pool);
+
+  // Call TikTok Android API using the phone's fixed identity
   let data;
   try {
-    data = await callAndroidAPI(videoId);
+    const result = await callAndroidAPI(videoId, phone);
+    data = result.data;
   } catch (e) {
+    // Record failure type — 404 won't penalise the phone, device_block will
+    await Promise.all([
+      recordPhoneResult(env, pool, phone, e.errorType || "network"),
+      trackFailureWindow(env, true),
+    ]);
     throw new Error(`TikTok API request failed: ${e.message}`);
   }
 
   const details = data?.aweme_details;
   if (!details || details.length === 0) {
     const status = data?.status_code ?? data?.status ?? "unknown";
+    await Promise.all([
+      recordPhoneResult(env, pool, phone, "network"),
+      trackFailureWindow(env, true),
+    ]);
     throw new Error(`Video not found or private (status: ${status}). The video may have been deleted or is region-restricted.`);
   }
 
@@ -505,13 +679,15 @@ async function fetchTikTokVideo(tiktokUrl, env) {
   const urlPayload = {
     videoUrl:    parsed.videoUrl,
     videoUrl720: parsed.videoUrl720,
-    audioUrl:   parsed.audioUrl,
+    audioUrl:    parsed.audioUrl,
   };
 
-  // Write to cache (parallel)
+  // Write cache + record phone success in parallel
   await Promise.all([
     metaCached ? Promise.resolve() : kvSetMeta(env, videoId, metaPayload),
     kvSetUrl(env, videoId, urlPayload),
+    recordPhoneResult(env, pool, phone, "ok"),
+    trackFailureWindow(env, false),
   ]);
 
   return { ...metaPayload, ...urlPayload, _debug: parsed._debug };
@@ -648,7 +824,39 @@ async function handleRequest(request, env) {
 
     // GET /health
     if (pathname === "/health" && method === "GET") {
-      return json({ status: "ok", version: "8.2.0", engine: "tiktok-android-api", token_enabled: !!secret }, 200, cors);
+      return json({ status: "ok", version: "9.0.0", engine: "tiktok-android-api", token_enabled: !!secret }, 200, cors);
+    }
+
+    // GET /api/pool-status — phone pool health overview
+    if (pathname === "/api/pool-status" && method === "GET") {
+      if (!env.META_KV) return err("KV not bound", 500, cors);
+
+      const [poolRaw, degradedRaw, winRaw] = await Promise.all([
+        env.META_KV.get(POOL_KV_KEY),
+        env.META_KV.get("pool:api_degraded"),
+        env.META_KV.get("pool:fail_window"),
+      ]);
+
+      const pool     = poolRaw ? JSON.parse(poolRaw) : [];
+      const degraded = degradedRaw ? JSON.parse(degradedRaw) : null;
+      const win      = winRaw ? JSON.parse(winRaw) : { total: 0, failed: 0 };
+      const now      = Math.floor(Date.now() / 1000);
+
+      const active   = pool.filter(p => p.status === "active").length;
+      const retired  = pool.filter(p => p.status === "retired").length;
+      const resting  = pool.filter(p => p.status === "active" && now - (p.last_used || 0) < PHONE_GAP_SEC).length;
+      const failRate = win.total > 0 ? ((win.failed / win.total) * 100).toFixed(1) + "%" : "0%";
+
+      return json({
+        pool_size:      pool.length,
+        active:         active,
+        retired:        retired,
+        resting:        resting,   // phones in 60s cooldown
+        available:      active - resting,
+        api_health:     degraded ? "degraded" : "ok",
+        degraded_since: degraded ? new Date(degraded.since * 1000).toISOString() : null,
+        fail_rate_5min: failRate,
+      }, 200, cors);
     }
 
     // GET /api/token
@@ -668,7 +876,7 @@ async function handleRequest(request, env) {
       if (!tiktokUrl) return err("Invalid TikTok URL", 400, cors);
       const videoId = await resolveVideoId(tiktokUrl);
       let data;
-      try { data = await callAndroidAPI(videoId); } catch (e) { return err(e.message, 422, cors); }
+      try { const result = await callAndroidAPI(videoId); data = result.data; } catch (e) { return err(e.message, 422, cors); }
       const aweme = data?.aweme_details?.[0];
       if (!aweme) return err("No aweme_details in response", 422, cors);
       const vid = aweme.video || {};
