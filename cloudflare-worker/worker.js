@@ -987,7 +987,7 @@ async function validateToken(token, secret) {
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     // ── Country geo-block — must run before ANY other logic ──────────────────
     // Blocks RU and IR with HTTP 451 (Unavailable For Legal Reasons).
     const blockedCountry = request.cf?.country;
@@ -999,7 +999,7 @@ export default {
     }
 
     try {
-      return await handleRequest(request, env);
+      return await handleRequest(request, env, ctx);
     } catch (e) {
       const cors = corsHeaders(request);
       return new Response(JSON.stringify({ detail: `Internal error: ${e.message}` }), {
@@ -1044,7 +1044,7 @@ async function checkRateLimit(env, ip) {
   }
 }
 
-async function handleRequest(request, env) {
+async function handleRequest(request, env, ctx) {
     const { pathname } = new URL(request.url);
     const method = request.method;
     const cors   = corsHeaders(request);
