@@ -65,9 +65,20 @@ app = FastAPI(title="TikTok Downloader API", version="2.1.0", lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+
+# This service is only ever called browser-side through the Vite dev proxy
+# (same-origin — CORS doesn't apply) or server-side from the Cloudflare
+# Worker/Render (not a browser — CORS doesn't apply there either). "*" was
+# wide open for no real benefit; restrict to the actual production/dev
+# origins in case this ever gets hit directly from a browser.
+_ALLOWED_CORS_ORIGINS = [
+    "https://luldown.com",
+    "https://www.luldown.com",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origin_regex=r"^https://luldown\.com$|^https://www\.luldown\.com$|^http://localhost(:\d+)?$|^http://127\.0\.0\.1(:\d+)?$",
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -154,8 +165,14 @@ async def get_session_token():
 
 
 @app.post("/api/debug/raw")
-async def debug_raw(body: InfoRequest):
-    """Returns raw itemStruct summary — for dev debugging only."""
+@limiter.limit("20/minute")
+async def debug_raw(request: Request, body: InfoRequest):
+    """Returns raw itemStruct summary — for dev debugging only.
+    Disabled by default (fail-closed): only works if ENABLE_DEBUG_ENDPOINTS=1
+    is explicitly set. Previously this had zero protection (no auth, no rate
+    limit) and could be hit directly to pull raw TikTok data for free."""
+    if os.environ.get("ENABLE_DEBUG_ENDPOINTS") != "1":
+        raise HTTPException(status_code=404, detail="Not found")
     url = validate_tiktok_url(body.url)
     try:
         return await get_raw_item(url)
@@ -271,7 +288,9 @@ async def admin_flush_cache(request: Request):
     from session import SECRET_KEY
     admin_key = os.environ.get("SESSION_SECRET", "")
     auth = request.headers.get("x-admin-key", "")
-    if admin_key and auth != admin_key:
+    # Fail-closed: if SESSION_SECRET isn't configured, refuse rather than
+    # silently letting anyone flush the cache with no key at all.
+    if not admin_key or auth != admin_key:
         raise HTTPException(status_code=403, detail="Forbidden — set x-admin-key header")
     before = len(_mem_cache)
     await cache_flush()
@@ -284,7 +303,8 @@ async def admin_cache_check(request: Request):
     Useful to confirm a fresh request stored a new URL correctly."""
     admin_key = os.environ.get("SESSION_SECRET", "")
     auth = request.headers.get("x-admin-key", "")
-    if admin_key and auth != admin_key:
+    # Fail-closed: no configured secret means no access, not open access.
+    if not admin_key or auth != admin_key:
         raise HTTPException(status_code=403, detail="Forbidden — set x-admin-key header")
     stats = cache_stats()
     sample_keys = list(_mem_cache.keys())[:20]
