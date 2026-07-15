@@ -15,6 +15,29 @@ const ALLOWED_ORIGINS = [
   "https://www.luldown.com",
 ];
 
+// ── Server-side Origin enforcement ────────────────────────────────────────────
+// CORS headers alone are NOT a server-side control — they only tell a
+// *browser* whether it may read the response; they never stop a request from
+// being processed (curl/Postman/another server can call these endpoints
+// directly regardless of what corsHeaders() returns). This adds an actual
+// gate: reject the request outright (before any processing) unless it
+// carries the exact production Origin. Not a strong boundary on its own
+// (Origin is client-supplied and spoofable by non-browser callers), but it
+// stops naive direct/script hits with zero processing cost. OPTIONS
+// (preflight) is exempt — callers checked before invoking this.
+const ALLOWED_API_ORIGIN = "https://luldown.com";
+
+function requireOrigin(request, cors) {
+  const origin = request.headers.get("Origin");
+  if (origin !== ALLOWED_API_ORIGIN) {
+    return new Response(JSON.stringify({ error: "Forbidden" }), {
+      status: 403,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
+  }
+  return null;
+}
+
 function corsHeaders(request) {
   const origin = request?.headers?.get("Origin") || "";
   const allowed =
@@ -1145,6 +1168,8 @@ async function handleRequest(request, env, ctx) {
 
     // GET /api/token
     if (pathname === "/api/token" && method === "GET") {
+      const originBlock = requireOrigin(request, cors);
+      if (originBlock) return originBlock;
       if (!secret) {
         return json({ token: "", ttl_seconds: TOKEN_TTL_SECONDS, dev_mode: true }, 200, cors);
       }
@@ -1196,6 +1221,8 @@ async function handleRequest(request, env, ctx) {
 
     // POST /api/info — fetch video metadata + download URLs
     if (pathname === "/api/info" && method === "POST") {
+      const originBlockInfo = requireOrigin(request, cors);
+      if (originBlockInfo) return originBlockInfo;
       const ip = request.headers.get("CF-Connecting-IP") || "unknown";
       if (!await checkRateLimit(env, ip)) return err("Too many requests. Please slow down.", 429, cors);
 
@@ -1319,6 +1346,8 @@ async function handleRequest(request, env, ctx) {
 
     // POST /api/download — return CDN URL for direct browser download
     if (pathname === "/api/download" && method === "POST") {
+      const originBlockDl = requireOrigin(request, cors);
+      if (originBlockDl) return originBlockDl;
       const ip2 = request.headers.get("CF-Connecting-IP") || "unknown";
       if (!await checkRateLimit(env, ip2)) return err("Too many requests. Please slow down.", 429, cors);
 
