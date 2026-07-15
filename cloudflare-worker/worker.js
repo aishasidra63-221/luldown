@@ -937,7 +937,7 @@ function validateTikTokUrl(raw) {
 
 // ── HMAC Token System ─────────────────────────────────────────────────────────
 
-const TOKEN_TTL_SECONDS = 900;
+const TOKEN_TTL_SECONDS = 1500; // 25 minutes
 
 async function hmacSign(secret, message) {
   const key = await crypto.subtle.importKey(

@@ -41,19 +41,48 @@ export interface HistoryItem {
 export type DownloadFormat = "mp4_720" | "mp4_1080" | "mp3" | "thumbnail";
 
 // ─── HMAC Token cache ─────────────────────────────────────────────────────────
-// Token is fetched once on first use and cached for 14 min (1 min buffer before
-// the 15 min server-side expiry). Refreshed automatically on next request.
+// Token is fetched once and cached for 24 min (1 min buffer before the 25 min
+// server-side expiry). Persisted in localStorage (not just in-memory) so a
+// page reload/new tab within that window reuses the same token instead of
+// requesting a new one — cuts /api/token traffic without weakening the
+// bot-protection (a token is still required and still time-limited).
 
-const TOKEN_CACHE_MS = 14 * 60 * 1000; // 14 minutes in ms
+const TOKEN_CACHE_MS = 24 * 60 * 1000; // 24 minutes in ms
+const TOKEN_STORAGE_KEY = "luldown_token_cache";
 
 let _cachedToken    = "";
 let _tokenFetchedAt = 0;
 let _tokenFetching: Promise<string> | null = null;
 
+function _loadTokenFromStorage(): void {
+  try {
+    const raw = localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.token === "string" && typeof parsed.fetchedAt === "number") {
+      _cachedToken    = parsed.token;
+      _tokenFetchedAt = parsed.fetchedAt;
+    }
+  } catch {
+    // Corrupt/inaccessible storage — ignore, will just fetch a fresh token
+  }
+}
+
+function _saveTokenToStorage(token: string, fetchedAt: number): void {
+  try {
+    localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify({ token, fetchedAt }));
+  } catch {
+    // Storage full/unavailable (e.g. private mode) — fine, memory cache still works
+  }
+}
+
+// Load any still-valid token saved from a previous page load, before first use
+_loadTokenFromStorage();
+
 async function getToken(): Promise<string> {
   const now = Date.now();
 
-  // Return cached token if still fresh
+  // Return cached token if still fresh (works across reloads via localStorage)
   if (_cachedToken && now - _tokenFetchedAt < TOKEN_CACHE_MS) {
     return _cachedToken;
   }
@@ -68,6 +97,7 @@ async function getToken(): Promise<string> {
         const data = await res.json();
         _cachedToken    = data.token || "";
         _tokenFetchedAt = Date.now();
+        _saveTokenToStorage(_cachedToken, _tokenFetchedAt);
       }
     } catch {
       // Network error — use empty token (Worker will allow if secret not set)
