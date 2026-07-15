@@ -826,9 +826,11 @@ function parseAweme(aweme) {
     || musicPlayUrl.uri || "";
 
   // Thumbnail
+  // Prefer origin_cover (highest quality) over the default low-res "cover"
+  // placeholder, falling back to dynamic_cover only if neither exists.
   const thumbnail = firstUrl(
-    (video.cover          || {}).url_list ||
     (video.origin_cover   || {}).url_list ||
+    (video.cover          || {}).url_list ||
     (video.dynamic_cover  || {}).url_list || [],
   );
 

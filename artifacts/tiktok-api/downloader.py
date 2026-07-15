@@ -323,9 +323,12 @@ def _parse_item_struct(item: dict) -> dict:
         audio_url = _resolver_url(_url_list) or _music_play_url.get("uri") or ""
     elif isinstance(_music_play_url, str):
         audio_url = _music_play_url
+    # Prefer origin_cover (highest quality) over the default low-res "cover"
+    # placeholder, falling back to dynamicCover only if neither exists.
     thumbnail = _first_str(
-        video.get("cover"), video.get("originCover"),
-        video.get("origin_cover"), video.get("dynamicCover"),
+        video.get("originCover"), video.get("origin_cover"),
+        video.get("cover"),
+        video.get("dynamicCover"), video.get("dynamic_cover"),
     )
 
     author_name = _first_str(
