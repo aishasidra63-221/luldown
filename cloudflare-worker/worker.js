@@ -1023,8 +1023,21 @@ export default {
   },
 };
 
-// ── Rate limiting — KV-based, 20 requests/min per IP ─────────────────────────
+// ── Rate limiting — 20 requests/min per IP ────────────────────────────────────
+// Prefers the native Cloudflare Rate Limiting binding (RATE_LIMITER) — atomic,
+// no eventual-consistency gaps under fast bursts. Falls back to a KV-based
+// counter (best-effort — KV writes can lag under a burst) if the binding
+// isn't configured, so this still works in envs without it wired up.
 async function checkRateLimit(env, ip) {
+  if (env.RATE_LIMITER) {
+    try {
+      const { success } = await env.RATE_LIMITER.limit({ key: ip });
+      return success;
+    } catch {
+      // Binding call failed — fall through to KV-based check below
+    }
+  }
+
   if (!env.META_KV) return true; // KV not bound — allow
   const key = `rl:${ip}`;
   try {
