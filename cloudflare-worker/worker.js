@@ -802,15 +802,6 @@ function parseAweme(aweme) {
     || (typeof musicPlayUrl === "string" ? musicPlayUrl : "")
     || musicPlayUrl.uri || "";
 
-  const _debug = {
-    bitRateGears:   bitRates.map(g => ({ gear_name: g.gear_name || g.gearName, bit_rate: g.bit_rate || g.bitRate })),
-    musicKeys:      Object.keys(music),
-    musicPlayUrl,
-    audioUrl,
-    url1080,
-    url720,
-  };
-
   // Thumbnail
   const thumbnail = firstUrl(
     (video.cover          || {}).url_list ||
@@ -833,7 +824,6 @@ function parseAweme(aweme) {
     videoUrl:      url1080,
     videoUrl720:   url720,
     audioUrl,
-    _debug,
     thumbUrl:      thumbnail,
     duration:      video.duration || 0,
     view_count:    stats.play_count   || stats.playCount   || 0,
@@ -918,7 +908,7 @@ async function fetchTikTokVideo(tiktokUrl, env, ctx) {
   ]);
   (ctx ? ctx.waitUntil.bind(ctx) : (p) => p)(trackFailureWindow(env, false));
 
-  return { ...metaPayload, ...urlPayload, _debug: parsed._debug };
+  return { ...metaPayload, ...urlPayload };
 }
 
 // ── Response helpers ──────────────────────────────────────────────────────────
@@ -1059,9 +1049,9 @@ async function handleRequest(request, env, ctx) {
 
     const secret = env.TOKEN_SECRET || null;
 
-    // GET /health
+    // GET /health — intentionally minimal, no version/engine/config details
     if (pathname === "/health" && method === "GET") {
-      return json({ status: "ok", version: "9.0.0", engine: "tiktok-android-api", token_enabled: !!secret }, 200, cors);
+      return json({ status: "ok" }, 200, cors);
     }
 
     // GET /api/pool-status — phone pool health overview
@@ -1185,6 +1175,9 @@ async function handleRequest(request, env, ctx) {
 
     // GET /api/proxy — stream TikTok CDN file
     if (pathname === "/api/proxy" && method === "GET") {
+      const proxyIp = request.headers.get("CF-Connecting-IP") || "unknown";
+      if (!await checkRateLimit(env, proxyIp)) return err("Too many requests. Please slow down.", 429, cors);
+
       const params   = new URL(request.url).searchParams;
       const rawUrl   = params.get("url");
       // Strip any chars that could break Content-Disposition header (quotes, newlines, semicolons)
@@ -1315,13 +1308,15 @@ async function handleRequest(request, env, ctx) {
     if (pathname === "/api/cache/purge" && method === "POST") {
       if (!env.META_KV) return err("KV not bound", 500, cors);
 
+      // Fail closed: if TOKEN_SECRET isn't configured, refuse rather than
+      // silently allowing anyone to wipe the entire KV cache.
+      if (!secret) return err("Cache purge is disabled: TOKEN_SECRET not configured.", 403, cors);
+
       let body = {};
       try { body = await request.json(); } catch {}
 
-      if (secret) {
-        const ok = await validateToken(body.token, secret);
-        if (!ok) return err("Invalid or expired token.", 401, cors);
-      }
+      const ok = await validateToken(body.token, secret);
+      if (!ok) return err("Invalid or expired token.", 401, cors);
 
       // If videoId provided — purge just that one video's URL cache
       if (body.videoId) {
