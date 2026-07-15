@@ -103,8 +103,10 @@ export default function LangPage({ lang, pageKey, highlightFormat }: Props) {
 
   useLangSEO(lang, pageKey, tr);
 
-  const switchLang = (_targetLang: Lang) => {
-    // URL navigation disabled — address bar stays on luldown.com
+  const [, setLocation] = useLocation();
+  const switchLang = (targetLang: Lang) => {
+    const url = buildPageUrl(targetLang, pageKey);
+    setLocation(url || "/");
   };
 
   return (

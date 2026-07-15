@@ -1,4 +1,4 @@
-export type Lang = "en" | "ur" | "hi" | "bn" | "id" | "ar" | "tr" | "es" | "pt" | "ru" | "vi" | "fr" | "de" | "ja" | "ko" | "th" | "it" | "pl";
+export type Lang = "en" | "ur" | "hi" | "bn" | "id" | "ar" | "tr" | "es" | "pt" | "vi" | "fr" | "de" | "ja" | "ko" | "th" | "it" | "pl";
 export type PageKey = "home" | "mp3" | "story" | "thumbnail" | "viewer" | "apk" | "howto";
 
 export interface LangMeta {
@@ -20,7 +20,6 @@ export const LANG_META: Record<Lang, LangMeta> = {
   tr: { code: "tr", urlPrefix: "/tr", label: "TR",    nativeName: "Türkçe",     dir: "ltr", hreflang: "tr" },
   es: { code: "es", urlPrefix: "/es", label: "ES",    nativeName: "Español",    dir: "ltr", hreflang: "es" },
   pt: { code: "pt", urlPrefix: "/pt", label: "PT",    nativeName: "Português",  dir: "ltr", hreflang: "pt" },
-  ru: { code: "ru", urlPrefix: "/ru", label: "RU",    nativeName: "Русский",    dir: "ltr", hreflang: "ru" },
   vi: { code: "vi", urlPrefix: "/vi", label: "VI",    nativeName: "Tiếng Việt", dir: "ltr", hreflang: "vi" },
   fr: { code: "fr", urlPrefix: "/fr", label: "FR",    nativeName: "Français",   dir: "ltr", hreflang: "fr" },
   de: { code: "de", urlPrefix: "/de", label: "DE",    nativeName: "Deutsch",    dir: "ltr", hreflang: "de" },
