@@ -980,6 +980,37 @@ async function validateToken(token, secret) {
 
 // ── Main handler ──────────────────────────────────────────────────────────────
 
+// ── Bot User-Agent blacklist ──────────────────────────────────────────────────
+// Catches raw scraper/HTTP-client tools that never bother spoofing a browser
+// UA. Trivial to bypass (just fake the UA string), but blocks the large share
+// of low-effort scripts that use their tool's default UA — free, zero-cost
+// first filter before the real token/rate-limit checks run.
+const BLOCKED_UA_PATTERNS = [
+  /python-requests/i,
+  /python-urllib/i,
+  /^curl\//i,
+  /^curl$/i,
+  /wget/i,
+  /scrapy/i,
+  /go-http-client/i,
+  /okhttp/i,
+  /libwww-perl/i,
+  /httpclient/i,
+  /^java\//i,
+  /node-fetch/i,
+  /^axios\//i,
+  /postmanruntime/i,
+  /insomnia/i,
+  /^$/, // empty/missing User-Agent header
+];
+
+function isBlockedUserAgent(request) {
+  const ua = request.headers.get("User-Agent") || "";
+  return BLOCKED_UA_PATTERNS.some((re) => re.test(ua));
+}
+
+const RICKROLL_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+
 export default {
   async fetch(request, env, ctx) {
     // ── Country geo-block — must run before ANY other logic ──────────────────
@@ -990,6 +1021,12 @@ export default {
         JSON.stringify({ error: "Service not available in your region." }),
         { status: 451, headers: { "Content-Type": "application/json" } }
       );
+    }
+
+    // ── Bot User-Agent blacklist — before anything else, except CORS preflight
+    // (OPTIONS requests from real browsers often carry no meaningful UA).
+    if (request.method !== "OPTIONS" && isBlockedUserAgent(request)) {
+      return Response.redirect(RICKROLL_URL, 302);
     }
 
     try {
