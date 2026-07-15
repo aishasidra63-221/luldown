@@ -937,7 +937,11 @@ function err(detail, status = 422, cors = {}) {
 function validateTikTokUrl(raw) {
   const u = (raw || "").trim();
   if (!u.startsWith("http")) return null;
-  if (u.includes("tiktok.com") || u.includes("douyin.com")) return u;
+  try {
+    const hostname = new URL(u).hostname;
+    const allowed  = ["tiktok.com", "douyin.com", "musical.ly"];
+    if (allowed.some(d => hostname === d || hostname.endsWith("." + d))) return u;
+  } catch {}
   return null;
 }
 
@@ -1103,8 +1107,15 @@ async function handleRequest(request, env, ctx) {
 
     // POST /api/debug — returns raw TikTok API response for a video (no cache)
     if (pathname === "/api/debug" && method === "POST") {
+      // Rate-limit + token-guard — same rules as /api/info
+      const dbgIp = request.headers.get("CF-Connecting-IP") || "unknown";
+      if (!await checkRateLimit(env, dbgIp)) return err("Too many requests. Please slow down.", 429, cors);
       let body = {};
       try { body = await request.json(); } catch { return err("Invalid JSON", 400, cors); }
+      if (secret) {
+        const ok = await validateToken(body.token, secret);
+        if (!ok) return err("Invalid or expired token. Please refresh the page.", 401, cors);
+      }
       const tiktokUrl = validateTikTokUrl(body.url);
       if (!tiktokUrl) return err("Invalid TikTok URL", 400, cors);
       const videoId = await resolveVideoId(tiktokUrl);
@@ -1176,7 +1187,8 @@ async function handleRequest(request, env, ctx) {
     if (pathname === "/api/proxy" && method === "GET") {
       const params   = new URL(request.url).searchParams;
       const rawUrl   = params.get("url");
-      const filename = params.get("filename") || "luldown.mp4";
+      // Strip any chars that could break Content-Disposition header (quotes, newlines, semicolons)
+      const filename = (params.get("filename") || "luldown.mp4").replace(/[^\w.\-]/g, "_");
 
       if (!rawUrl) return err("Missing url parameter", 400, cors);
 
