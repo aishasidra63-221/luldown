@@ -136,14 +136,19 @@ function generatePhone(id) {
 }
 
 async function loadPool(env) {
+  // Worker memory first — zero-latency on warm requests
+  if (globalThis._poolCache) return globalThis._poolCache;
   if (!env.META_KV) return null;
   try {
-    const raw = await env.META_KV.get(POOL_KV_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const raw  = await env.META_KV.get(POOL_KV_KEY);
+    const pool = raw ? JSON.parse(raw) : null;
+    if (pool) globalThis._poolCache = pool;
+    return pool;
   } catch { return null; }
 }
 
 async function savePool(env, pool) {
+  globalThis._poolCache = pool;           // always update memory
   if (!env.META_KV) return;
   try { await env.META_KV.put(POOL_KV_KEY, JSON.stringify(pool)); } catch {}
 }
@@ -187,10 +192,14 @@ function pickPhone(pool) {
   return source.slice().sort((a, b) => (a.last_used || 0) - (b.last_used || 0))[0];
 }
 
-async function applyPhoneUpdate(env, pool, updated) {
+async function applyPhoneUpdate(env, pool, updated, writeKv = false) {
   const idx = pool.findIndex(p => p.id === updated.id);
   if (idx !== -1) pool[idx] = updated;
-  await savePool(env, pool);
+  if (writeKv) {
+    await savePool(env, pool);  // memory + KV
+  } else {
+    globalThis._poolCache = pool;  // memory only — KV skipped
+  }
 }
 
 // Record outcome of a TikTok API call for a specific phone.
@@ -199,31 +208,37 @@ async function recordPhoneResult(env, pool, phone, errorType) {
   const now = Math.floor(Date.now() / 1000);
   const p   = { ...phone, last_used: now };
 
+  // writeKv = true only for state changes that matter for future requests.
+  // Happy path ("ok") just updates last_used → memory only, no KV write needed.
+  let writeKv = false;
+
   if (errorType === "ok") {
-    p.failures = 0;
+    p.failures = 0;                  // reset counters, memory-only update is fine
 
   } else if (errorType === "api_change") {
     // HTTP 404 = TikTok moved the endpoint — phone is innocent, no penalty
 
   } else if (errorType === "rate_limit") {
-    p.skip_until = now + 600; // skip this phone for 10 minutes
+    p.skip_until = now + 600;        // must persist — skip this phone for 10 min
+    writeKv = true;
 
   } else if (errorType === "device_block") {
     p.failures = (p.failures || 0) + 1;
+    writeKv = true;                  // must persist — failure count changed
     if (p.failures >= 3) {
       // Retire and replace with a brand-new phone in the same slot
-      await applyPhoneUpdate(env, pool, generatePhone(p.id));
+      await applyPhoneUpdate(env, pool, generatePhone(p.id), true);
       return;
     }
   }
 
   // Auto-replace expired phones (1-year lifespan)
   if (p.expires_at && now > p.expires_at) {
-    await applyPhoneUpdate(env, pool, generatePhone(p.id));
+    await applyPhoneUpdate(env, pool, generatePhone(p.id), true);
     return;
   }
 
-  await applyPhoneUpdate(env, pool, p);
+  await applyPhoneUpdate(env, pool, p, writeKv);
 }
 
 // Track 5-minute failure rate. If >50% of recent calls fail → set api_degraded.
@@ -832,7 +847,7 @@ function parseAweme(aweme) {
 
 // ── Step 4: fetchTikTokVideo — cache → API → parse → cache → return ──────────
 
-async function fetchTikTokVideo(tiktokUrl, env) {
+async function fetchTikTokVideo(tiktokUrl, env, ctx) {
   const videoId = await resolveVideoId(tiktokUrl);
 
   // Both meta and url now live in Cloudflare KV — globally replicated.
@@ -860,20 +875,17 @@ async function fetchTikTokVideo(tiktokUrl, env) {
     data = result.data;
   } catch (e) {
     // Record failure type — 404 won't penalise the phone, device_block will
-    await Promise.all([
-      recordPhoneResult(env, pool, phone, e.errorType || "network"),
-      trackFailureWindow(env, true),
-    ]);
+    // trackFailureWindow runs in background — user doesn't wait for it
+    await recordPhoneResult(env, pool, phone, e.errorType || "network");
+    (ctx ? ctx.waitUntil : (p) => p)(trackFailureWindow(env, true));
     throw new Error(`TikTok API request failed: ${e.message}`);
   }
 
   const details = data?.aweme_details;
   if (!details || details.length === 0) {
     const status = data?.status_code ?? data?.status ?? "unknown";
-    await Promise.all([
-      recordPhoneResult(env, pool, phone, "network"),
-      trackFailureWindow(env, true),
-    ]);
+    await recordPhoneResult(env, pool, phone, "network");
+    (ctx ? ctx.waitUntil.bind(ctx) : (p) => p)(trackFailureWindow(env, true));
     throw new Error(`Video not found or private (status: ${status}). The video may have been deleted or is region-restricted.`);
   }
 
@@ -898,13 +910,13 @@ async function fetchTikTokVideo(tiktokUrl, env) {
     audioUrl:    parsed.audioUrl,
   };
 
-  // Write cache + record phone success in parallel
+  // Write KV cache + update phone memory — trackFailureWindow runs in background
   await Promise.all([
     metaCached ? Promise.resolve() : kvSetMeta(env, videoId, metaPayload),
     kvSetUrl(env, videoId, urlPayload),
-    recordPhoneResult(env, pool, phone, "ok"),
-    trackFailureWindow(env, false),
+    recordPhoneResult(env, pool, phone, "ok"),  // memory-only on success (no KV write)
   ]);
+  (ctx ? ctx.waitUntil.bind(ctx) : (p) => p)(trackFailureWindow(env, false));
 
   return { ...metaPayload, ...urlPayload, _debug: parsed._debug };
 }
@@ -1138,7 +1150,7 @@ async function handleRequest(request, env) {
 
       let p;
       try {
-        p = await fetchTikTokVideo(tiktokUrl, env);
+        p = await fetchTikTokVideo(tiktokUrl, env, ctx);
       } catch (e) {
         return err(e.message, 422, cors);
       }
@@ -1262,7 +1274,7 @@ async function handleRequest(request, env) {
 
       let p;
       try {
-        p = await fetchTikTokVideo(tiktokUrl, env);
+        p = await fetchTikTokVideo(tiktokUrl, env, ctx);
       } catch (e) {
         return err(e.message, 422, cors);
       }
