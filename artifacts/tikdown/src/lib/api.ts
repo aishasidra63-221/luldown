@@ -41,13 +41,15 @@ export interface HistoryItem {
 export type DownloadFormat = "mp4_720" | "mp4_1080" | "mp3" | "thumbnail";
 
 // ─── HMAC Token cache ─────────────────────────────────────────────────────────
-// Token is fetched once and cached for 24 min (1 min buffer before the 25 min
-// server-side expiry). Persisted in localStorage (not just in-memory) so a
-// page reload/new tab within that window reuses the same token instead of
-// requesting a new one — cuts /api/token traffic without weakening the
-// bot-protection (a token is still required and still time-limited).
+// Server now rotates the token 4x/day (every 6 hours — see cloudflare-worker/
+// worker.js) and every visitor gets the identical token during that window.
+// Cached here for 5h50m (10 min buffer before the 6h server-side expiry).
+// Persisted in localStorage (not just in-memory) so a page reload/new tab
+// within that window reuses the same token instead of requesting a new one —
+// cuts /api/token traffic without weakening the bot-protection (a token is
+// still required and still time-limited).
 
-const TOKEN_CACHE_MS = 24 * 60 * 1000; // 24 minutes in ms
+const TOKEN_CACHE_MS = (6 * 60 - 10) * 60 * 1000; // 5h50m in ms
 const TOKEN_STORAGE_KEY = "luldown_token_cache";
 
 let _cachedToken    = "";

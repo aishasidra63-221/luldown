@@ -960,7 +960,17 @@ function validateTikTokUrl(raw) {
 
 // ── HMAC Token System ─────────────────────────────────────────────────────────
 
-const TOKEN_TTL_SECONDS = 1500; // 25 minutes
+// Token rotates 4x/day (every 6 hours) instead of continuously. The token
+// value is a pure function of the current 6-hour bucket (floor(now/period)),
+// so every visitor across every datacenter gets the IDENTICAL token during
+// that window — no per-request generation, no storage needed. Combined with
+// edge caching on /api/token (see below), this cuts down how often the
+// Worker itself gets invoked just to hand out a token. This was never a
+// strong security boundary (a token isn't bound to any one user/IP), so
+// widening the window doesn't meaningfully change the threat model — the
+// real protection is the per-IP rate limit + Origin check.
+const TOKEN_PERIOD_SECONDS = 21600; // 6 hours -> 4 rotations/day (~120/month)
+const TOKEN_TTL_SECONDS = TOKEN_PERIOD_SECONDS;
 
 async function hmacSign(secret, message) {
   const key = await crypto.subtle.importKey(
@@ -975,9 +985,10 @@ async function hmacSign(secret, message) {
 }
 
 async function generateToken(secret) {
-  const ts  = Math.floor(Date.now() / 1000);
-  const sig = await hmacSign(secret, String(ts));
-  return `${ts}.${sig}`;
+  const now         = Math.floor(Date.now() / 1000);
+  const bucketStart = Math.floor(now / TOKEN_PERIOD_SECONDS) * TOKEN_PERIOD_SECONDS;
+  const sig         = await hmacSign(secret, String(bucketStart));
+  return `${bucketStart}.${sig}`;
 }
 
 async function validateToken(token, secret) {
@@ -1167,14 +1178,31 @@ async function handleRequest(request, env, ctx) {
     }
 
     // GET /api/token
+    // Edge-cached (see below) so repeat requests from ANY visitor during the
+    // same 6-hour rotation window are served straight from Cloudflare's
+    // cache — the Worker doesn't even run for those, which is the actual
+    // request-count saving (not just "same token value").
     if (pathname === "/api/token" && method === "GET") {
       const originBlock = requireOrigin(request, cors);
       if (originBlock) return originBlock;
       if (!secret) {
         return json({ token: "", ttl_seconds: TOKEN_TTL_SECONDS, dev_mode: true }, 200, cors);
       }
-      const token = await generateToken(secret);
-      return json({ token, ttl_seconds: TOKEN_TTL_SECONDS }, 200, cors);
+
+      const cache    = caches.default;
+      const cacheKey = new Request(new URL(request.url).origin + "/api/token", { method: "GET" });
+      const cached   = await cache.match(cacheKey);
+      if (cached) return cached;
+
+      const now      = Math.floor(Date.now() / 1000);
+      const maxAge   = Math.max(60, TOKEN_PERIOD_SECONDS - (now % TOKEN_PERIOD_SECONDS));
+      const token    = await generateToken(secret);
+      const response = json({ token, ttl_seconds: TOKEN_TTL_SECONDS }, 200, {
+        ...cors,
+        "Cache-Control": `public, max-age=${maxAge}`,
+      });
+      ctx.waitUntil(cache.put(cacheKey, response.clone()));
+      return response;
     }
 
     // POST /api/debug — returns raw TikTok API response for a video (no cache)
