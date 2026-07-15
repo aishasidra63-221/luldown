@@ -1068,7 +1068,14 @@ async function handleRequest(request, env, ctx) {
     }
 
     // GET /api/pool-status — phone pool health overview
+    // Admin/monitoring only — never called by the frontend. Protected by the
+    // same TOKEN_SECRET as other endpoints so internal infra details (pool
+    // size, fail rate, degraded state) aren't publicly exposed.
     if (pathname === "/api/pool-status" && method === "GET") {
+      if (secret) {
+        const ok = await validateToken(new URL(request.url).searchParams.get("token"), secret);
+        if (!ok) return err("Invalid or expired token.", 401, cors);
+      }
       if (!env.META_KV) return err("KV not bound", 500, cors);
 
       const [poolRaw, degradedRaw, winRaw] = await Promise.all([
@@ -1109,7 +1116,11 @@ async function handleRequest(request, env, ctx) {
     }
 
     // POST /api/debug — returns raw TikTok API response for a video (no cache)
+    // Dev-only tool — disabled in production unless NODE_ENV=development is
+    // explicitly set on the Worker (it isn't, by default).
     if (pathname === "/api/debug" && method === "POST") {
+      if (env.NODE_ENV !== "development") return new Response("Not found", { status: 404, headers: cors });
+
       // Rate-limit + token-guard — same rules as /api/info
       const dbgIp = request.headers.get("CF-Connecting-IP") || "unknown";
       if (!await checkRateLimit(env, dbgIp)) return err("Too many requests. Please slow down.", 429, cors);
