@@ -39,6 +39,12 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
+        // Never let the SW's SPA navigation fallback swallow full-page navigations
+        // to our own API (e.g. window.location.href = "/api/proxy?..." used for the
+        // native download loading bar). Without this, the service worker intercepts
+        // that navigation and serves cached index.html instead of hitting the API,
+        // making downloads look like they redirect to the home page.
+        navigateFallbackDenylist: [/^\/api\//, /^\/tikapi\//],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
