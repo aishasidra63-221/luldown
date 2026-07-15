@@ -387,7 +387,10 @@ def _parse_page_data(parsed: dict, video_id: str) -> dict:
     if not item and source == "sigi":
         item_module = _safe_get(data, "ItemModule")
         if item_module:
-            item = item_module.get(video_id) or next(iter(item_module.values()), None)
+            # Only accept an exact video_id match — never fall back to a
+            # random/unrelated item in the module (that silently returned the
+            # wrong video's music/title in some cases).
+            item = item_module.get(video_id)
         if not item:
             item = _safe_get(data, "itemInfo", "itemStruct")
 
@@ -440,7 +443,10 @@ async def get_raw_item(url: str) -> dict:
     if not item and source == "sigi":
         item_module = _safe_get(data, "ItemModule")
         if item_module:
-            item = item_module.get(video_id) or next(iter(item_module.values()), None)
+            # Only accept an exact video_id match — never fall back to a
+            # random/unrelated item in the module (that silently returned the
+            # wrong video's music/title in some cases).
+            item = item_module.get(video_id)
         if not item:
             item = _safe_get(data, "itemInfo", "itemStruct")
     if not item and source == "next":
