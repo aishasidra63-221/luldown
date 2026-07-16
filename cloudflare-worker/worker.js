@@ -1277,8 +1277,6 @@ async function handleRequest(request, env, ctx) {
     // cache — the Worker doesn't even run for those, which is the actual
     // request-count saving (not just "same token value").
     if (pathname === "/api/token" && method === "GET") {
-      const originBlock = requireOrigin(request, cors);
-      if (originBlock) return originBlock;
       if (!secret) {
         return json({ token: "", ttl_seconds: TOKEN_TTL_SECONDS, dev_mode: true }, 200, cors);
       }
