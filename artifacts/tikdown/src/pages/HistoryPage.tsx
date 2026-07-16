@@ -45,15 +45,15 @@ export default function HistoryPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
-      <div style={{ maxWidth: 720, margin: "0 auto", padding: "24px 16px 64px" }}>
+      <div className="history-shell" style={{ margin: "0 auto", padding: "24px 16px 64px" }}>
 
         <div style={{ marginBottom: 20 }}>
           <BackHomeButtonLight />
         </div>
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28 }}>
-          <div>
+        <div className="history-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, marginBottom: 28, flexWrap: "wrap" }}>
+          <div style={{ minWidth: 0 }}>
             <h1 style={{ fontSize: 26, fontWeight: 800, color: "#111827", letterSpacing: "-0.02em", margin: 0, marginBottom: 6 }}>
               Download History
             </h1>
@@ -67,12 +67,12 @@ export default function HistoryPage() {
               onClick={handleClear}
               disabled={clearing}
               style={{
-                display: "flex", alignItems: "center", gap: 6,
-                padding: "8px 14px", borderRadius: 10,
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                padding: "10px 16px", borderRadius: 10,
                 background: "rgba(239,68,68,0.08)",
                 border: "1px solid rgba(239,68,68,0.25)",
                 color: "#ef4444", fontSize: 13, fontWeight: 600,
-                cursor: "pointer", flexShrink: 0,
+                cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap",
                 opacity: clearing ? 0.5 : 1,
               }}
             >
@@ -200,6 +200,18 @@ export default function HistoryPage() {
 
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .history-shell { max-width: 720px; }
+        @media (min-width: 900px) {
+          .history-shell { max-width: 960px; padding-left: 32px; padding-right: 32px; }
+        }
+        @media (min-width: 1280px) {
+          .history-shell { max-width: 1080px; }
+        }
+        @media (max-width: 420px) {
+          .history-header { flex-wrap: nowrap; }
+          .history-header h1 { font-size: 22px !important; }
+          .history-header button { padding: 8px 12px !important; font-size: 12px !important; }
+        }
       `}</style>
     </div>
   );
