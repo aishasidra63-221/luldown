@@ -25,11 +25,14 @@ const ALLOWED_ORIGINS = [
 // (Origin is client-supplied and spoofable by non-browser callers), but it
 // stops naive direct/script hits with zero processing cost. OPTIONS
 // (preflight) is exempt — callers checked before invoking this.
-const ALLOWED_API_ORIGIN = "https://luldown.com";
+const ALLOWED_API_ORIGINS = [
+  "https://luldown.com",
+  "https://www.luldown.com",
+];
 
 function requireOrigin(request, cors) {
   const origin = request.headers.get("Origin");
-  if (origin !== ALLOWED_API_ORIGIN) {
+  if (!origin || !ALLOWED_API_ORIGINS.includes(origin)) {
     return new Response(JSON.stringify({ error: "Forbidden" }), {
       status: 403,
       headers: { ...cors, "Content-Type": "application/json" },
