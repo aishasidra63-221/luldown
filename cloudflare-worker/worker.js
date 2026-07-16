@@ -895,7 +895,7 @@ async function fetchTikTokVideo(tiktokUrl, env, ctx) {
     // Record failure type — 404 won't penalise the phone, device_block will
     // trackFailureWindow runs in background — user doesn't wait for it
     await recordPhoneResult(env, pool, phone, e.errorType || "network");
-    (ctx ? ctx.waitUntil : (p) => p)(trackFailureWindow(env, true));
+    (ctx ? ctx.waitUntil.bind(ctx) : (p) => p)(trackFailureWindow(env, true));
     throw new Error(`TikTok API request failed: ${e.message}`);
   }
 
