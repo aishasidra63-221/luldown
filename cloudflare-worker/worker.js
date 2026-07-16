@@ -798,6 +798,20 @@ function firstUrl(urlList) {
   return urlList.find(u => u && u.startsWith("http")) || "";
 }
 
+// For cover images: pick the URL with the largest pixel dimensions when
+// TikTok CDN embeds size hints in the path (e.g. ~c5_1080x1920.jpeg).
+// Falls back to the first HTTP URL when no size hints are present.
+function bestCoverUrl(urlList) {
+  if (!urlList || !Array.isArray(urlList) || urlList.length === 0) return "";
+  const candidates = urlList.filter(u => u && u.startsWith("http"));
+  if (candidates.length === 0) return "";
+  const scored = candidates.map(u => {
+    const m = u.match(/[_~](\d{3,4})x(\d{3,4})/);
+    return { u, area: m ? parseInt(m[1]) * parseInt(m[2]) : 0 };
+  }).sort((a, b) => b.area - a.area);
+  return scored[0].u;
+}
+
 // Each url_list usually holds 2 direct CDN links (tiktokcdn.com, time-signed
 // with bt=/ft=, expire in hours) followed by ONE resolver link
 // (.../aweme/v1/play/?...&signaturev3=...) that resolves live on every hit
@@ -862,13 +876,15 @@ function parseAweme(aweme) {
     || (typeof musicPlayUrl === "string" ? musicPlayUrl : "")
     || musicPlayUrl.uri || "";
 
-  // Thumbnail
-  // Prefer origin_cover (highest quality) over the default low-res "cover"
-  // placeholder, falling back to dynamic_cover only if neither exists.
-  const thumbnail = firstUrl(
-    (video.origin_cover   || {}).url_list ||
-    (video.cover          || {}).url_list ||
-    (video.dynamic_cover  || {}).url_list || [],
+  // Thumbnail — pick highest resolution available.
+  // Use .length check before || so an empty url_list [] (truthy but useless)
+  // doesn't block the fallback chain. bestCoverUrl prefers the URL with the
+  // largest pixel dimensions when TikTok embeds size hints (e.g. ~c5_1080x1920).
+  const thumbnail = bestCoverUrl(
+    (video.origin_cover  ?.url_list?.length ? video.origin_cover.url_list  : null) ||
+    (video.cover         ?.url_list?.length ? video.cover.url_list         : null) ||
+    (video.dynamic_cover ?.url_list?.length ? video.dynamic_cover.url_list : null) ||
+    [],
   );
 
   // Author
