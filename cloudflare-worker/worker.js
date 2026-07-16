@@ -418,8 +418,31 @@ function buildGorgon(queryString, bodyString) {
 // ── Step 1: Resolve video ID from any TikTok URL ─────────────────────────────
 
 function extractIdFromString(s) {
+  // Path-based: /video/1234567890
   const m = s.match(/\/video\/(\d{10,20})/);
+  if (m) return m[1];
+  // Query param: share_item_id=1234567890 (present in TikTok short-link Location headers)
+  try {
+    const sid = new URL(s).searchParams.get("share_item_id");
+    if (sid && /^\d{10,20}$/.test(sid)) return sid;
+  } catch {}
+  return null;
+}
+
+function extractShortCode(url) {
+  // Matches: vm.tiktok.com/CODE  vt.tiktok.com/CODE  tiktok.com/t/CODE
+  const m = url.match(/tiktok\.com\/(?:t\/)?([A-Za-z0-9]{5,15})\/?(?:\?|$)/);
   return m ? m[1] : null;
+}
+
+async function kvGetShortId(env, shortCode) {
+  if (!env.META_KV) return null;
+  try { return await env.META_KV.get(`short:${shortCode}`); } catch { return null; }
+}
+
+async function kvSetShortId(env, shortCode, videoId) {
+  if (!env.META_KV) return;
+  try { await env.META_KV.put(`short:${shortCode}`, videoId, { expirationTtl: 86400 * 30 }); } catch {}
 }
 
 const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
@@ -428,20 +451,31 @@ const TIKTOK_ALLOWED_HOSTS = ["tiktok.com", "douyin.com", "musical.ly"];
 
 const MAX_MANUAL_REDIRECTS = 5;
 
-async function resolveVideoId(rawUrl) {
+async function cacheAndReturn(env, shortCode, videoId) {
+  if (shortCode) kvSetShortId(env, shortCode, videoId); // fire-and-forget
+  return videoId;
+}
+
+async function resolveVideoId(rawUrl, env) {
   const url = rawUrl.trim();
 
   // Fast path — video ID already in URL
   const direct = extractIdFromString(url);
   if (direct) return direct;
 
+  // KV cache — short URL already resolved before?
+  const shortCode = extractShortCode(url);
+  if (shortCode) {
+    const cached = await kvGetShortId(env, shortCode);
+    if (cached) return cached;
+  }
+
   // ── Fast path for short links (vm./vt.tiktok.com) ───────────────────────────
   // Follow redirects ONE HOP AT A TIME, reading only the `Location` header —
   // never download the actual HTML page. TikTok's short-link redirect puts
   // the numeric video ID straight in the Location header on the very first
-  // hop, so this is a single lightweight round-trip (~0.3-0.5s) instead of a
-  // full page fetch + HTML parse (~3s+, and more likely to hit bot checks
-  // since it looks like a real page visit rather than a plain redirect check).
+  // hop (also in share_item_id query param), so this is a single lightweight
+  // round-trip (~0.3-0.5s) instead of a full page fetch + HTML parse.
   let current = url;
   for (let hop = 0; hop < MAX_MANUAL_REDIRECTS; hop++) {
     let res;
@@ -463,15 +497,15 @@ async function resolveVideoId(rawUrl) {
     // Redirect hop — check the Location header for the ID before following it
     if (res.status >= 300 && res.status < 400 && location) {
       const resolved = new URL(location, current).toString();
-      const fromLocation = extractIdFromString(resolved);
-      if (fromLocation) return fromLocation;
+      const fromLocation = extractIdFromString(resolved); // checks both /video/ID and share_item_id=ID
+      if (fromLocation) return cacheAndReturn(env, shortCode, fromLocation);
       current = resolved;
       continue;
     }
 
     // Not a redirect (200 or otherwise) — the URL itself may already carry the ID
     const fromCurrent = extractIdFromString(current);
-    if (fromCurrent) return fromCurrent;
+    if (fromCurrent) return cacheAndReturn(env, shortCode, fromCurrent);
     break; // no more redirects and no ID found this way — fall back below
   }
 
@@ -495,24 +529,24 @@ async function resolveVideoId(rawUrl) {
 
   // Check final URL first — fastest, no body read needed
   const fromUrl = extractIdFromString(res.url);
-  if (fromUrl) return fromUrl;
+  if (fromUrl) return cacheAndReturn(env, shortCode, fromUrl);
 
   // Read body and search for video ID in HTML / JSON
   const html = await res.text();
 
   const fromHtml = html.match(/\/video\/(\d{10,20})/);
-  if (fromHtml) return fromHtml[1];
+  if (fromHtml) return cacheAndReturn(env, shortCode, fromHtml[1]);
 
   // Also check canonical / og:url meta tags
   const ogUrl = html.match(/(?:og:url|canonical)[^>]*content="([^"]+)"/);
   if (ogUrl) {
     const fromOg = extractIdFromString(ogUrl[1]);
-    if (fromOg) return fromOg;
+    if (fromOg) return cacheAndReturn(env, shortCode, fromOg);
   }
 
   // Check aweme_id in embedded JSON (TikTok __UNIVERSAL_DATA_FOR_REHYDRATION__)
   const awemeId = html.match(/"aweme_id"\s*:\s*"(\d{10,20})"/);
-  if (awemeId) return awemeId[1];
+  if (awemeId) return cacheAndReturn(env, shortCode, awemeId[1]);
 
   throw new Error("Could not extract video ID. Make sure the link is a valid public TikTok video.");
 }
@@ -866,7 +900,7 @@ function parseAweme(aweme) {
 // ── Step 4: fetchTikTokVideo — cache → API → parse → cache → return ──────────
 
 async function fetchTikTokVideo(tiktokUrl, env, ctx) {
-  const videoId = await resolveVideoId(tiktokUrl);
+  const videoId = await resolveVideoId(tiktokUrl, env);
 
   // Both meta and url now live in Cloudflare KV — globally replicated.
   // Once ANY PoP scrapes a video, every other PoP worldwide sees the same
@@ -1229,7 +1263,7 @@ async function handleRequest(request, env, ctx) {
       }
       const tiktokUrl = validateTikTokUrl(body.url);
       if (!tiktokUrl) return err("Invalid TikTok URL", 400, cors);
-      const videoId = await resolveVideoId(tiktokUrl);
+      const videoId = await resolveVideoId(tiktokUrl, env);
       let data;
       try { const result = await callAndroidAPI(videoId); data = result.data; } catch (e) { return err(e.message, 422, cors); }
       const aweme = data?.aweme_details?.[0];
