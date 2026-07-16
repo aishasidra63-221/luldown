@@ -456,8 +456,8 @@ function buildGorgon(queryString, bodyString, cookieString) {
 // ── Step 1: Resolve video ID from any TikTok URL ─────────────────────────────
 
 function extractIdFromString(s) {
-  // Path-based: /video/1234567890
-  const m = s.match(/\/video\/(\d{10,20})/);
+  // Path-based: /video/1234567890  OR  /photo/1234567890 (slideshow posts)
+  const m = s.match(/\/(?:video|photo)\/(\d{10,20})/);
   if (m) return m[1];
   // Query param: share_item_id=1234567890 (present in TikTok short-link Location headers)
   try {
@@ -572,7 +572,7 @@ async function resolveVideoId(rawUrl, env) {
   // Read body and search for video ID in HTML / JSON
   const html = await res.text();
 
-  const fromHtml = html.match(/\/video\/(\d{10,20})/);
+  const fromHtml = html.match(/\/(?:video|photo)\/(\d{10,20})/);
   if (fromHtml) return cacheAndReturn(env, shortCode, fromHtml[1]);
 
   // Also check canonical / og:url meta tags
@@ -872,8 +872,11 @@ function parseAweme(aweme) {
   if (imgPost) {
     for (const img of (imgPost.images || [])) {
       const u = firstUrl(
-        (img.display_image   || img.displayImage   || {}).url_list ||
-        (img.display_image   || img.displayImage   || {}).urlList  || [],
+        (img.display_image   || img.displayImage   || {}).url_list  ||
+        (img.display_image   || img.displayImage   || {}).urlList   ||
+        (img.thumbnail       || {}).url_list                        ||
+        (img.thumbnail       || {}).urlList                         ||
+        (img.ownerWatermarkImage || {}).urlList                     || [],
       );
       if (u) images.push(u);
     }
