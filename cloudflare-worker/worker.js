@@ -379,38 +379,76 @@ function md5(data /* Uint8Array */) {
 }
 
 // ── X-Gorgon + X-Khronos signing ─────────────────────────────────────────────
-// Reverse-engineered TikTok request signing. Without valid X-Gorgon, TikTok
-// returns HTTP 200 but Content-Length: 0 (empty body — bot detected).
+// Reverse-engineered TikTok request signing — v0408 algorithm.
+// TikTok updated their signing from v0404 to v0408; old key caused status 2053.
 //
-// Algorithm (as documented by the reverse-engineering community):
-//   1. MD5(query_string_bytes + body_bytes) → 16 raw bytes
-//   2. XOR each byte with TikTok's known 16-byte key
-//   3. X-Gorgon = "0404b0d300000000" + xored_hex(32) + timestamp_hex(8)
-//   4. X-Khronos = unix timestamp as decimal string
-function buildGorgon(queryString, bodyString) {
+// Algorithm (v0408):
+//   1. MD5(url), MD5(body), MD5(cookie) separately → three 32-char hex digests
+//   2. Concat: url_md5 + data_md5 + cookie_md5 + 32 zeros → 128-char hex string
+//   3. Extract 12 bytes from positions [0:8], [32:40], [64:72]
+//   4. Append fixed marker bytes [0x0, 0x6, 0xB, 0x1C] + 4 timestamp bytes → 20 bytes
+//   5. XOR with 20-byte key, then apply RBIT + nibble-swap transform per byte
+//   6. X-Gorgon = "0408b0d30000" + result_hex(40)
+//   7. X-Khronos = unix timestamp as decimal string
+function buildGorgon(queryString, bodyString, cookieString) {
   const ts  = Math.floor(Date.now() / 1000);
   const enc = new TextEncoder();
 
-  // Step 1 — MD5(params + body)
-  const qsBytes   = enc.encode(queryString);
-  const bodyBytes = enc.encode(bodyString || "");
-  const combined  = new Uint8Array(qsBytes.length + bodyBytes.length);
-  combined.set(qsBytes);
-  combined.set(bodyBytes, qsBytes.length);
-  const hash = md5(combined); // 16 bytes
+  // Helper: md5 raw bytes → lowercase hex string
+  function md5Hex(bytes) {
+    return Array.from(md5(bytes)).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
 
-  // Step 2 — XOR with TikTok's known key
-  const KEY   = [0x72,0x47,0x62,0x4B,0x72,0x53,0x77,0x72,
-                 0x4D,0x4E,0x78,0x5A,0x79,0x71,0x6B,0x66];
-  const xored = Array.from(hash).map((b, i) => b ^ KEY[i]);
+  // Step 1 — MD5 each component separately
+  const urlMd5    = md5Hex(enc.encode(queryString  || ""));
+  const dataMd5   = bodyString   ? md5Hex(enc.encode(bodyString))   : "0".repeat(32);
+  const cookieMd5 = cookieString ? md5Hex(enc.encode(cookieString)) : "0".repeat(32);
 
-  // Step 3 — assemble header value
-  const xoredHex = xored.map(b => b.toString(16).padStart(2,"0")).join("");
-  const tsHex    = ts.toString(16).padStart(8, "0");
-  const gorgon   = `0404b0d300000000${xoredHex}${tsHex}`;
+  // Step 2 — 128-char hex string
+  const gorgonHex = urlMd5 + dataMd5 + cookieMd5 + "0".repeat(32);
 
+  // Step 3 — extract 12 bytes from offsets 0, 32, 64 (8 hex chars = 4 bytes each)
+  const paramList = [];
+  for (let i = 0; i < 12; i += 4) {
+    const chunk = gorgonHex.slice(8 * i, 8 * (i + 1));
+    for (let j = 0; j < 4; j++) {
+      paramList.push(parseInt(chunk.slice(j * 2, (j + 1) * 2), 16));
+    }
+  }
+
+  // Step 4 — fixed marker + timestamp (total 20 bytes)
+  paramList.push(0x0, 0x6, 0xB, 0x1C);
+  paramList.push((ts >>> 24) & 0xFF, (ts >>> 16) & 0xFF, (ts >>> 8) & 0xFF, ts & 0xFF);
+
+  // Step 5 — XOR with 20-byte key
+  const KEY = [0xDF,0x77,0xB9,0x40,0xB9,0x9B,0x84,0x83,
+               0xD1,0xB9,0xCB,0xD1,0xF7,0xC2,0xB9,0x85,
+               0xC3,0xD0,0xFB,0xC3];
+  const eorList = paramList.map((a, i) => a ^ KEY[i]);
+
+  // Step 5b — RBIT + nibble-swap transform
+  const LEN = 0x14; // 20
+  function rbit(n) {
+    let r = 0;
+    for (let i = 0; i < 8; i++) r = (r << 1) | ((n >> i) & 1);
+    return r & 0xFF;
+  }
+  function swapNibbles(n) {
+    const h = n.toString(16).padStart(2, "0");
+    return parseInt(h[1] + h[0], 16);
+  }
+  for (let i = 0; i < LEN; i++) {
+    const C = swapNibbles(eorList[i]);
+    const D = eorList[(i + 1) % LEN];
+    const E = C ^ D;
+    const F = rbit(E);
+    eorList[i] = ((F ^ 0xFFFFFFFF) ^ LEN) & 0xFF;
+  }
+
+  // Step 6 — assemble header
+  const result = eorList.map(b => b.toString(16).padStart(2, "0")).join("");
   return {
-    "X-Gorgon":  gorgon,
+    "X-Gorgon":  `0408b0d30000${result}`,
     "X-Khronos": String(ts),
   };
 }
@@ -729,7 +767,8 @@ async function callAndroidAPI(videoId, phone = null) {
 
     try {
       const bodyStr  = body.toString();
-      const gorgon   = buildGorgon(qs, bodyStr);
+      const cookieStr = `odin_tt=${odinToken}`;
+      const gorgon   = buildGorgon(qs, bodyStr, cookieStr);
       const response = await fetch(endpoint, {
         method:  "POST",
         headers: {
