@@ -296,18 +296,20 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                 {fmts.map(cfg => {
                   const isActive = activeDownload === cfg.format;
                   const busy = !!activeDownload;
+                  const mp3Unavailable = cfg.format === "mp3" && !info?.download_urls?.mp3;
                   return (
                     <button
                       key={cfg.format}
-                      onClick={() => handleDownload(cfg.format)}
-                      disabled={busy}
+                      onClick={() => !mp3Unavailable && handleDownload(cfg.format)}
+                      disabled={busy || mp3Unavailable}
+                      title={mp3Unavailable ? "Audio not available for this video" : undefined}
                       style={{
                         display:"flex", alignItems:"center", gap:0,
                         borderRadius:13, overflow:"hidden",
                         background: cfg.btnBg,
                         border:"none", width:"100%", textAlign:"left",
-                        opacity: busy && !isActive ? 0.5 : 1,
-                        cursor: busy ? "default" : "pointer",
+                        opacity: (busy && !isActive) || mp3Unavailable ? 0.4 : 1,
+                        cursor: busy || mp3Unavailable ? "not-allowed" : "pointer",
                         transition:"opacity 0.18s, filter 0.18s",
                         filter: busy ? "none" : "brightness(1)",
                         boxShadow: `0 4px 16px ${cfg.glowColor}`,

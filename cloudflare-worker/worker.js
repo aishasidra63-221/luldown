@@ -1374,7 +1374,7 @@ async function handleRequest(request, env, ctx) {
         const respHeaders = new Headers({
           ...cors,
           "Content-Disposition": `attachment; filename="${filename}"`,
-          "Content-Type":        upstream.headers.get("Content-Type") || "video/mp4",
+          "Content-Type":        filename.endsWith(".mp3") ? "audio/mpeg" : (upstream.headers.get("Content-Type") || "video/mp4"),
           "Cache-Control":       "no-store",
         });
         const cl = upstream.headers.get("Content-Length");
@@ -1404,7 +1404,7 @@ async function handleRequest(request, env, ctx) {
       const respHeaders2 = new Headers({
         ...cors,
         "Content-Disposition": `attachment; filename="${filename}"`,
-        "Content-Type":        upstream.headers.get("Content-Type") || "video/mp4",
+        "Content-Type":        filename.endsWith(".mp3") ? "audio/mpeg" : (upstream.headers.get("Content-Type") || "video/mp4"),
         "Cache-Control":       "no-store",
       });
       const cl2 = upstream.headers.get("Content-Length");
@@ -1456,7 +1456,12 @@ async function handleRequest(request, env, ctx) {
         cdnUrl = p.audioUrl; filename = "luldown_audio"; ext = "mp3"; mediaType = "audio/mpeg";
       }
 
-      if (!cdnUrl) return err("Download URL not available. The video may be private or region-restricted.", 422, cors);
+      if (!cdnUrl) return err(
+        format === "mp3"
+          ? "Audio not available for this video. The background music may be restricted in your region. Try downloading the video instead."
+          : "Download URL not available. The video may be private or region-restricted.",
+        422, cors
+      );
 
       return json({ success: true, cdn_url: cdnUrl, filename: `${filename}.${ext}`, media_type: mediaType, title: p.title, author: p.username, format }, 200, cors);
     }
