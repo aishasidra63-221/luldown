@@ -151,15 +151,30 @@ function _addHistoryEntry(entry: HistoryItem) {
 // Worker /api/proxy streams the TikTok CDN file with proper Referer headers.
 // Browser never touches TikTok CDN directly → no "Access Denied".
 
+function _sanitizeFilename(title: string): string {
+  return title
+    .replace(/[^\w\s-]/g, "")   // keep letters, digits, spaces, hyphens
+    .trim()
+    .replace(/\s+/g, "_")        // spaces → underscores
+    .slice(0, 60)                 // max 60 chars
+    || "luldown";                 // fallback if title is blank after sanitize
+}
+
 async function _cdnDownload(cdnUrl: string, filename: string): Promise<void> {
   // Route through Worker proxy so TikTok CDN doesn't block the request
   const proxyUrl =
     `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
 
-  // Navigate to proxy URL — browser sees Content-Disposition: attachment and
-  // saves the file. Using location.href (not <a download>) so the browser's
-  // native loading indicator fires while the stream is in flight.
-  window.location.href = proxyUrl;
+  // Use a hidden <a> click instead of window.location.href so:
+  // 1. Page does not navigate — multiple downloads (photos) can fire sequentially
+  // 2. Browser still shows native download progress via Content-Disposition: attachment
+  const a = document.createElement("a");
+  a.href     = proxyUrl;
+  a.download = filename;
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -229,9 +244,10 @@ export async function downloadVideo(
 
   if (cachedCdnUrl) {
     cdnUrl   = cachedCdnUrl;
-    filename = FORMAT_FILENAME[format];
     title    = videoMeta?.title  || "TikTok Video";
     author   = videoMeta?.author || "Unknown";
+    const ext = format === "mp3" ? "mp3" : "mp4";
+    filename = `${_sanitizeFilename(title)}_${format}.${ext}`;
   } else {
     // Fallback — call /api/download (e.g. if info was fetched by older code)
     const token = await getToken();

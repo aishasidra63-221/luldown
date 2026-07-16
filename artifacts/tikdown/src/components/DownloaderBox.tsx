@@ -112,11 +112,6 @@ export default function DownloaderBox({ highlightFormat }: Props) {
 
   const handlePaste = async () => {
     try { const t = await navigator.clipboard.readText(); if (t) { setUrl(t); return; } } catch {}
-    const ta = document.createElement("textarea");
-    ta.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0";
-    document.body.appendChild(ta); ta.focus();
-    try { const ok = document.execCommand("paste"); if (ok && ta.value) { setUrl(ta.value); return; } }
-    catch {} finally { document.body.removeChild(ta); }
     inputRef.current?.focus();
   };
 
