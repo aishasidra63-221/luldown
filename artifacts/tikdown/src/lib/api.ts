@@ -49,11 +49,12 @@ export type DownloadFormat = "mp4_720" | "mp4_1080" | "mp3" | "thumbnail";
 // cuts /api/token traffic without weakening the bot-protection (a token is
 // still required and still time-limited).
 
-const TOKEN_CACHE_MS = (6 * 60 - 10) * 60 * 1000; // 5h50m in ms
+const TOKEN_CACHE_MS = (6 * 60 - 10) * 60 * 1000; // 5h50m fallback (if server doesn't send ttl_seconds)
 const TOKEN_STORAGE_KEY = "luldown_token_cache";
 
 let _cachedToken    = "";
 let _tokenFetchedAt = 0;
+let _tokenCacheMs   = TOKEN_CACHE_MS; // updated per-fetch from server's ttl_seconds
 let _tokenFetching: Promise<string> | null = null;
 
 function _loadTokenFromStorage(): void {
@@ -64,15 +65,17 @@ function _loadTokenFromStorage(): void {
     if (parsed && typeof parsed.token === "string" && typeof parsed.fetchedAt === "number") {
       _cachedToken    = parsed.token;
       _tokenFetchedAt = parsed.fetchedAt;
+      // Restore the server-supplied TTL so expiry is correct across reloads
+      if (typeof parsed.cacheMs === "number") _tokenCacheMs = parsed.cacheMs;
     }
   } catch {
     // Corrupt/inaccessible storage — ignore, will just fetch a fresh token
   }
 }
 
-function _saveTokenToStorage(token: string, fetchedAt: number): void {
+function _saveTokenToStorage(token: string, fetchedAt: number, cacheMs: number): void {
   try {
-    localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify({ token, fetchedAt }));
+    localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify({ token, fetchedAt, cacheMs }));
   } catch {
     // Storage full/unavailable (e.g. private mode) — fine, memory cache still works
   }
@@ -84,8 +87,8 @@ _loadTokenFromStorage();
 async function getToken(): Promise<string> {
   const now = Date.now();
 
-  // Return cached token if still fresh (works across reloads via localStorage)
-  if (_cachedToken && now - _tokenFetchedAt < TOKEN_CACHE_MS) {
+  // Return cached token if still fresh — uses server-supplied TTL, not a hardcoded value
+  if (_cachedToken && now - _tokenFetchedAt < _tokenCacheMs) {
     return _cachedToken;
   }
 
@@ -99,7 +102,13 @@ async function getToken(): Promise<string> {
         const data = await res.json();
         _cachedToken    = data.token || "";
         _tokenFetchedAt = Date.now();
-        _saveTokenToStorage(_cachedToken, _tokenFetchedAt);
+        // Use server's remaining window time (ttl_seconds) minus 60s buffer so
+        // we refresh before the token expires, not after. Falls back to 5h50m
+        // if server doesn't send ttl_seconds (old Worker / dev mode).
+        _tokenCacheMs = data.ttl_seconds
+          ? Math.max(60_000, (data.ttl_seconds - 60) * 1000)
+          : TOKEN_CACHE_MS;
+        _saveTokenToStorage(_cachedToken, _tokenFetchedAt, _tokenCacheMs);
       }
     } catch {
       // Network error — use empty token (Worker will allow if secret not set)

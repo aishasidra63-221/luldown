@@ -1202,7 +1202,9 @@ async function handleRequest(request, env, ctx) {
       const now      = Math.floor(Date.now() / 1000);
       const maxAge   = Math.max(60, TOKEN_PERIOD_SECONDS - (now % TOKEN_PERIOD_SECONDS));
       const token    = await generateToken(secret);
-      const response = json({ token, ttl_seconds: TOKEN_TTL_SECONDS }, 200, {
+      // Send remaining window time (not full TTL) so the client knows exactly
+      // how long this token is valid and caches it for the right duration.
+      const response = json({ token, ttl_seconds: maxAge }, 200, {
         ...cors,
         "Cache-Control": `public, max-age=${maxAge}`,
       });
