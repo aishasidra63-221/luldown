@@ -1211,7 +1211,7 @@ async function checkRateLimit(env, ip) {
   try {
     const raw  = await env.META_KV.get(key);
     const count = raw ? parseInt(raw, 10) : 0;
-    if (count >= 20) return false; // blocked
+    if (count >= 60) return false; // blocked
     await env.META_KV.put(key, String(count + 1), { expirationTtl: 60 });
     return true;
   } catch {

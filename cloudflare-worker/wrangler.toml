@@ -37,7 +37,7 @@ crons = ["*/10 * * * *"]
 name = "RATE_LIMITER"
 type = "ratelimit"
 namespace_id = "1001"
-simple = { limit = 20, period = 60 }
+simple = { limit = 60, period = 60 }
 
 # ── KV Namespace — globally-replicated metadata cache (title/author/avatar) ──
 # Unlike the Cache API (per-datacenter), KV replicates worldwide, so once any
