@@ -250,41 +250,159 @@ export default function DownloaderBox({ highlightFormat }: Props) {
 
             {/* ── Download options ── */}
             {isPhoto ? (
-              <div style={{ padding:"12px" }}>
-                <p style={{ textAlign:"center", fontSize:11, fontWeight:700, letterSpacing:"0.06em", color:"rgba(255,255,255,0.4)", marginBottom:10 }}>
-                  📸 Photo Post — {info.images!.length} images
+              <div style={{ padding:"12px", display:"flex", flexDirection:"column", gap:8 }}>
+
+                {/* Label */}
+                <p style={{ textAlign:"center", fontSize:11, fontWeight:700, letterSpacing:"0.07em", color:"rgba(255,255,255,0.35)", margin:0 }}>
+                  📸 PHOTO SLIDESHOW &nbsp;·&nbsp; {info.images!.length} SLIDES
                 </p>
-                {info.images!.length > 1 && (
-                  <button
-                    onClick={() => info.images!.forEach((u,i) => setTimeout(() => handlePhotoDownload(u,i), i*400))}
-                    disabled={photoDownloading !== null}
-                    style={{
-                      width:"100%", padding:12, borderRadius:12, marginBottom:10, fontSize:14,
-                      border:"none", background:"linear-gradient(135deg,#7c3aed,#6d28d9)",
-                      color:"#fff", fontWeight:700, cursor:"pointer",
-                      display:"flex", alignItems:"center", justifyContent:"center", gap:8,
-                    }}>
-                    <Download size={15} /> Save All {info.images!.length} Photos
-                  </button>
-                )}
-                <div style={{ display:"grid", gridTemplateColumns: info.images!.length === 1 ? "1fr" : "1fr 1fr", gap:8 }}>
+
+                {/* ── Horizontal slide strip ── */}
+                <div style={{
+                  display:"flex", gap:8, overflowX:"auto", paddingBottom:4,
+                  scrollbarWidth:"none",
+                }}>
                   {info.images!.map((imgUrl, i) => (
-                    <div key={i} style={{ borderRadius:10, overflow:"hidden", border:"1px solid rgba(255,255,255,0.1)" }}>
-                      <div style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden" }}>
-                        <img src={imgUrl} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} loading="lazy" />
-                        <div style={{ position:"absolute", top:6, right:6, background:"rgba(0,0,0,0.65)", color:"#fff", fontSize:10, fontWeight:700, padding:"2px 6px", borderRadius:6 }}>
-                          {i+1}/{info.images!.length}
-                        </div>
+                    <div
+                      key={i}
+                      onClick={() => handlePhotoDownload(imgUrl, i)}
+                      title={`Save slide ${i+1}`}
+                      style={{
+                        position:"relative", flexShrink:0,
+                        width:80, height:108, borderRadius:10, overflow:"hidden",
+                        border:"1px solid rgba(255,255,255,0.12)",
+                        cursor: photoDownloading !== null ? "wait" : "pointer",
+                        boxShadow:"0 2px 10px rgba(0,0,0,0.4)",
+                      }}
+                    >
+                      <img
+                        src={imgUrl} alt=""
+                        style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}
+                        loading="lazy"
+                      />
+                      {/* slide number badge */}
+                      <div style={{
+                        position:"absolute", top:5, left:5,
+                        background:"rgba(0,0,0,0.65)", backdropFilter:"blur(4px)",
+                        color:"#fff", fontSize:9, fontWeight:800,
+                        padding:"2px 5px", borderRadius:5, lineHeight:1.4,
+                      }}>
+                        {i+1}
                       </div>
-                      <button
-                        onClick={() => handlePhotoDownload(imgUrl, i)}
-                        disabled={photoDownloading !== null}
-                        style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:5, padding:"9px 0", fontSize:12, fontWeight:600, color:"#a78bfa", background:"transparent", border:"none", borderTop:"1px solid rgba(255,255,255,0.08)", cursor:"pointer" }}>
-                        {photoDownloading === i ? <><Loader2 size={12} className="animate-spin"/> Saving…</> : <><Download size={12}/> Save</>}
-                      </button>
+                      {/* download icon overlay */}
+                      <div style={{
+                        position:"absolute", inset:0,
+                        background:"rgba(124,58,237,0.0)",
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        transition:"background 0.15s",
+                      }}>
+                        {photoDownloading === i
+                          ? <Loader2 size={18} color="#fff" className="animate-spin" />
+                          : null}
+                      </div>
                     </div>
                   ))}
                 </div>
+
+                {/* ── Download All Slides ── */}
+                <button
+                  onClick={() => info.images!.forEach((u,i) => setTimeout(() => handlePhotoDownload(u,i), i * 400))}
+                  disabled={photoDownloading !== null}
+                  style={{
+                    display:"flex", alignItems:"center", gap:0,
+                    borderRadius:13, overflow:"hidden",
+                    background:"linear-gradient(135deg,#7c3aed,#6d28d9)",
+                    border:"none", width:"100%", textAlign:"left",
+                    opacity: photoDownloading !== null ? 0.5 : 1,
+                    cursor: photoDownloading !== null ? "not-allowed" : "pointer",
+                    boxShadow:"0 4px 16px rgba(124,58,237,0.4)",
+                  }}
+                >
+                  <div style={{ width:54, minWidth:54, alignSelf:"stretch", background:"rgba(0,0,0,0.18)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                    <Image size={19} color="#fff" strokeWidth={2.2} />
+                  </div>
+                  <div style={{ flex:1, padding:"14px 14px" }}>
+                    <p style={{ margin:0, fontSize:13.5, fontWeight:700, color:"#fff", lineHeight:1.3 }}>
+                      Download All {info.images!.length} Slides
+                    </p>
+                  </div>
+                  <div style={{ paddingRight:14, flexShrink:0 }}>
+                    <div style={{ width:32, height:32, borderRadius:"50%", background:"rgba(0,0,0,0.22)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      <Download size={15} color="#fff" strokeWidth={2.4} />
+                    </div>
+                  </div>
+                </button>
+
+                {/* ── Download as Video ── */}
+                {info.download_urls?.mp4_1080 || info.download_urls?.mp4_720 ? (
+                  <button
+                    onClick={() => handleDownload("mp4_1080")}
+                    disabled={!!activeDownload}
+                    style={{
+                      display:"flex", alignItems:"center", gap:0,
+                      borderRadius:13, overflow:"hidden",
+                      background:"#2563eb",
+                      border:"none", width:"100%", textAlign:"left",
+                      opacity: activeDownload && activeDownload !== "mp4_1080" ? 0.4 : 1,
+                      cursor: activeDownload ? "not-allowed" : "pointer",
+                      boxShadow:"0 4px 16px rgba(37,99,235,0.35)",
+                    }}
+                  >
+                    <div style={{ width:54, minWidth:54, alignSelf:"stretch", background:"rgba(0,0,0,0.18)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                      {activeDownload === "mp4_1080"
+                        ? <Loader2 size={20} color="#fff" className="animate-spin" />
+                        : <Video size={20} color="#fff" strokeWidth={2.2} />}
+                    </div>
+                    <div style={{ flex:1, padding:"14px 14px" }}>
+                      <p style={{ margin:0, fontSize:13.5, fontWeight:700, color:"#fff", lineHeight:1.3 }}>
+                        {activeDownload === "mp4_1080" ? "Downloading…" : "Download as Video"}
+                      </p>
+                    </div>
+                    <div style={{ paddingRight:14, flexShrink:0 }}>
+                      {activeDownload !== "mp4_1080" && (
+                        <div style={{ width:32, height:32, borderRadius:"50%", background:"rgba(0,0,0,0.22)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                          <Download size={15} color="#fff" strokeWidth={2.4} />
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                ) : null}
+
+                {/* ── Download MP3 ── */}
+                {info.download_urls?.mp3 ? (
+                  <button
+                    onClick={() => handleDownload("mp3")}
+                    disabled={!!activeDownload}
+                    style={{
+                      display:"flex", alignItems:"center", gap:0,
+                      borderRadius:13, overflow:"hidden",
+                      background:"#16a34a",
+                      border:"none", width:"100%", textAlign:"left",
+                      opacity: activeDownload && activeDownload !== "mp3" ? 0.4 : 1,
+                      cursor: activeDownload ? "not-allowed" : "pointer",
+                      boxShadow:"0 4px 16px rgba(22,163,74,0.35)",
+                    }}
+                  >
+                    <div style={{ width:54, minWidth:54, alignSelf:"stretch", background:"rgba(0,0,0,0.18)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                      {activeDownload === "mp3"
+                        ? <Loader2 size={20} color="#fff" className="animate-spin" />
+                        : <Music size={19} color="#fff" strokeWidth={2.2} />}
+                    </div>
+                    <div style={{ flex:1, padding:"14px 14px" }}>
+                      <p style={{ margin:0, fontSize:13.5, fontWeight:700, color:"#fff", lineHeight:1.3 }}>
+                        {activeDownload === "mp3" ? "Downloading…" : "Download MP3"}
+                      </p>
+                    </div>
+                    <div style={{ paddingRight:14, flexShrink:0 }}>
+                      {activeDownload !== "mp3" && (
+                        <div style={{ width:32, height:32, borderRadius:"50%", background:"rgba(0,0,0,0.22)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                          <Download size={15} color="#fff" strokeWidth={2.4} />
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                ) : null}
+
               </div>
             ) : (
               <div style={{ padding:"12px 12px 14px", display:"flex", flexDirection:"column", gap:7 }}>
