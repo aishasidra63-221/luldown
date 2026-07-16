@@ -127,10 +127,10 @@ async function kvSetUrl(env, videoId, value) {
 // penalises the phone; only status_code -1/8 (device block) counts as a
 // real phone failure and retires it after 3 strikes, replacing with a fresh phone.
 
-const POOL_SIZE     = 500;
+const POOL_SIZE     = 2000;
 const POOL_KV_KEY   = "pool:phones";
 const PHONE_YEAR    = 365 * 24 * 60 * 60; // 1 year in seconds
-const PHONE_GAP_SEC = 60;                  // min seconds between same-phone reuse
+const PHONE_GAP_SEC = 120;                 // min seconds between same-phone reuse
 
 function generatePhone(id) {
   const now     = Math.floor(Date.now() / 1000);
