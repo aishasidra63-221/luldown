@@ -846,8 +846,11 @@ function bestCoverUrl(urlList) {
   if (candidates.length === 0) return "";
   const scored = candidates.map(u => {
     const m = u.match(/[_~](\d{3,4})x(\d{3,4})/);
-    return { u, area: m ? parseInt(m[1]) * parseInt(m[2]) : 0 };
-  }).sort((a, b) => b.area - a.area);
+    const area = m ? parseInt(m[1]) * parseInt(m[2]) : 0;
+    // Prefer URLs with "origin" in the path — these are unresized originals
+    const originBonus = /[~_\-.]origin[~_\-./]|origin\.jpeg|origin\.jpg|origin\.webp|-origin$/i.test(u) ? 9_999_999 : 0;
+    return { u, score: area + originBonus };
+  }).sort((a, b) => b.score - a.score);
   return scored[0].u;
 }
 
