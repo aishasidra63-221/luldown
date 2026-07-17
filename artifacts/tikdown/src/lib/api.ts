@@ -186,13 +186,30 @@ export async function fetchVideoInfo(
       recaptcha_token: recaptchaToken ?? null,
     }),
   });
+
+  // Token expired at the 6-hour boundary — silently fetch a fresh one and retry once
+  if (res.status === 401) {
+    _cachedToken    = "";
+    _tokenFetchedAt = 0;
+    const freshToken = await getToken();
+    const retry = await fetch(`${API_BASE}/api/info`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url,
+        token: freshToken,
+        recaptcha_token: recaptchaToken ?? null,
+      }),
+    });
+    if (!retry.ok) {
+      const errData = await retry.json().catch(() => ({ detail: "Failed to fetch info" }));
+      throw new Error(errData.detail || "Failed to fetch video info");
+    }
+    return retry.json();
+  }
+
   if (!res.ok) {
     const errData = await res.json().catch(() => ({ detail: "Failed to fetch info" }));
-    // Token expired mid-session — clear cache so next call gets a fresh one
-    if (res.status === 401) {
-      _cachedToken    = "";
-      _tokenFetchedAt = 0;
-    }
     throw new Error(errData.detail || "Failed to fetch video info");
   }
   return res.json();
