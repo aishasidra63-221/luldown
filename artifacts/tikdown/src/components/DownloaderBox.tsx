@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from "react";
-import { fetchVideoInfo, downloadVideo, downloadPhoto, VideoInfo, DownloadFormat } from "@/lib/api";
+import { fetchVideoInfo, downloadVideo, downloadPhoto, VideoInfo, DownloadFormat, isProfileUrl, fetchProfileInfo, ProfileInfo } from "@/lib/api";
+import ProfileResults from "@/components/ProfileResults";
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import {
   Music, Clipboard, Download, Image, Video,
@@ -57,7 +58,7 @@ const FMTS: FmtCfg[] = [
 ];
 
 
-type Step = "idle" | "loading-info" | "info-ready" | "error";
+type Step = "idle" | "loading-info" | "info-ready" | "profile-ready" | "error";
 interface Props { highlightFormat?: DownloadFormat; }
 
 export default function DownloaderBox({ highlightFormat }: Props) {
@@ -65,6 +66,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
   const [step, setStep] = useState<Step>("idle");
   const inputRef = useRef<HTMLInputElement>(null);
   const [info, setInfo] = useState<VideoInfo | null>(null);
+  const [profileInfo, setProfileInfo] = useState<ProfileInfo | null>(null);
   const [error, setError] = useState("");
   const [photoDownloading, setPhotoDownloading] = useState<number | null>(null);
   const { executeRecaptcha } = useGoogleReCaptcha();
@@ -77,13 +79,18 @@ export default function DownloaderBox({ highlightFormat }: Props) {
   const handleFetchUrl = async (fetchUrl: string) => {
     const trimmed = fetchUrl.trim();
     if (!trimmed) return;
-    setStep("loading-info"); setError(""); setInfo(null);
+    setStep("loading-info"); setError(""); setInfo(null); setProfileInfo(null);
     try {
       const token = await getToken("fetch_info");
-      setInfo(await fetchVideoInfo(trimmed, token));
-      setStep("info-ready");
+      if (isProfileUrl(trimmed)) {
+        setProfileInfo(await fetchProfileInfo(trimmed, token));
+        setStep("profile-ready");
+      } else {
+        setInfo(await fetchVideoInfo(trimmed, token));
+        setStep("info-ready");
+      }
     } catch (e: any) {
-      setError(e.message || "Failed to fetch video info");
+      setError(e.message || "Failed to fetch");
       setStep("error");
     }
   };
@@ -113,7 +120,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
     inputRef.current?.focus();
   };
 
-  const reset = () => { setUrl(""); setStep("idle"); setInfo(null); setError(""); };
+  const reset = () => { setUrl(""); setStep("idle"); setInfo(null); setProfileInfo(null); setError(""); };
 
   const isPhoto = info?.is_photo && (info.images?.length ?? 0) > 0;
   const fmts = highlightFormat
@@ -162,6 +169,11 @@ export default function DownloaderBox({ highlightFormat }: Props) {
         <div className="error-box">
           <AlertCircle size={16} style={{ flexShrink:0, marginTop:2 }} /> {error}
         </div>
+      )}
+
+      {/* ══════════ PROFILE RESULT ══════════ */}
+      {step === "profile-ready" && profileInfo && (
+        <ProfileResults profile={profileInfo} />
       )}
 
       {/* ══════════ RESULT CARD ══════════ */}

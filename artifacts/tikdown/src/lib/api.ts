@@ -29,6 +29,21 @@ export interface VideoInfo {
   download_urls?: DownloadUrls;
 }
 
+export interface ProfileVideo {
+  title: string;
+  thumbnail: string;
+  download_urls: DownloadUrls;
+}
+
+export interface ProfileInfo {
+  success: boolean;
+  username: string;
+  display_name: string;
+  avatar: string;
+  follower_count: number;
+  videos: ProfileVideo[];
+}
+
 export interface HistoryItem {
   url: string;
   title: string;
@@ -170,7 +185,63 @@ async function _cdnDownload(cdnUrl: string, filename: string): Promise<void> {
   window.location.href = proxyUrl;
 }
 
+// ─── Profile URL detection ────────────────────────────────────────────────────
+export function isProfileUrl(url: string): boolean {
+  try {
+    const u = new URL(url.trim());
+    const hostname = u.hostname;
+    const allowed  = ["tiktok.com", "douyin.com", "musical.ly"];
+    if (!allowed.some(d => hostname === d || hostname.endsWith("." + d))) return false;
+    // Has @username but is NOT a single video/photo link
+    return /\/@[\w.]+/.test(u.pathname) && !/\/(video|photo)\//.test(u.pathname);
+  } catch { return false; }
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
+
+export async function fetchProfileInfo(
+  url: string,
+  recaptchaToken?: string,
+): Promise<ProfileInfo> {
+  const token = await getToken();
+  const res = await fetch(`${API_BASE}/api/profile`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url, token, recaptcha_token: recaptchaToken ?? null }),
+  });
+
+  if (res.status === 401) {
+    _cachedToken    = "";
+    _tokenFetchedAt = 0;
+    const freshToken = await getToken();
+    const retry = await fetch(`${API_BASE}/api/profile`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, token: freshToken, recaptcha_token: recaptchaToken ?? null }),
+    });
+    if (!retry.ok) {
+      const errData = await retry.json().catch(() => ({ detail: "Failed to fetch profile" }));
+      throw new Error(errData.detail || "Failed to fetch profile");
+    }
+    return retry.json();
+  }
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({ detail: "Failed to fetch profile" }));
+    throw new Error(errData.detail || "Failed to fetch profile");
+  }
+  return res.json();
+}
+
+export async function downloadProfileVideo(
+  cdnUrl: string,
+  title: string,
+  format: "mp4_1080" | "mp4_720" | "mp3",
+): Promise<void> {
+  const ext      = format === "mp3" ? "mp3" : "mp4";
+  const filename = `${_sanitizeFilename(title)}_${format}.${ext}`;
+  await _cdnDownload(cdnUrl, filename);
+}
 
 export async function fetchVideoInfo(
   url: string,

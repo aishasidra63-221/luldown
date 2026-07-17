@@ -830,6 +830,82 @@ async function callAndroidAPI(videoId, phone = null) {
   throw e;
 }
 
+// ── User posts API — same infra as callAndroidAPI, different endpoint ─────────
+async function callUserPostsAPI(username, phone = null) {
+  const body = new URLSearchParams({
+    unique_id:      username,
+    count:          "10",
+    max_cursor:     "0",
+    min_cursor:     "0",
+    retry_type:     "no_retry",
+    request_source: "0",
+  });
+
+  let lastError     = null;
+  let lastErrorType = "network";
+
+  for (const host of TIKTOK_API_ENDPOINTS) {
+    const qs        = buildQueryParams("0", phone);
+    const endpoint  = `https://${host}/aweme/v1/aweme/post/?${qs}`;
+    const odinToken = phone ? phone.odin_tt : randHex(160);
+
+    try {
+      const bodyStr   = body.toString();
+      const cookieStr = `odin_tt=${odinToken}`;
+      const gorgon    = buildGorgon(qs, bodyStr, cookieStr);
+      const response  = await fetch(endpoint, {
+        method:  "POST",
+        headers: {
+          "User-Agent":   phone ? phone.user_agent : randUserAgent(),
+          "X-SS-TC":      "0",
+          "X-Gorgon":     gorgon["X-Gorgon"],
+          "X-Khronos":    gorgon["X-Khronos"],
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Cookie":       `odin_tt=${odinToken}`,
+        },
+        body: bodyStr,
+      });
+
+      if (response.status === 404) {
+        lastError     = new Error(`TikTok API ${host} returned HTTP 404`);
+        lastErrorType = "api_change";
+        continue;
+      }
+      if (!response.ok) {
+        lastError     = new Error(`TikTok API ${host} returned HTTP ${response.status}`);
+        lastErrorType = "network";
+        continue;
+      }
+
+      const data = await response.json();
+      if (data?.status_code === -1 || data?.status_code === 8) {
+        lastError     = new Error(`TikTok API device blocked (status: ${data.status_code})`);
+        lastErrorType = "device_block";
+        continue;
+      }
+      if (data?.status_code === 2048) {
+        lastError     = new Error(`TikTok API rate limited`);
+        lastErrorType = "rate_limit";
+        continue;
+      }
+      if (data?.status_code && data.status_code !== 0) {
+        lastError     = new Error(`TikTok API body status: ${data.status_code}`);
+        lastErrorType = "network";
+        continue;
+      }
+
+      return { data, errorType: "ok" };
+    } catch (e) {
+      lastError     = new Error(`TikTok API ${host} failed: ${e.message}`);
+      lastErrorType = "network";
+    }
+  }
+
+  const e = lastError || new Error("All TikTok API endpoints failed");
+  e.errorType = lastErrorType;
+  throw e;
+}
+
 // ── Step 3: Parse aweme_details from API response ────────────────────────────
 
 function firstUrl(urlList) {
@@ -1451,6 +1527,86 @@ async function handleRequest(request, env, ctx) {
           mp4_720:  p.videoUrl720,
           mp3:      p.audioUrl,
         },
+      }, 200, cors);
+    }
+
+    // POST /api/profile — fetch latest 10 videos from a TikTok profile
+    if (pathname === "/api/profile" && method === "POST") {
+      const originBlockProfile = requireOrigin(request, cors);
+      if (originBlockProfile) return originBlockProfile;
+      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+      if (!await checkRateLimit(env, ip)) return err("Too many requests. Please slow down.", 429, cors);
+
+      let body;
+      try { body = await request.json(); } catch { return err("Invalid JSON", 400, cors); }
+
+      if (secret) {
+        const ok = await validateToken(body.token, secret);
+        if (!ok) return err("Invalid or expired token. Please refresh the page.", 401, cors);
+      }
+
+      if (env.RECAPTCHA_SECRET) {
+        const score = await verifyRecaptcha(body.recaptcha_token, env.RECAPTCHA_SECRET, ip);
+        if (score !== null && score < 0.3) return err("Bot detected. Please try again.", 403, cors);
+      }
+
+      // Extract username from profile URL e.g. tiktok.com/@username
+      const rawProfileUrl = (body.url || "").trim();
+      const usernameMatch = rawProfileUrl.match(/\/@([\w.]+)/);
+      if (!usernameMatch) return err("Invalid TikTok profile URL. Use a link like tiktok.com/@username", 400, cors);
+      const username = usernameMatch[1];
+
+      const pool  = await getOrInitPool(env);
+      const phone = pickPhone(pool);
+
+      let profileData;
+      try {
+        const result = await callUserPostsAPI(username, phone);
+        profileData  = result.data;
+      } catch (e) {
+        await recordPhoneResult(env, pool, phone, e.errorType || "network");
+        return err(`Failed to fetch profile: ${e.message}`, 422, cors);
+      }
+
+      const awemeList = profileData?.aweme_list || [];
+      if (awemeList.length === 0) {
+        await recordPhoneResult(env, pool, phone, "network");
+        return err("No videos found. This account may be private or have no posts.", 404, cors);
+      }
+
+      await recordPhoneResult(env, pool, phone, "ok");
+
+      // Parse videos using existing parseAweme()
+      const videos = awemeList.slice(0, 10).map(aweme => {
+        const p = parseAweme(aweme);
+        return {
+          title:         p.title,
+          thumbnail:     p.thumbUrl,
+          download_urls: {
+            mp4_1080: p.videoUrl,
+            mp4_720:  p.videoUrl720,
+            mp3:      p.audioUrl,
+          },
+        };
+      });
+
+      // Profile info from first video's author field
+      const firstAuthor   = awemeList[0]?.author || {};
+      const outUsername   = firstAuthor.unique_id || firstAuthor.uniqueId || username;
+      const displayName   = firstAuthor.nickname  || outUsername;
+      const avatar        = firstUrl(
+        (firstAuthor.avatar_thumb  || firstAuthor.avatarThumb  || {}).url_list ||
+        (firstAuthor.avatar_medium || firstAuthor.avatarMedium || {}).url_list || [],
+      );
+      const followerCount = firstAuthor.follower_count || firstAuthor.followerCount || 0;
+
+      return json({
+        success:        true,
+        username:       `@${outUsername}`,
+        display_name:   displayName,
+        avatar,
+        follower_count: followerCount,
+        videos,
       }, 200, cors);
     }
 
