@@ -483,89 +483,51 @@ async function resolveVideoId(rawUrl, env) {
     }
   }
 
-  // ── Fast path for short links (vm./vt.tiktok.com) ───────────────────────────
-  // Follow redirects ONE HOP AT A TIME, reading only the `Location` header —
-  // never download the actual HTML page. TikTok's short-link redirect puts
-  // the numeric video ID straight in the Location header on the very first
-  // hop (also in share_item_id query param), so this is a single lightweight
-  // round-trip (~0.3-0.5s) instead of a full page fetch + HTML parse.
-  let current = url;
-  for (let hop = 0; hop < MAX_MANUAL_REDIRECTS; hop++) {
-    let res;
-    try {
-      res = await fetch(current, {
-        redirect: "manual",
-        headers: {
-          "User-Agent":      BROWSER_UA,
-          "Accept-Language": "en-US,en;q=0.9",
-          "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        },
-      });
-    } catch {
-      console.log(`[timing] resolve: hop-${hop}-network-error in ${Date.now()-t0}ms — falling to full-page`);
-      break; // network error — fall through to full-page fallback
-    }
-
-    const location = res.headers.get("Location") || res.headers.get("location");
-
-    // Redirect hop — check the Location header for the ID before following it
-    if (res.status >= 300 && res.status < 400 && location) {
-      const resolved = new URL(location, current).toString();
-      const fromLocation = extractIdFromString(resolved);
-      if (fromLocation) {
-        console.log(`[timing] resolve: hop-${hop}-header in ${Date.now()-t0}ms`);
-        return cacheAndReturn(env, shortCode, fromLocation);
-      }
-      current = resolved;
-      continue;
-    }
-
-    // Not a redirect (200 or otherwise) — the URL itself may already carry the ID
-    const fromCurrent = extractIdFromString(current);
-    if (fromCurrent) {
-      console.log(`[timing] resolve: hop-${hop}-url in ${Date.now()-t0}ms`);
-      return cacheAndReturn(env, shortCode, fromCurrent);
-    }
-    break; // no more redirects and no ID found this way — fall back below
+  // ── Short link resolution — single redirect:follow fetch ────────────────────
+  // One fetch call; Cloudflare's HTTP layer follows all hops internally with
+  // connection reuse — much faster than 5 manual sequential fetch() calls.
+  // Check the final URL first (no body needed in 99% of cases).
+  let resolveRes;
+  try {
+    resolveRes = await fetch(url, {
+      redirect: "follow",
+      headers: {
+        "User-Agent":      BROWSER_UA,
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      },
+    });
+  } catch (e) {
+    console.log(`[timing] resolve: redirect-follow-error in ${Date.now()-t0}ms — ${e.message}`);
+    throw new Error("Could not reach TikTok. Please check the link and try again.");
   }
 
-  // ── Fallback: full page fetch + HTML parse ──────────────────────────────────
-  // Only reached if the header-only redirect chain didn't reveal the ID
-  // (e.g. TikTok changed the redirect shape, or served a page directly).
-  console.log(`[timing] resolve: falling-to-full-page-fetch after ${Date.now()-t0}ms`);
-  const res = await fetch(url, {
-    redirect: "follow",
-    headers: {
-      "User-Agent":      BROWSER_UA,
-      "Accept-Language": "en-US,en;q=0.9",
-      "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    },
-  });
-
   // SSRF guard — final URL after redirects must land on TikTok/Douyin
-  const finalHost = new URL(res.url).hostname;
+  const finalHost = new URL(resolveRes.url).hostname;
   if (!TIKTOK_ALLOWED_HOSTS.some(d => finalHost === d || finalHost.endsWith("." + d))) {
     throw new Error("URL did not resolve to a TikTok domain.");
   }
 
-  // Check final URL first — fastest, no body read needed
-  const fromUrl = extractIdFromString(res.url);
-  if (fromUrl) return cacheAndReturn(env, shortCode, fromUrl);
+  // Check final URL — ID found, no body download needed (fast path)
+  const fromUrl = extractIdFromString(resolveRes.url);
+  if (fromUrl) {
+    console.log(`[timing] resolve: redirect-follow-url in ${Date.now()-t0}ms`);
+    return cacheAndReturn(env, shortCode, fromUrl);
+  }
 
-  // Read body and search for video ID in HTML / JSON
-  const html = await res.text();
+  // Final URL didn't have the ID — read body and parse HTML
+  console.log(`[timing] resolve: falling-to-html-parse after ${Date.now()-t0}ms`);
+  const html = await resolveRes.text();
 
   const fromHtml = html.match(/\/(?:video|photo)\/(\d{10,20})/);
   if (fromHtml) return cacheAndReturn(env, shortCode, fromHtml[1]);
 
-  // Also check canonical / og:url meta tags
   const ogUrl = html.match(/(?:og:url|canonical)[^>]*content="([^"]+)"/);
   if (ogUrl) {
     const fromOg = extractIdFromString(ogUrl[1]);
     if (fromOg) return cacheAndReturn(env, shortCode, fromOg);
   }
 
-  // Check aweme_id in embedded JSON (TikTok __UNIVERSAL_DATA_FOR_REHYDRATION__)
   const awemeId = html.match(/"aweme_id"\s*:\s*"(\d{10,20})"/);
   if (awemeId) return cacheAndReturn(env, shortCode, awemeId[1]);
 
