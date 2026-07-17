@@ -1422,22 +1422,19 @@ async function handleRequest(request, env, ctx) {
         return json({ token: "", ttl_seconds: TOKEN_TTL_SECONDS, dev_mode: true }, 200, cors);
       }
 
-      const cache    = caches.default;
-      const cacheKey = new Request(new URL(request.url).origin + "/api/token", { method: "GET" });
-      const cached   = await cache.match(cacheKey);
-      if (cached) return cached;
-
-      const now      = Math.floor(Date.now() / 1000);
-      const maxAge   = Math.max(60, TOKEN_PERIOD_SECONDS - (now % TOKEN_PERIOD_SECONDS));
-      const token    = await generateToken(secret);
-      // Send remaining window time (not full TTL) so the client knows exactly
-      // how long this token is valid and caches it for the right duration.
-      const response = json({ token, ttl_seconds: maxAge }, 200, {
+      const now    = Math.floor(Date.now() / 1000);
+      const maxAge = Math.max(60, TOKEN_PERIOD_SECONDS - (now % TOKEN_PERIOD_SECONDS));
+      const token  = await generateToken(secret);
+      // Send remaining window time so the client knows exactly how long this
+      // token is valid and caches it in localStorage for the right duration.
+      // Cache-Control: no-store — token must never be cached at Cloudflare edge.
+      // Edge caching meant a fresh deploy kept serving the old token for up to
+      // 6 hours; with no-store every request hits the Worker and gets a fresh
+      // token instantly. Client-side localStorage caching (api.ts) is enough.
+      return json({ token, ttl_seconds: maxAge }, 200, {
         ...cors,
-        "Cache-Control": `public, max-age=${maxAge}`,
+        "Cache-Control": "no-store",
       });
-      ctx.waitUntil(cache.put(cacheKey, response.clone()));
-      return response;
     }
 
     // POST /api/debug — returns raw TikTok API response for a video (no cache)
