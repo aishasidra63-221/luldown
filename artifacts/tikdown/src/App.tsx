@@ -5,7 +5,6 @@ import { GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import HomePage from "@/pages/HomePage";
-import DownloadBar from "@/components/DownloadBar";
 
 const HistoryPage    = lazy(() => import("@/pages/HistoryPage"));
 const PrivacyPage    = lazy(() => import("@/pages/PrivacyPage"));
@@ -107,7 +106,6 @@ function App() {
           </main>
           <Footer />
         </div>
-        <DownloadBar />
       </WouterRouter>
     </QueryClientProvider>
   );

@@ -45,6 +45,8 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "@types/nprogress": "^0.2.3",
+    "nprogress": "^0.2.0",
     "react-google-recaptcha-v3": "^1.11.0"
   }
 }

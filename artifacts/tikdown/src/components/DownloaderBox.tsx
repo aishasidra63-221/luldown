@@ -3,7 +3,7 @@ import { fetchVideoInfo, downloadVideo, downloadPhoto, VideoInfo, DownloadFormat
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import {
   Music, Clipboard, Download, Image, Video,
-  AlertCircle, Loader2, X,
+  AlertCircle, X,
 } from "lucide-react";
 
 /* ── Download row configs ── */
@@ -66,7 +66,6 @@ export default function DownloaderBox({ highlightFormat }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [info, setInfo] = useState<VideoInfo | null>(null);
   const [error, setError] = useState("");
-  const [activeDownload, setActiveDownload] = useState<DownloadFormat | null>(null);
   const [photoDownloading, setPhotoDownloading] = useState<number | null>(null);
   const { executeRecaptcha } = useGoogleReCaptcha();
   const getToken = useCallback(async (action: string) => {
@@ -92,7 +91,6 @@ export default function DownloaderBox({ highlightFormat }: Props) {
   const handleFetch = () => handleFetchUrl(url);
 
   const handleDownload = async (format: DownloadFormat) => {
-    setActiveDownload(format);
     try {
       const token = await getToken("download");
       await downloadVideo(url.trim(), format, {
@@ -101,7 +99,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
       }, token);
     } catch (e: any) {
       setError(e.message || "Download failed"); setStep("error");
-    } finally { setActiveDownload(null); }
+    }
   };
 
   const handlePhotoDownload = async (imgUrl: string, index: number) => {
@@ -296,9 +294,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                         display:"flex", alignItems:"center", justifyContent:"center",
                         transition:"background 0.15s",
                       }}>
-                        {photoDownloading === i
-                          ? <Loader2 size={18} color="#fff" className="animate-spin" />
-                          : null}
+                        {null}
                       </div>
                     </div>
                   ))}
@@ -337,33 +333,27 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                 {info.download_urls?.mp4_1080 || info.download_urls?.mp4_720 ? (
                   <button
                     onClick={() => handleDownload("mp4_1080")}
-                    disabled={!!activeDownload}
                     style={{
                       display:"flex", alignItems:"center", gap:0,
                       borderRadius:13, overflow:"hidden",
                       background:"#2563eb",
                       border:"none", width:"100%", textAlign:"left",
-                      opacity: activeDownload && activeDownload !== "mp4_1080" ? 0.4 : 1,
-                      cursor: activeDownload ? "not-allowed" : "pointer",
+                      cursor:"pointer",
                       boxShadow:"0 4px 16px rgba(37,99,235,0.35)",
                     }}
                   >
                     <div style={{ width:54, minWidth:54, alignSelf:"stretch", background:"rgba(0,0,0,0.18)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                      {activeDownload === "mp4_1080"
-                        ? <Loader2 size={20} color="#fff" className="animate-spin" />
-                        : <Video size={20} color="#fff" strokeWidth={2.2} />}
+                      <Video size={20} color="#fff" strokeWidth={2.2} />
                     </div>
                     <div style={{ flex:1, padding:"14px 14px" }}>
                       <p style={{ margin:0, fontSize:13.5, fontWeight:700, color:"#fff", lineHeight:1.3 }}>
-                        {activeDownload === "mp4_1080" ? "Downloading…" : "Download as Video"}
+                        Download as Video
                       </p>
                     </div>
                     <div style={{ paddingRight:14, flexShrink:0 }}>
-                      {activeDownload !== "mp4_1080" && (
-                        <div style={{ width:32, height:32, borderRadius:"50%", background:"rgba(0,0,0,0.22)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                          <Download size={15} color="#fff" strokeWidth={2.4} />
-                        </div>
-                      )}
+                      <div style={{ width:32, height:32, borderRadius:"50%", background:"rgba(0,0,0,0.22)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                        <Download size={15} color="#fff" strokeWidth={2.4} />
+                      </div>
                     </div>
                   </button>
                 ) : null}
@@ -372,33 +362,27 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                 {info.download_urls?.mp3 ? (
                   <button
                     onClick={() => handleDownload("mp3")}
-                    disabled={!!activeDownload}
                     style={{
                       display:"flex", alignItems:"center", gap:0,
                       borderRadius:13, overflow:"hidden",
                       background:"#16a34a",
                       border:"none", width:"100%", textAlign:"left",
-                      opacity: activeDownload && activeDownload !== "mp3" ? 0.4 : 1,
-                      cursor: activeDownload ? "not-allowed" : "pointer",
+                      cursor:"pointer",
                       boxShadow:"0 4px 16px rgba(22,163,74,0.35)",
                     }}
                   >
                     <div style={{ width:54, minWidth:54, alignSelf:"stretch", background:"rgba(0,0,0,0.18)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                      {activeDownload === "mp3"
-                        ? <Loader2 size={20} color="#fff" className="animate-spin" />
-                        : <Music size={19} color="#fff" strokeWidth={2.2} />}
+                      <Music size={19} color="#fff" strokeWidth={2.2} />
                     </div>
                     <div style={{ flex:1, padding:"14px 14px" }}>
                       <p style={{ margin:0, fontSize:13.5, fontWeight:700, color:"#fff", lineHeight:1.3 }}>
-                        {activeDownload === "mp3" ? "Downloading…" : "Download MP3"}
+                        Download MP3
                       </p>
                     </div>
                     <div style={{ paddingRight:14, flexShrink:0 }}>
-                      {activeDownload !== "mp3" && (
-                        <div style={{ width:32, height:32, borderRadius:"50%", background:"rgba(0,0,0,0.22)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                          <Download size={15} color="#fff" strokeWidth={2.4} />
-                        </div>
-                      )}
+                      <div style={{ width:32, height:32, borderRadius:"50%", background:"rgba(0,0,0,0.22)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                        <Download size={15} color="#fff" strokeWidth={2.4} />
+                      </div>
                     </div>
                   </button>
                 ) : null}
@@ -406,62 +390,48 @@ export default function DownloaderBox({ highlightFormat }: Props) {
               </div>
             ) : (
               <div style={{ padding:"12px 12px 14px", display:"flex", flexDirection:"column", gap:7 }}>
-                {fmts.map(cfg => {
-                  const isActive = activeDownload === cfg.format;
-                  const busy = !!activeDownload;
-                  const mp3Unavailable = false;
-                  return (
-                    <button
-                      key={cfg.format}
-                      onClick={() => !mp3Unavailable && handleDownload(cfg.format)}
-                      disabled={busy || mp3Unavailable}
-                      title={mp3Unavailable ? "Audio not available for this video" : undefined}
-                      style={{
-                        display:"flex", alignItems:"center", gap:0,
-                        borderRadius:13, overflow:"hidden",
-                        background: cfg.btnBg,
-                        border:"none", width:"100%", textAlign:"left",
-                        opacity: (busy && !isActive) || mp3Unavailable ? 0.4 : 1,
-                        cursor: busy || mp3Unavailable ? "not-allowed" : "pointer",
-                        transition:"opacity 0.18s, filter 0.18s",
-                        filter: busy ? "none" : "brightness(1)",
-                        boxShadow: `0 4px 16px ${cfg.glowColor}`,
-                      }}
-                    >
-                      {/* Left icon block — slightly darker shade */}
+                {fmts.map(cfg => (
+                  <button
+                    key={cfg.format}
+                    onClick={() => handleDownload(cfg.format)}
+                    style={{
+                      display:"flex", alignItems:"center", gap:0,
+                      borderRadius:13, overflow:"hidden",
+                      background: cfg.btnBg,
+                      border:"none", width:"100%", textAlign:"left",
+                      cursor:"pointer",
+                      boxShadow: `0 4px 16px ${cfg.glowColor}`,
+                    }}
+                  >
+                    {/* Left icon block */}
+                    <div style={{
+                      width:54, minWidth:54, alignSelf:"stretch",
+                      background:"rgba(0,0,0,0.18)",
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      flexShrink:0,
+                    }}>
+                      {cfg.leftNode}
+                    </div>
+
+                    {/* Label */}
+                    <div style={{ flex:1, padding:"14px 14px" }}>
+                      <p style={{ margin:0, fontSize:13.5, fontWeight:700, color:"#fff", lineHeight:1.3 }}>
+                        {cfg.label}
+                      </p>
+                    </div>
+
+                    {/* Arrow indicator */}
+                    <div style={{ paddingRight:14, flexShrink:0 }}>
                       <div style={{
-                        width:54, minWidth:54, alignSelf:"stretch",
-                        background:"rgba(0,0,0,0.18)",
+                        width:32, height:32, borderRadius:"50%",
+                        background:"rgba(0,0,0,0.22)",
                         display:"flex", alignItems:"center", justifyContent:"center",
-                        flexShrink:0,
                       }}>
-                        {isActive
-                          ? <Loader2 size={20} color="#fff" className="animate-spin" />
-                          : cfg.leftNode}
+                        <Download size={15} color="#fff" strokeWidth={2.4} />
                       </div>
-
-                      {/* Label */}
-                      <div style={{ flex:1, padding:"14px 14px" }}>
-                        <p style={{ margin:0, fontSize:13.5, fontWeight:700, color:"#fff", lineHeight:1.3 }}>
-                          {isActive ? "Downloading…" : cfg.label}
-                        </p>
-                      </div>
-
-                      {/* Arrow indicator */}
-                      <div style={{ paddingRight:14, flexShrink:0 }}>
-                        {!isActive && (
-                          <div style={{
-                            width:32, height:32, borderRadius:"50%",
-                            background:"rgba(0,0,0,0.22)",
-                            display:"flex", alignItems:"center", justifyContent:"center",
-                          }}>
-                            <Download size={15} color="#fff" strokeWidth={2.4} />
-                          </div>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
+                    </div>
+                  </button>
+                ))}
               </div>
             )}
           </div>
