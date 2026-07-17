@@ -160,21 +160,51 @@ function _sanitizeFilename(title: string): string {
     || "luldown";                 // fallback if title is blank after sanitize
 }
 
+function _emitProgress(p: number | null) {
+  window.dispatchEvent(new CustomEvent("luldown:progress", { detail: { progress: p } }));
+}
+
 async function _cdnDownload(cdnUrl: string, filename: string): Promise<void> {
-  // Route through Worker proxy so TikTok CDN doesn't block the request
   const proxyUrl =
     `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
 
-  // Use a hidden <a> click instead of window.location.href so:
-  // 1. Page does not navigate — multiple downloads (photos) can fire sequentially
-  // 2. Browser still shows native download progress via Content-Disposition: attachment
-  const a = document.createElement("a");
-  a.href     = proxyUrl;
-  a.download = filename;
-  a.style.display = "none";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  _emitProgress(0);
+  try {
+    const res = await fetch(proxyUrl);
+    if (!res.ok) throw new Error("Download failed");
+
+    const contentLength = res.headers.get("content-length");
+    const total = contentLength ? parseInt(contentLength, 10) : 0;
+
+    // Stream + track progress
+    const reader = res.body!.getReader();
+    const chunks: Uint8Array[] = [];
+    let received = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.length;
+      _emitProgress(total ? Math.min(99, Math.round((received / total) * 100)) : -1);
+    }
+
+    // Trigger browser save-file dialog
+    const blob = new Blob(chunks);
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10_000);
+
+    _emitProgress(100);
+  } finally {
+    setTimeout(() => _emitProgress(null), 900);
+  }
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
