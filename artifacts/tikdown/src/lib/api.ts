@@ -164,16 +164,10 @@ async function _cdnDownload(cdnUrl: string, filename: string): Promise<void> {
   const proxyUrl =
     `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
 
-  // Let the browser handle the download natively — it shows its own
-  // loading indicator and saves the file without leaving the page,
-  // because the server responds with Content-Disposition: attachment.
-  const a = document.createElement("a");
-  a.href = proxyUrl;
-  a.download = filename;
-  a.style.display = "none";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  // Navigate to the proxy URL — browser shows its native loading bar,
+  // detects Content-Disposition: attachment, saves the file, and keeps
+  // the current page exactly as-is.
+  window.location.href = proxyUrl;
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
