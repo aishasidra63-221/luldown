@@ -379,19 +379,11 @@ function md5(data /* Uint8Array */) {
 }
 
 // ── X-Gorgon + X-Khronos signing ─────────────────────────────────────────────
-// Two versions are maintained. callAndroidAPI tries v8404 first (newer, no
-// encryption layer), then falls back to v0408 (older, XOR+RBIT transform).
-// status 2053 = signature rejected → try the other version.
-//
-// v8404 algorithm (current TikTok requirement, rolling out server-side):
+// v8404 algorithm (current TikTok requirement):
 //   1. MD5(url)[0:4], MD5(body)[0:4], MD5(cookie)[0:4] → 12 bytes
 //   2. Append marker bytes [0x1, 0x1, 0x2, 0x4] + 4 timestamp bytes → 20 bytes
 //   3. No XOR/RBIT/nibble-swap — raw bytes as hex directly
 //   4. X-Gorgon = "8404" + rand_byte_masked + rand_byte + "0000" + result_hex(40)
-//
-// v0408 algorithm (older, still accepted on some servers):
-//   Same 12-byte extraction, marker [0x0, 0x6, 0xB, 0x1C], then XOR+RBIT+nibble-swap.
-//   X-Gorgon = "0408b0d30000" + encrypted_result_hex(40)
 
 function buildGorgon(queryString, bodyString, cookieString) {
   // v8404 — new algorithm (no encryption)
@@ -428,61 +420,6 @@ function buildGorgon(queryString, bodyString, cookieString) {
   };
 }
 
-function buildGorgonV0408(queryString, bodyString, cookieString) {
-  // v0408 — legacy algorithm (XOR + RBIT + nibble-swap)
-  const ts  = Math.floor(Date.now() / 1000);
-  const enc = new TextEncoder();
-
-  function md5Hex(bytes) {
-    return Array.from(md5(bytes)).map(b => b.toString(16).padStart(2, "0")).join("");
-  }
-
-  const urlMd5    = md5Hex(enc.encode(queryString  || ""));
-  const dataMd5   = bodyString   ? md5Hex(enc.encode(bodyString))   : "0".repeat(32);
-  const cookieMd5 = cookieString ? md5Hex(enc.encode(cookieString)) : "0".repeat(32);
-
-  const gorgonHex = urlMd5 + dataMd5 + cookieMd5 + "0".repeat(32);
-
-  const paramList = [];
-  for (let i = 0; i < 12; i += 4) {
-    const chunk = gorgonHex.slice(8 * i, 8 * (i + 1));
-    for (let j = 0; j < 4; j++) {
-      paramList.push(parseInt(chunk.slice(j * 2, (j + 1) * 2), 16));
-    }
-  }
-
-  paramList.push(0x0, 0x6, 0xB, 0x1C);
-  paramList.push((ts >>> 24) & 0xFF, (ts >>> 16) & 0xFF, (ts >>> 8) & 0xFF, ts & 0xFF);
-
-  const KEY = [0xDF,0x77,0xB9,0x40,0xB9,0x9B,0x84,0x83,
-               0xD1,0xB9,0xCB,0xD1,0xF7,0xC2,0xB9,0x85,
-               0xC3,0xD0,0xFB,0xC3];
-  const eorList = paramList.map((a, i) => a ^ KEY[i]);
-
-  const LEN = 0x14;
-  function rbit(n) {
-    let r = 0;
-    for (let i = 0; i < 8; i++) r = (r << 1) | ((n >> i) & 1);
-    return r & 0xFF;
-  }
-  function swapNibbles(n) {
-    const h = n.toString(16).padStart(2, "0");
-    return parseInt(h[1] + h[0], 16);
-  }
-  for (let i = 0; i < LEN; i++) {
-    const C = swapNibbles(eorList[i]);
-    const D = eorList[(i + 1) % LEN];
-    const E = C ^ D;
-    const F = rbit(E);
-    eorList[i] = ((F ^ 0xFFFFFFFF) ^ LEN) & 0xFF;
-  }
-
-  const result = eorList.map(b => b.toString(16).padStart(2, "0")).join("");
-  return {
-    "X-Gorgon":  `0408b0d30000${result}`,
-    "X-Khronos": String(ts),
-  };
-}
 
 // ── Step 1: Resolve video ID from any TikTok URL ─────────────────────────────
 
@@ -527,16 +464,23 @@ async function cacheAndReturn(env, shortCode, videoId) {
 
 async function resolveVideoId(rawUrl, env) {
   const url = rawUrl.trim();
+  const t0  = Date.now();
 
   // Fast path — video ID already in URL
   const direct = extractIdFromString(url);
-  if (direct) return direct;
+  if (direct) {
+    console.log(`[timing] resolve: id-in-url in ${Date.now()-t0}ms`);
+    return direct;
+  }
 
   // KV cache — short URL already resolved before?
   const shortCode = extractShortCode(url);
   if (shortCode) {
     const cached = await kvGetShortId(env, shortCode);
-    if (cached) return cached;
+    if (cached) {
+      console.log(`[timing] resolve: kv-cache-hit in ${Date.now()-t0}ms`);
+      return cached;
+    }
   }
 
   // ── Fast path for short links (vm./vt.tiktok.com) ───────────────────────────
@@ -558,6 +502,7 @@ async function resolveVideoId(rawUrl, env) {
         },
       });
     } catch {
+      console.log(`[timing] resolve: hop-${hop}-network-error in ${Date.now()-t0}ms — falling to full-page`);
       break; // network error — fall through to full-page fallback
     }
 
@@ -566,21 +511,28 @@ async function resolveVideoId(rawUrl, env) {
     // Redirect hop — check the Location header for the ID before following it
     if (res.status >= 300 && res.status < 400 && location) {
       const resolved = new URL(location, current).toString();
-      const fromLocation = extractIdFromString(resolved); // checks both /video/ID and share_item_id=ID
-      if (fromLocation) return cacheAndReturn(env, shortCode, fromLocation);
+      const fromLocation = extractIdFromString(resolved);
+      if (fromLocation) {
+        console.log(`[timing] resolve: hop-${hop}-header in ${Date.now()-t0}ms`);
+        return cacheAndReturn(env, shortCode, fromLocation);
+      }
       current = resolved;
       continue;
     }
 
     // Not a redirect (200 or otherwise) — the URL itself may already carry the ID
     const fromCurrent = extractIdFromString(current);
-    if (fromCurrent) return cacheAndReturn(env, shortCode, fromCurrent);
+    if (fromCurrent) {
+      console.log(`[timing] resolve: hop-${hop}-url in ${Date.now()-t0}ms`);
+      return cacheAndReturn(env, shortCode, fromCurrent);
+    }
     break; // no more redirects and no ID found this way — fall back below
   }
 
   // ── Fallback: full page fetch + HTML parse ──────────────────────────────────
   // Only reached if the header-only redirect chain didn't reveal the ID
   // (e.g. TikTok changed the redirect shape, or served a page directly).
+  console.log(`[timing] resolve: falling-to-full-page-fetch after ${Date.now()-t0}ms`);
   const res = await fetch(url, {
     redirect: "follow",
     headers: {
@@ -791,98 +743,81 @@ async function callAndroidAPI(videoId, phone = null) {
   let lastError     = null;
   let lastErrorType = "network";
 
-  // Try v8404 first (new TikTok requirement, rolling out gradually).
-  // If every endpoint returns 2053 (invalid signature) with v8404,
-  // fall back to v0408 (older algorithm still accepted on some servers).
-  // Any other failure (device_block, rate_limit, network) is endpoint-specific
-  // and handled inside the loop — no need to switch signing versions for those.
-  const sigBuilders = [buildGorgon, buildGorgonV0408];
+  for (const host of TIKTOK_API_ENDPOINTS) {
+    const t0        = Date.now();
+    const qs        = buildQueryParams(videoId, phone);
+    const endpoint  = `https://${host}/aweme/v1/multi/aweme/detail/?${qs}`;
+    const odinToken = phone ? phone.odin_tt : randHex(160);
 
-  for (const buildSig of sigBuilders) {
-    let all2053 = true; // assume all endpoints reject this sig version until proven otherwise
+    try {
+      const bodyStr   = body.toString();
+      const cookieStr = `odin_tt=${odinToken}`;
+      const gorgon    = buildGorgon(qs, bodyStr, cookieStr);
+      const response  = await fetch(endpoint, {
+        method:  "POST",
+        headers: {
+          "User-Agent":   phone ? phone.user_agent : randUserAgent(),
+          "X-SS-TC":      "0",
+          "X-Gorgon":     gorgon["X-Gorgon"],
+          "X-Khronos":    gorgon["X-Khronos"],
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Cookie":       `odin_tt=${odinToken}`,
+        },
+        body: bodyStr,
+      });
 
-    for (const host of TIKTOK_API_ENDPOINTS) {
-      const qs        = buildQueryParams(videoId, phone);
-      const endpoint  = `https://${host}/aweme/v1/multi/aweme/detail/?${qs}`;
-      const odinToken = phone ? phone.odin_tt : randHex(160);
-
-      try {
-        const bodyStr   = body.toString();
-        const cookieStr = `odin_tt=${odinToken}`;
-        const gorgon    = buildSig(qs, bodyStr, cookieStr);
-        const response  = await fetch(endpoint, {
-          method:  "POST",
-          headers: {
-            "User-Agent":   phone ? phone.user_agent : randUserAgent(),
-            "X-SS-TC":      "0",
-            "X-Gorgon":     gorgon["X-Gorgon"],
-            "X-Khronos":    gorgon["X-Khronos"],
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Cookie":       `odin_tt=${odinToken}`,
-          },
-          body: bodyStr,
-        });
-
-        // 404 = TikTok moved the endpoint (API change) — not a phone problem
-        if (response.status === 404) {
-          lastError     = new Error(`TikTok API ${host} returned HTTP 404 — endpoint may have changed`);
-          lastErrorType = "api_change";
-          all2053 = false;
-          continue;
-        }
-
-        if (!response.ok) {
-          lastError     = new Error(`TikTok API ${host} returned HTTP ${response.status}`);
-          lastErrorType = "network";
-          all2053 = false;
-          continue;
-        }
-
-        const data = await response.json();
-
-        // Device flagged / banned by TikTok
-        if (data?.status_code === -1 || data?.status_code === 8) {
-          lastError     = new Error(`TikTok API device blocked (status: ${data.status_code})`);
-          lastErrorType = "device_block";
-          all2053 = false;
-          continue;
-        }
-
-        // Rate limited
-        if (data?.status_code === 2048) {
-          lastError     = new Error(`TikTok API rate limited (status: 2048)`);
-          lastErrorType = "rate_limit";
-          all2053 = false;
-          continue;
-        }
-
-        // Invalid signature — this version may not be accepted by this server
-        if (data?.status_code === 2053) {
-          lastError     = new Error(`TikTok API ${host} body status: 2053`);
-          lastErrorType = "network";
-          continue; // all2053 stays true
-        }
-
-        // Any other non-zero body status
-        if (data?.status_code && data.status_code !== 0) {
-          lastError     = new Error(`TikTok API ${host} body status: ${data.status_code}`);
-          lastErrorType = "network";
-          all2053 = false;
-          continue;
-        }
-
-        return { data, errorType: "ok" }; // ✅ success
-      } catch (e) {
-        lastError     = new Error(`TikTok API ${host} failed: ${e.message}`);
-        lastErrorType = "network";
-        all2053 = false;
+      // 404 = TikTok moved the endpoint (API change) — not a phone problem
+      if (response.status === 404) {
+        console.log(`[timing] tiktok-api ${host} 404 in ${Date.now()-t0}ms`);
+        lastError     = new Error(`TikTok API ${host} returned HTTP 404 — endpoint may have changed`);
+        lastErrorType = "api_change";
+        continue;
       }
-    }
 
-    // If every endpoint rejected this signing version with 2053, try the next version.
-    // If there were other kinds of errors mixed in, no point switching — the signing
-    // version isn't the issue, so fall through and throw lastError.
-    if (!all2053) break;
+      if (!response.ok) {
+        console.log(`[timing] tiktok-api ${host} HTTP ${response.status} in ${Date.now()-t0}ms`);
+        lastError     = new Error(`TikTok API ${host} returned HTTP ${response.status}`);
+        lastErrorType = "network";
+        continue;
+      }
+
+      const data = await response.json();
+
+      if (data?.status_code === -1 || data?.status_code === 8) {
+        console.log(`[timing] tiktok-api ${host} device_block in ${Date.now()-t0}ms`);
+        lastError     = new Error(`TikTok API device blocked (status: ${data.status_code})`);
+        lastErrorType = "device_block";
+        continue;
+      }
+
+      if (data?.status_code === 2048) {
+        console.log(`[timing] tiktok-api ${host} rate_limit in ${Date.now()-t0}ms`);
+        lastError     = new Error(`TikTok API rate limited (status: 2048)`);
+        lastErrorType = "rate_limit";
+        continue;
+      }
+
+      if (data?.status_code === 2053) {
+        console.log(`[timing] tiktok-api ${host} 2053 sig_rejected in ${Date.now()-t0}ms`);
+        lastError     = new Error(`TikTok API ${host} body status: 2053`);
+        lastErrorType = "network";
+        continue;
+      }
+
+      if (data?.status_code && data.status_code !== 0) {
+        console.log(`[timing] tiktok-api ${host} status ${data.status_code} in ${Date.now()-t0}ms`);
+        lastError     = new Error(`TikTok API ${host} body status: ${data.status_code}`);
+        lastErrorType = "network";
+        continue;
+      }
+
+      console.log(`[timing] tiktok-api ${host} OK in ${Date.now()-t0}ms`);
+      return { data, errorType: "ok" }; // ✅ success
+    } catch (e) {
+      console.log(`[timing] tiktok-api ${host} exception in ${Date.now()-t0}ms: ${e.message}`);
+      lastError     = new Error(`TikTok API ${host} failed: ${e.message}`);
+      lastErrorType = "network";
+    }
   }
 
   const e = lastError || new Error("All TikTok API endpoints failed");
@@ -904,80 +839,75 @@ async function callUserPostsAPI(username, phone = null) {
   let lastError     = null;
   let lastErrorType = "network";
 
-  const sigBuilders = [buildGorgon, buildGorgonV0408];
+  for (const host of TIKTOK_API_ENDPOINTS) {
+    const t0        = Date.now();
+    const qs        = buildQueryParams("0", phone);
+    const endpoint  = `https://${host}/aweme/v1/aweme/post/?${qs}`;
+    const odinToken = phone ? phone.odin_tt : randHex(160);
 
-  for (const buildSig of sigBuilders) {
-    let all2053 = true;
+    try {
+      const bodyStr   = body.toString();
+      const cookieStr = `odin_tt=${odinToken}`;
+      const gorgon    = buildGorgon(qs, bodyStr, cookieStr);
+      const response  = await fetch(endpoint, {
+        method:  "POST",
+        headers: {
+          "User-Agent":   phone ? phone.user_agent : randUserAgent(),
+          "X-SS-TC":      "0",
+          "X-Gorgon":     gorgon["X-Gorgon"],
+          "X-Khronos":    gorgon["X-Khronos"],
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Cookie":       `odin_tt=${odinToken}`,
+        },
+        body: bodyStr,
+      });
 
-    for (const host of TIKTOK_API_ENDPOINTS) {
-      const qs        = buildQueryParams("0", phone);
-      const endpoint  = `https://${host}/aweme/v1/aweme/post/?${qs}`;
-      const odinToken = phone ? phone.odin_tt : randHex(160);
-
-      try {
-        const bodyStr   = body.toString();
-        const cookieStr = `odin_tt=${odinToken}`;
-        const gorgon    = buildSig(qs, bodyStr, cookieStr);
-        const response  = await fetch(endpoint, {
-          method:  "POST",
-          headers: {
-            "User-Agent":   phone ? phone.user_agent : randUserAgent(),
-            "X-SS-TC":      "0",
-            "X-Gorgon":     gorgon["X-Gorgon"],
-            "X-Khronos":    gorgon["X-Khronos"],
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Cookie":       `odin_tt=${odinToken}`,
-          },
-          body: bodyStr,
-        });
-
-        if (response.status === 404) {
-          lastError     = new Error(`TikTok API ${host} returned HTTP 404`);
-          lastErrorType = "api_change";
-          all2053 = false;
-          continue;
-        }
-        if (!response.ok) {
-          lastError     = new Error(`TikTok API ${host} returned HTTP ${response.status}`);
-          lastErrorType = "network";
-          all2053 = false;
-          continue;
-        }
-
-        const data = await response.json();
-        if (data?.status_code === -1 || data?.status_code === 8) {
-          lastError     = new Error(`TikTok API device blocked (status: ${data.status_code})`);
-          lastErrorType = "device_block";
-          all2053 = false;
-          continue;
-        }
-        if (data?.status_code === 2048) {
-          lastError     = new Error(`TikTok API rate limited`);
-          lastErrorType = "rate_limit";
-          all2053 = false;
-          continue;
-        }
-        if (data?.status_code === 2053) {
-          lastError     = new Error(`TikTok API ${host} body status: 2053`);
-          lastErrorType = "network";
-          continue;
-        }
-        if (data?.status_code && data.status_code !== 0) {
-          lastError     = new Error(`TikTok API body status: ${data.status_code}`);
-          lastErrorType = "network";
-          all2053 = false;
-          continue;
-        }
-
-        return { data, errorType: "ok" };
-      } catch (e) {
-        lastError     = new Error(`TikTok API ${host} failed: ${e.message}`);
-        lastErrorType = "network";
-        all2053 = false;
+      if (response.status === 404) {
+        console.log(`[timing] profile-api ${host} 404 in ${Date.now()-t0}ms`);
+        lastError     = new Error(`TikTok API ${host} returned HTTP 404`);
+        lastErrorType = "api_change";
+        continue;
       }
-    }
+      if (!response.ok) {
+        console.log(`[timing] profile-api ${host} HTTP ${response.status} in ${Date.now()-t0}ms`);
+        lastError     = new Error(`TikTok API ${host} returned HTTP ${response.status}`);
+        lastErrorType = "network";
+        continue;
+      }
 
-    if (!all2053) break;
+      const data = await response.json();
+      if (data?.status_code === -1 || data?.status_code === 8) {
+        console.log(`[timing] profile-api ${host} device_block in ${Date.now()-t0}ms`);
+        lastError     = new Error(`TikTok API device blocked (status: ${data.status_code})`);
+        lastErrorType = "device_block";
+        continue;
+      }
+      if (data?.status_code === 2048) {
+        console.log(`[timing] profile-api ${host} rate_limit in ${Date.now()-t0}ms`);
+        lastError     = new Error(`TikTok API rate limited`);
+        lastErrorType = "rate_limit";
+        continue;
+      }
+      if (data?.status_code === 2053) {
+        console.log(`[timing] profile-api ${host} 2053 sig_rejected in ${Date.now()-t0}ms`);
+        lastError     = new Error(`TikTok API ${host} body status: 2053`);
+        lastErrorType = "network";
+        continue;
+      }
+      if (data?.status_code && data.status_code !== 0) {
+        console.log(`[timing] profile-api ${host} status ${data.status_code} in ${Date.now()-t0}ms`);
+        lastError     = new Error(`TikTok API body status: ${data.status_code}`);
+        lastErrorType = "network";
+        continue;
+      }
+
+      console.log(`[timing] profile-api ${host} OK in ${Date.now()-t0}ms`);
+      return { data, errorType: "ok" };
+    } catch (e) {
+      console.log(`[timing] profile-api ${host} exception in ${Date.now()-t0}ms: ${e.message}`);
+      lastError     = new Error(`TikTok API ${host} failed: ${e.message}`);
+      lastErrorType = "network";
+    }
   }
 
   const e = lastError || new Error("All TikTok API endpoints failed");
@@ -1137,34 +1067,38 @@ function parseAweme(aweme) {
 // ── Step 4: fetchTikTokVideo — cache → API → parse → cache → return ──────────
 
 async function fetchTikTokVideo(tiktokUrl, env, ctx) {
-  const videoId = await resolveVideoId(tiktokUrl, env);
+  const t0 = Date.now();
 
-  // Both meta and url now live in Cloudflare KV — globally replicated.
-  // Once ANY PoP scrapes a video, every other PoP worldwide sees the same
-  // cached meta AND url — no matter which datacenter the next user's
-  // request lands on. Url now shares meta's 30-day TTL (resolver link).
+  const videoId = await resolveVideoId(tiktokUrl, env);
+  console.log(`[timing] fetch: resolve done in ${Date.now()-t0}ms`);
+
+  const t1 = Date.now();
   const [metaCached, urlCached] = await Promise.all([
     kvGetMeta(env, videoId),
     kvGetUrl(env, videoId),
   ]);
+  console.log(`[timing] fetch: kv-lookup in ${Date.now()-t1}ms`);
 
   // Both fresh — return immediately, zero API calls
   if (metaCached && urlCached) {
+    console.log(`[timing] fetch: kv-cache-hit TOTAL ${Date.now()-t0}ms`);
     return { ...metaCached, ...urlCached };
   }
 
-  // Select a persistent phone from the pool for this API call
+  const t2 = Date.now();
   const pool  = await getOrInitPool(env);
   const phone = pickPhone(pool);
+  console.log(`[timing] fetch: pool-pick in ${Date.now()-t2}ms`);
 
   // Call TikTok Android API using the phone's fixed identity
+  const t3 = Date.now();
   let data;
   try {
     const result = await callAndroidAPI(videoId, phone);
     data = result.data;
+    console.log(`[timing] fetch: tiktok-api done in ${Date.now()-t3}ms`);
   } catch (e) {
-    // Record failure type — 404 won't penalise the phone, device_block will
-    // trackFailureWindow runs in background — user doesn't wait for it
+    console.log(`[timing] fetch: tiktok-api FAILED in ${Date.now()-t3}ms — ${e.message}`);
     await recordPhoneResult(env, pool, phone, e.errorType || "network");
     (ctx ? ctx.waitUntil.bind(ctx) : (p) => p)(trackFailureWindow(env, true));
     throw new Error(`TikTok API request failed: ${e.message}`);
@@ -1180,7 +1114,6 @@ async function fetchTikTokVideo(tiktokUrl, env, ctx) {
 
   const parsed = parseAweme(details[0]);
 
-  // Only re-cache meta if it was missing — URL-only expiry keeps 30-day meta untouched
   const metaPayload = metaCached || {
     title:       parsed.title,
     username:    parsed.username,
@@ -1192,21 +1125,20 @@ async function fetchTikTokVideo(tiktokUrl, env, ctx) {
     images:      parsed.images,
   };
 
-  // Always refresh the signed CDN URL
   const urlPayload = {
     videoUrl:    parsed.videoUrl,
     videoUrl720: parsed.videoUrl720,
     audioUrl:    parsed.audioUrl,
   };
 
-  // Write KV cache + update phone memory — trackFailureWindow runs in background
   await Promise.all([
     metaCached ? Promise.resolve() : kvSetMeta(env, videoId, metaPayload),
     kvSetUrl(env, videoId, urlPayload),
-    recordPhoneResult(env, pool, phone, "ok"),  // memory-only on success (no KV write)
+    recordPhoneResult(env, pool, phone, "ok"),
   ]);
   (ctx ? ctx.waitUntil.bind(ctx) : (p) => p)(trackFailureWindow(env, false));
 
+  console.log(`[timing] fetch: TOTAL ${Date.now()-t0}ms`);
   return { ...metaPayload, ...urlPayload };
 }
 
