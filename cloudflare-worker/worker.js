@@ -913,13 +913,32 @@ function parseAweme(aweme) {
     || resolverUrl((video.play_addr || video.playAddr || {}).url_list)
     || resolverUrl((video.download_addr || video.downloadAddr || {}).url_list);
 
+  // ── Photo slideshow video URL ─────────────────────────────────────────────
+  // For photo/slideshow posts TikTok sometimes provides a compiled MP4 slideshow
+  // inside image_post_info.video. This is the actual "Download as Video" source.
+  // video.play_addr for photo posts usually carries the audio track, not video.
+  const photoVideo = (imgPost?.video || imgPost?.videoInfo || null);
+  const photoVideoUrl = photoVideo
+    ? resolverUrl(
+        (photoVideo.play_addr  || photoVideo.playAddr  || {}).url_list  ||
+        (photoVideo.play_addr  || photoVideo.playAddr  || {}).urlList   ||
+        (photoVideo.download_addr || photoVideo.downloadAddr || {}).url_list || [],
+      )
+    : "";
+
   // ── Audio URL ────────────────────────────────────────────────────────────────
   // music.play_url (snake) or music.playUrl (camel) → url_list / urlList array
   const musicPlayUrl = music.play_url || music.playUrl || {};
   const audioUrlList = musicPlayUrl.url_list || musicPlayUrl.urlList || [];
-  const audioUrl = resolverUrl(Array.isArray(audioUrlList) ? audioUrlList : [])
+  const musicUrl = resolverUrl(Array.isArray(audioUrlList) ? audioUrlList : [])
     || (typeof musicPlayUrl === "string" ? musicPlayUrl : "")
     || musicPlayUrl.uri || "";
+
+  // For photo posts: video.play_addr is the audio track (background music).
+  // Use it as the mp3 source; fall back to music.play_url if absent.
+  const audioUrl = isPhoto
+    ? (url1080 || musicUrl)   // url1080 = video.play_addr = audio for photo posts
+    : musicUrl;
 
   // Thumbnail — pick highest resolution available.
   // Use .length check before || so an empty url_list [] (truthy but useless)
@@ -944,8 +963,10 @@ function parseAweme(aweme) {
     username:      username ? `@${username}` : "",
     displayName:   author.nickname || "",
     avatarUrl:     avatar,
-    videoUrl:      url1080,
-    videoUrl720:   url720,
+    // For photo posts: use compiled slideshow video (image_post_info.video) if TikTok provides it.
+    // For regular videos: use the highest-bitrate gear URL as usual.
+    videoUrl:      isPhoto ? photoVideoUrl : url1080,
+    videoUrl720:   isPhoto ? ""            : url720,
     audioUrl,
     thumbUrl:      thumbnail,
     duration:      video.duration || 0,
