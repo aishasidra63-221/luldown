@@ -1424,7 +1424,7 @@ async function handleRequest(request, env, ctx) {
       // reCAPTCHA v3 verification
       if (env.RECAPTCHA_SECRET) {
         const score = await verifyRecaptcha(body.recaptcha_token, env.RECAPTCHA_SECRET, ip);
-        if (score !== null && score < 0.5) return err("Bot detected. Please try again.", 403, cors);
+        if (score !== null && score < 0.3) return err("Bot detected. Please try again.", 403, cors);
       }
 
       const tiktokUrl = validateTikTokUrl(body.url);
@@ -1555,7 +1555,7 @@ async function handleRequest(request, env, ctx) {
       // reCAPTCHA v3 verification
       if (env.RECAPTCHA_SECRET) {
         const score = await verifyRecaptcha(body.recaptcha_token, env.RECAPTCHA_SECRET, ip2);
-        if (score !== null && score < 0.5) return err("Bot detected. Please try again.", 403, cors);
+        if (score !== null && score < 0.3) return err("Bot detected. Please try again.", 403, cors);
       }
 
       const tiktokUrl = validateTikTokUrl(body.url);
