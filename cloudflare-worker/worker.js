@@ -1069,8 +1069,12 @@ function parseAweme(aweme) {
 async function fetchTikTokVideo(tiktokUrl, env, ctx) {
   const t0 = Date.now();
 
-  const videoId = await resolveVideoId(tiktokUrl, env);
-  console.log(`[timing] fetch: resolve done in ${Date.now()-t0}ms`);
+  // Parallel: resolve URL + load phone pool at the same time
+  const [videoId, pool] = await Promise.all([
+    resolveVideoId(tiktokUrl, env),
+    getOrInitPool(env),
+  ]);
+  console.log(`[timing] fetch: resolve+pool done in ${Date.now()-t0}ms`);
 
   const t1 = Date.now();
   const [metaCached, urlCached] = await Promise.all([
@@ -1086,7 +1090,6 @@ async function fetchTikTokVideo(tiktokUrl, env, ctx) {
   }
 
   const t2 = Date.now();
-  const pool  = await getOrInitPool(env);
   const phone = pickPhone(pool);
   console.log(`[timing] fetch: pool-pick in ${Date.now()-t2}ms`);
 
@@ -1495,10 +1498,14 @@ async function handleRequest(request, env, ctx) {
       const originBlockInfo = requireOrigin(request, cors);
       if (originBlockInfo) return originBlockInfo;
       const ip = request.headers.get("CF-Connecting-IP") || "unknown";
-      if (!await checkRateLimit(env, ip)) return err("Too many requests. Please slow down.", 429, cors);
 
-      let body;
-      try { body = await request.json(); } catch { return err("Invalid JSON", 400, cors); }
+      // Parallel: rate limit check + body parse at the same time
+      const [rateLimitOk, body] = await Promise.all([
+        checkRateLimit(env, ip),
+        request.json().catch(() => null),
+      ]);
+      if (!rateLimitOk) return err("Too many requests. Please slow down.", 429, cors);
+      if (!body) return err("Invalid JSON", 400, cors);
 
       if (secret) {
         const ok = await validateToken(body.token, secret);
@@ -1543,10 +1550,16 @@ async function handleRequest(request, env, ctx) {
       const originBlockProfile = requireOrigin(request, cors);
       if (originBlockProfile) return originBlockProfile;
       const ip = request.headers.get("CF-Connecting-IP") || "unknown";
-      if (!await checkRateLimit(env, ip)) return err("Too many requests. Please slow down.", 429, cors);
 
-      let body;
-      try { body = await request.json(); } catch { return err("Invalid JSON", 400, cors); }
+      // Parallel: rate limit check + body parse + pool load at the same time
+      const [rateLimitOkP, bodyP, poolP] = await Promise.all([
+        checkRateLimit(env, ip),
+        request.json().catch(() => null),
+        getOrInitPool(env),
+      ]);
+      if (!rateLimitOkP) return err("Too many requests. Please slow down.", 429, cors);
+      const body = bodyP;
+      if (!body) return err("Invalid JSON", 400, cors);
 
       if (secret) {
         const ok = await validateToken(body.token, secret);
@@ -1564,7 +1577,7 @@ async function handleRequest(request, env, ctx) {
       if (!usernameMatch) return err("Invalid TikTok profile URL. Use a link like tiktok.com/@username", 400, cors);
       const username = usernameMatch[1];
 
-      const pool  = await getOrInitPool(env);
+      const pool  = poolP;
       const phone = pickPhone(pool);
 
       let profileData;
