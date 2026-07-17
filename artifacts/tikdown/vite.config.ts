@@ -12,7 +12,7 @@ const basePath = process.env.BASE_PATH ?? "/";
 export default defineConfig({
   base: basePath,
   define: {
-    __RECAPTCHA_SITE_KEY__: JSON.stringify(process.env.RECAPTCHA_SITE_KEY ?? ""),
+    __RECAPTCHA_SITE_KEY__: JSON.stringify(process.env.RECAPTCHA_SITE_KEY ?? "6LevOlgtAAAAANnnK4n8cnL9pOhh3iSzq6JMTHf8"),
     __WORKER_URL__: JSON.stringify(process.env.WORKER_URL ?? ""),
   },
   plugins: [
