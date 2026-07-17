@@ -1325,6 +1325,23 @@ async function handleRequest(request, env, ctx) {
     // cache — the Worker doesn't even run for those, which is the actual
     // request-count saving (not just "same token value").
     if (pathname === "/api/token" && method === "GET") {
+      // Origin lock — block cross-origin requests from non-allowed domains.
+      // Same-origin requests (luldown.com page calling luldown.com/api/token)
+      // send NO Origin header — those are always allowed.
+      // Requests from evil.com send Origin: https://evil.com → blocked.
+      const tokenOrigin = request.headers.get("Origin");
+      if (
+        tokenOrigin &&
+        !ALLOWED_API_ORIGINS.includes(tokenOrigin) &&
+        !tokenOrigin.startsWith("http://localhost") &&
+        !tokenOrigin.startsWith("http://127.0.0.1")
+      ) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...cors, "Content-Type": "application/json" },
+        });
+      }
+
       if (!secret) {
         return json({ token: "", ttl_seconds: TOKEN_TTL_SECONDS, dev_mode: true }, 200, cors);
       }
