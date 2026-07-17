@@ -1,51 +1,44 @@
-# LulDown — TikTok Downloader
+# LulDown — TikTok Video Downloader
 
-A TikTok video and audio downloader that provides direct CDN links. Supports MP4 (1080p/720p), MP3 audio, and photo posts with no watermark.
+A TikTok video downloader that strips watermarks and supports MP4/MP3 output.
 
 ## Stack
 
-- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS 4, Radix UI, Wouter, TanStack Query
-- **Dev API:** Python FastAPI (`artifacts/tiktok-api/`) — runs on port 8000, proxied via Vite at `/tikapi`
-- **Production API:** Cloudflare Worker (`cloudflare-worker/worker.js`) — deployed separately via Wrangler
+- **Frontend:** React 19, Vite, TypeScript, Tailwind CSS 4, Radix UI, TanStack Query, Wouter
+- **Dev backend:** Python 3.11 + FastAPI (`artifacts/tiktok-api/`) — proxied from Vite at `/tikapi`
+- **Production backend:** Cloudflare Worker (`cloudflare-worker/worker.js`)
 - **Monorepo:** pnpm workspaces
 
-## How to run (dev mode)
+## How to run
 
-Two workflows run in parallel:
+Two workflows run concurrently:
 
-1. **TikTok API** — Python FastAPI server on port 8000
-   ```
-   cd artifacts/tiktok-api && pip install --user -r requirements.txt -q && PORT=8000 WORKERS=1 python3 main.py
-   ```
+| Workflow | Command | Port |
+|---|---|---|
+| **Start application** | `PORT=5000 pnpm --filter @workspace/tikdown run dev` | 5000 |
+| **TikTok API** | `cd artifacts/tiktok-api && pip install --user -r requirements.txt -q && PORT=8000 WORKERS=1 python3 main.py` | 8000 |
 
-2. **Start application** — React/Vite frontend on port 5000
-   ```
-   PORT=5000 pnpm --filter @workspace/tikdown run dev
-   ```
+Install dependencies once with `pnpm install` from the repo root before starting.
 
-The Vite dev server proxies `/tikapi` → `http://localhost:8000`, so the frontend hits the local Python API in dev mode.
-
-## Environment variables (optional for dev)
+## Optional environment variables
 
 | Variable | Purpose |
 |---|---|
-| `WORKER_URL` | Points frontend to the deployed Cloudflare Worker (production only) |
-| `RENDER_URL` | Proxy server URL for CDN streaming (production only) |
-| `PROXY_SECRET` | HMAC secret for the proxy (production only) |
-| `TOKEN_SECRET` | API request validation token (production only) |
-| `RECAPTCHA_SITE_KEY` | Google reCAPTCHA v3 site key (optional) |
+| `WORKER_URL` | Cloudflare Worker URL (production API) |
+| `RENDER_URL` | Render.com fallback URL |
+| `PROXY_SECRET` | Shared secret between frontend and worker |
+| `TOKEN_SECRET` | JWT signing secret |
+| `RECAPTCHA_SITE_KEY` | Google reCAPTCHA v3 site key |
 
-Without `WORKER_URL` set, the frontend falls back to the local Python API automatically.
+These are optional in dev — the Python backend handles scraping locally without them.
 
-## Project structure
+## Key directories
 
-```
-artifacts/
-  tikdown/        # React frontend
-  tiktok-api/     # Python FastAPI dev backend
-cloudflare-worker/ # Production Cloudflare Worker
-lib/              # Shared packages (API specs, Zod schemas, DB)
-scripts/          # Workspace utilities
-```
+- `artifacts/tikdown/` — React frontend
+- `artifacts/tiktok-api/` — Python FastAPI dev backend
+- `cloudflare-worker/` — Production Cloudflare Worker
+- `lib/` — Shared packages (`api-spec`, `api-zod`, `db`)
 
 ## User preferences
+
+_None recorded yet._
