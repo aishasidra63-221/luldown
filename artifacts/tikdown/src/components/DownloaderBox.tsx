@@ -409,7 +409,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                 {fmts.map(cfg => {
                   const isActive = activeDownload === cfg.format;
                   const busy = !!activeDownload;
-                  const mp3Unavailable = cfg.format === "mp3" && !info?.download_urls?.mp3;
+                  const mp3Unavailable = false;
                   return (
                     <button
                       key={cfg.format}
