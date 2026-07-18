@@ -16,7 +16,6 @@ from slowapi.util import get_remote_address
 from cache import init_redis, cache_get, cache_set, make_cache_key, cache_stats, cache_flush, _mem_cache
 from downloader import DownloadError, get_video_info, get_cdn_url, stream_download, get_raw_item
 from history import add_to_history, get_history, clear_history, history_stats
-from proxy_pool import build_proxy_pool, pool_stats
 from recaptcha import verify_token as verify_recaptcha, is_enabled as recaptcha_enabled
 from session import generate_token, verify_token as verify_session_token
 from updater import schedule_midnight_update
@@ -45,7 +44,6 @@ async def _delayed_startup():
     await asyncio.sleep(5)
     try:
         await asyncio.gather(
-            build_proxy_pool(),
             init_redis(),
         )
     except Exception:
@@ -153,7 +151,6 @@ async def health():
         "engine": "tiktok-html-direct",
         "cache": cache_stats(),
         "history": history_stats(),
-        "proxy_pool": pool_stats(),
         "recaptcha_enabled": recaptcha_enabled(),
     }
 
