@@ -1,7 +1,6 @@
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, lazy, Suspense } from "react";
-import { GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import HomePage from "@/pages/HomePage";
@@ -25,8 +24,6 @@ const TikmateAltPage    = lazy(() => import("@/pages/TikmateAltPage"));
 const LangHomePage      = lazy(() => import("@/pages/LangHomePage"));
 const ApkPage        = lazy(() => import("@/pages/ApkPage"));
 const HowToPage      = lazy(() => import("@/pages/HowToPage"));
-
-declare const __RECAPTCHA_SITE_KEY__: string;
 
 const queryClient = new QueryClient();
 
@@ -92,9 +89,7 @@ function App() {
     localStorage.setItem("luldown-theme", "dark");
   }, []);
 
-  const siteKey = __RECAPTCHA_SITE_KEY__;
-
-  const inner = (
+  return (
     <QueryClientProvider client={queryClient}>
       <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
         <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
@@ -109,16 +104,6 @@ function App() {
       </WouterRouter>
     </QueryClientProvider>
   );
-
-  if (siteKey) {
-    return (
-      <GoogleReCaptchaProvider reCaptchaKey={siteKey} scriptProps={{ async: true, defer: true }}>
-        {inner}
-      </GoogleReCaptchaProvider>
-    );
-  }
-
-  return inner;
 }
 
 export default App;

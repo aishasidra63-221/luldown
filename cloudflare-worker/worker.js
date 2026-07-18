@@ -1185,27 +1185,6 @@ async function validateToken(token, secret) {
     : sig === expected; // fallback for envs without timingSafeEqual
 }
 
-// ── reCAPTCHA v3 verification ─────────────────────────────────────────────────
-// Calls Google's siteverify API and returns the score (0.0–1.0).
-// Score < 0.5 = likely bot. Returns null if secret not set (dev mode — skip check).
-async function verifyRecaptcha(token, secret, ip) {
-  if (!secret) return null; // dev mode — no secret, skip
-  if (!token)  return 0;    // no token sent → treat as bot
-  try {
-    const body = new URLSearchParams({ secret, response: token });
-    if (ip) body.append("remoteip", ip);
-    const res  = await fetch("https://www.google.com/recaptcha/api/siteverify", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: body.toString(),
-    });
-    const data = await res.json();
-    return typeof data.score === "number" ? data.score : (data.success ? 0.9 : 0);
-  } catch {
-    return null; // Google unreachable — allow through, don't block real users
-  }
-}
-
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 // ── Bot User-Agent blacklist ──────────────────────────────────────────────────
@@ -1474,12 +1453,6 @@ async function handleRequest(request, env, ctx) {
         if (!ok) return err("Invalid or expired token. Please refresh the page.", 401, cors);
       }
 
-      // reCAPTCHA v3 verification
-      if (env.RECAPTCHA_SECRET) {
-        const score = await verifyRecaptcha(body.recaptcha_token, env.RECAPTCHA_SECRET, ip);
-        if (score !== null && score < 0.3) return err("Bot detected. Please try again.", 403, cors);
-      }
-
       const tiktokUrl = validateTikTokUrl(body.url);
       if (!tiktokUrl) return err("Invalid TikTok URL. Please copy the link from TikTok app.", 400, cors);
 
@@ -1526,11 +1499,6 @@ async function handleRequest(request, env, ctx) {
       if (secret) {
         const ok = await validateToken(body.token, secret);
         if (!ok) return err("Invalid or expired token. Please refresh the page.", 401, cors);
-      }
-
-      if (env.RECAPTCHA_SECRET) {
-        const score = await verifyRecaptcha(body.recaptcha_token, env.RECAPTCHA_SECRET, ip);
-        if (score !== null && score < 0.3) return err("Bot detected. Please try again.", 403, cors);
       }
 
       // Extract username from profile URL e.g. tiktok.com/@username
@@ -1689,12 +1657,6 @@ async function handleRequest(request, env, ctx) {
       if (secret) {
         const ok = await validateToken(body.token, secret);
         if (!ok) return err("Invalid or expired token. Please refresh the page.", 401, cors);
-      }
-
-      // reCAPTCHA v3 verification
-      if (env.RECAPTCHA_SECRET) {
-        const score = await verifyRecaptcha(body.recaptcha_token, env.RECAPTCHA_SECRET, ip2);
-        if (score !== null && score < 0.3) return err("Bot detected. Please try again.", 403, cors);
       }
 
       const tiktokUrl = validateTikTokUrl(body.url);

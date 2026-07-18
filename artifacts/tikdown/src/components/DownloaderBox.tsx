@@ -1,7 +1,6 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useRef } from "react";
 import { fetchVideoInfo, downloadVideo, downloadPhoto, VideoInfo, DownloadFormat, isProfileUrl, fetchProfileInfo, ProfileInfo } from "@/lib/api";
 import ProfileResults from "@/components/ProfileResults";
-import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import {
   Music, Clipboard, Download, Image, Video,
   AlertCircle, X,
@@ -69,24 +68,17 @@ export default function DownloaderBox({ highlightFormat }: Props) {
   const [profileInfo, setProfileInfo] = useState<ProfileInfo | null>(null);
   const [error, setError] = useState("");
   const [photoDownloading, setPhotoDownloading] = useState<number | null>(null);
-  const { executeRecaptcha } = useGoogleReCaptcha();
-  const getToken = useCallback(async (action: string) => {
-    if (!executeRecaptcha) return undefined;
-    try { return await executeRecaptcha(action); } catch { return undefined; }
-  }, [executeRecaptcha]);
-
   // Core fetch logic — accepts explicit URL so auto-fetch on mount can pass it directly
   const handleFetchUrl = async (fetchUrl: string) => {
     const trimmed = fetchUrl.trim();
     if (!trimmed) return;
     setStep("loading-info"); setError(""); setInfo(null); setProfileInfo(null);
     try {
-      const token = await getToken("fetch_info");
       if (isProfileUrl(trimmed)) {
-        setProfileInfo(await fetchProfileInfo(trimmed, token));
+        setProfileInfo(await fetchProfileInfo(trimmed));
         setStep("profile-ready");
       } else {
-        setInfo(await fetchVideoInfo(trimmed, token));
+        setInfo(await fetchVideoInfo(trimmed));
         setStep("info-ready");
       }
     } catch (e: any) {
@@ -99,11 +91,10 @@ export default function DownloaderBox({ highlightFormat }: Props) {
 
   const handleDownload = async (format: DownloadFormat) => {
     try {
-      const token = await getToken("download");
       await downloadVideo(url.trim(), format, {
         title: info?.title, author: info?.author,
         thumbnail: info?.thumbnail, download_urls: info?.download_urls,
-      }, token);
+      });
     } catch (e: any) {
       setError(e.message || "Download failed"); setStep("error");
     }

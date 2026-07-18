@@ -199,15 +199,12 @@ export function isProfileUrl(url: string): boolean {
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-export async function fetchProfileInfo(
-  url: string,
-  recaptchaToken?: string,
-): Promise<ProfileInfo> {
+export async function fetchProfileInfo(url: string): Promise<ProfileInfo> {
   const token = await getToken();
   const res = await fetch(`${API_BASE}/api/profile`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url, token, recaptcha_token: recaptchaToken ?? null }),
+    body: JSON.stringify({ url, token }),
   });
 
   if (res.status === 401) {
@@ -217,7 +214,7 @@ export async function fetchProfileInfo(
     const retry = await fetch(`${API_BASE}/api/profile`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url, token: freshToken, recaptcha_token: recaptchaToken ?? null }),
+      body: JSON.stringify({ url, token: freshToken }),
     });
     if (!retry.ok) {
       const errData = await retry.json().catch(() => ({ detail: "Failed to fetch profile" }));
@@ -243,19 +240,12 @@ export async function downloadProfileVideo(
   await _cdnDownload(cdnUrl, filename);
 }
 
-export async function fetchVideoInfo(
-  url: string,
-  recaptchaToken?: string,
-): Promise<VideoInfo> {
+export async function fetchVideoInfo(url: string): Promise<VideoInfo> {
   const token = await getToken();
   const res = await fetch(`${API_BASE}/api/info`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      url,
-      token,
-      recaptcha_token: recaptchaToken ?? null,
-    }),
+    body: JSON.stringify({ url, token }),
   });
 
   // Token expired at the 6-hour boundary — silently fetch a fresh one and retry once
@@ -266,11 +256,7 @@ export async function fetchVideoInfo(
     const retry = await fetch(`${API_BASE}/api/info`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        url,
-        token: freshToken,
-        recaptcha_token: recaptchaToken ?? null,
-      }),
+      body: JSON.stringify({ url, token: freshToken }),
     });
     if (!retry.ok) {
       const errData = await retry.json().catch(() => ({ detail: "Failed to fetch info" }));
@@ -297,7 +283,6 @@ export async function downloadVideo(
   url: string,
   format: DownloadFormat,
   videoMeta?: { title?: string; author?: string; thumbnail?: string; download_urls?: DownloadUrls },
-  recaptchaToken?: string,
 ): Promise<void> {
   // Thumbnail — download the cover image directly, no API call needed
   if (format === "thumbnail") {
@@ -335,12 +320,7 @@ export async function downloadVideo(
     const res = await fetch(`${API_BASE}/api/download`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        url,
-        format,
-        token,
-        recaptcha_token: recaptchaToken ?? null,
-      }),
+      body: JSON.stringify({ url, format, token }),
     });
 
     if (!res.ok) {
