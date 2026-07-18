@@ -1095,21 +1095,16 @@ function parseAweme(aweme) {
     || (typeof musicPlayUrl === "string" ? musicPlayUrl : "")
     || musicPlayUrl.uri || "";
 
-  // Stable audio resolver — same idea as signaturev3 for video.
-  // music.play_url.url_list contains short-lived CDN URLs (expire in hours),
-  // not stable resolver links. Storing them in KV for 30 days means they go
-  // stale. Instead, use TikTok's aweme/v1/play/?data_type=4 endpoint which
-  // is a redirect resolver (like signaturev3 for video) — stable indefinitely.
-  const awemeId = aweme.aweme_id || aweme.awemeId || "";
-  const stableAudioUrl = awemeId
-    ? `https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/play/?item_id=${awemeId}&data_type=4`
-    : musicUrl; // fallback to CDN URL if no aweme_id (should not happen)
-
-  // For photo posts: url1080 = video.play_addr which already has a signaturev3
-  // resolver — stable, no change needed. For regular videos: use stable resolver.
+  // Audio URL — use the best available CDN URL from TikTok's music.play_url list.
+  // resolverUrl() prefers signaturev3 links when present (stable); otherwise
+  // falls back to the first CDN URL. aweme/v1/play/?data_type=4 is NOT used here
+  // because it requires signed Android auth headers that the Render proxy cannot
+  // provide — passing it through would result in TikTok returning 400.
+  //
+  // For photo posts: url1080 = video.play_addr which has a signaturev3 link.
   const audioUrl = isPhoto
-    ? (url1080 || musicUrl)   // url1080 = video.play_addr = audio for photo posts
-    : stableAudioUrl;
+    ? (url1080 || musicUrl)   // url1080 = video.play_addr = audio track for photo posts
+    : musicUrl;
 
   // Thumbnail — pick highest resolution available.
   // Use .length check before || so an empty url_list [] (truthy but useless)
