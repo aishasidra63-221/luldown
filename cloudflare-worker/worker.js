@@ -468,7 +468,8 @@ async function kvSetShortId(env, shortCode, videoId) {
   try { await env.META_KV.put(`short:${shortCode}`, videoId, { expirationTtl: 86400 * 30 }); } catch {}
 }
 
-const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+const BROWSER_UA    = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+const FB_CRAWLER_UA = "facebookexternalhit/1.1";
 
 const TIKTOK_ALLOWED_HOSTS = ["tiktok.com", "douyin.com", "musical.ly"];
 
@@ -500,10 +501,74 @@ async function resolveVideoId(rawUrl, env) {
     }
   }
 
-  // ── Short link resolution — single redirect:follow fetch ────────────────────
-  // One fetch call; Cloudflare's HTTP layer follows all hops internally with
-  // connection reuse — much faster than 5 manual sequential fetch() calls.
-  // Check the final URL first (no body needed in 99% of cases).
+  // Helper — SSRF-safe Location header extractor
+  function safeLocation(headers) {
+    const loc = headers.get("location") || headers.get("Location") || "";
+    if (!loc) return null;
+    try {
+      const full = loc.startsWith("/") ? `https://www.tiktok.com${loc}` : loc;
+      const host = new URL(full).hostname;
+      if (!TIKTOK_ALLOWED_HOSTS.some(d => host === d || host.endsWith("." + d))) return null;
+      return full;
+    } catch { return null; }
+  }
+
+  // ── Step 1: HEAD + facebookexternalhit + redirect:manual ─────────────────────
+  // TikTok treats Facebook crawler as trusted → single clean 301 to video URL.
+  // HEAD = zero body download → fastest path (~50–150 ms).
+  try {
+    const headRes = await fetch(url, {
+      method:   "HEAD",
+      redirect: "manual",
+      headers:  { "User-Agent": FB_CRAWLER_UA },
+    });
+    const loc = safeLocation(headRes.headers);
+    if (loc) {
+      const id = extractIdFromString(loc);
+      if (id) {
+        console.log(`[timing] resolve: step1-head-fb in ${Date.now()-t0}ms`);
+        return cacheAndReturn(env, shortCode, id);
+      }
+    }
+  } catch (e) {
+    console.log(`[timing] resolve: step1-head-fb-error in ${Date.now()-t0}ms — ${e.message}`);
+  }
+
+  // ── Step 2: GET + facebookexternalhit + redirect:manual ──────────────────────
+  // Location header check + limited body read (max 32 KB — no full page download).
+  try {
+    const getRes = await fetch(url, {
+      method:   "GET",
+      redirect: "manual",
+      headers:  { "User-Agent": FB_CRAWLER_UA, "Accept": "text/html,*/*;q=0.8" },
+    });
+    const loc = safeLocation(getRes.headers);
+    if (loc) {
+      const id = extractIdFromString(loc);
+      if (id) {
+        console.log(`[timing] resolve: step2-get-fb-loc in ${Date.now()-t0}ms`);
+        return cacheAndReturn(env, shortCode, id);
+      }
+    }
+    // Read only the first 32 KB — avoids downloading TikTok's multi-MB pages
+    const reader = getRes.body?.getReader();
+    let bodyChunk = "";
+    if (reader) {
+      const { value } = await reader.read();
+      reader.cancel();
+      bodyChunk = value ? new TextDecoder().decode(value).slice(0, 32768) : "";
+    }
+    const fromBody = bodyChunk.match(/\/(?:video|photo)\/(\d{10,20})/);
+    if (fromBody) {
+      console.log(`[timing] resolve: step2-get-fb-body in ${Date.now()-t0}ms`);
+      return cacheAndReturn(env, shortCode, fromBody[1]);
+    }
+  } catch (e) {
+    console.log(`[timing] resolve: step2-get-fb-error in ${Date.now()-t0}ms — ${e.message}`);
+  }
+
+  // ── Step 3 (fallback): redirect:follow + browser UA ──────────────────────────
+  // Slower — follows all hops, may download full HTML — but catches edge cases.
   let resolveRes;
   try {
     resolveRes = await fetch(url, {
@@ -515,7 +580,7 @@ async function resolveVideoId(rawUrl, env) {
       },
     });
   } catch (e) {
-    console.log(`[timing] resolve: redirect-follow-error in ${Date.now()-t0}ms — ${e.message}`);
+    console.log(`[timing] resolve: step3-follow-error in ${Date.now()-t0}ms — ${e.message}`);
     throw new Error("Could not reach TikTok. Please check the link and try again.");
   }
 
@@ -525,15 +590,14 @@ async function resolveVideoId(rawUrl, env) {
     throw new Error("URL did not resolve to a TikTok domain.");
   }
 
-  // Check final URL — ID found, no body download needed (fast path)
   const fromUrl = extractIdFromString(resolveRes.url);
   if (fromUrl) {
-    console.log(`[timing] resolve: redirect-follow-url in ${Date.now()-t0}ms`);
+    console.log(`[timing] resolve: step3-follow-url in ${Date.now()-t0}ms`);
     return cacheAndReturn(env, shortCode, fromUrl);
   }
 
   // Final URL didn't have the ID — read body and parse HTML
-  console.log(`[timing] resolve: falling-to-html-parse after ${Date.now()-t0}ms`);
+  console.log(`[timing] resolve: step3-html-parse after ${Date.now()-t0}ms`);
   const html = await resolveRes.text();
 
   const fromHtml = html.match(/\/(?:video|photo)\/(\d{10,20})/);
