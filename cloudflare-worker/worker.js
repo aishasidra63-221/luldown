@@ -151,6 +151,8 @@ function generatePhone(id) {
     app_version:  profile.app_version,
     version_code: profile.version_code,
     user_agent:   profile.user_agent,
+    // Fixed timezone — assigned at birth, consistent with device location
+    timezone_name: pickTimezone(),
     // Lifecycle
     created_at:   now,
     expires_at:   now + PHONE_YEAR,
@@ -195,7 +197,22 @@ async function getOrInitPool(env) {
 async function growPool(env) {
   if (!env.META_KV) return;
   const pool = await loadPool(env);
-  if (!pool || pool.length >= POOL_SIZE) return; // already full
+  if (!pool) return;
+
+  // One-time migration: patch existing phones that were created before timezone field existed
+  let patched = false;
+  for (const phone of pool) {
+    if (!phone.timezone_name) {
+      phone.timezone_name = pickTimezone();
+      patched = true;
+    }
+  }
+  if (patched) {
+    await savePool(env, pool);
+    console.log("Pool: patched missing timezones on existing phones");
+  }
+
+  if (pool.length >= POOL_SIZE) return; // already full
   const start = pool.length + 1;
   const end   = Math.min(pool.length + POOL_BATCH, POOL_SIZE);
   for (let i = start; i <= end; i++) pool.push(generatePhone(i));
@@ -546,8 +563,7 @@ const STATIC_DEVICE_BASE = {
   channel:         "googleplay",
   sys_region:      "US",
   app_language:    "en",
-  timezone_name:   "America/New_York",
-  timezone_offset: "-14400",
+
   host_abi:        "arm64-v8a",
   aid:             "1988",
   ssmix:           "a",
@@ -641,6 +657,34 @@ const PHONE_PROFILES = [
   },
 ];
 
+// ── Timezone pool — weighted by real US population distribution ───────────────
+const TIMEZONE_POOL = [
+  { name: "America/New_York",    weight: 47 },
+  { name: "America/Chicago",     weight: 33 },
+  { name: "America/Los_Angeles", weight: 13 },
+  { name: "America/Denver",      weight:  5 },
+  { name: "America/Phoenix",     weight:  2 },
+];
+
+function pickTimezone() {
+  const total = TIMEZONE_POOL.reduce((s, t) => s + t.weight, 0);
+  let r = Math.random() * total;
+  for (const tz of TIMEZONE_POOL) {
+    r -= tz.weight;
+    if (r <= 0) return tz.name;
+  }
+  return TIMEZONE_POOL[0].name;
+}
+
+// Returns current UTC offset in seconds for a given IANA timezone (DST-aware).
+// e.g. "America/New_York" in summer → -14400, in winter → -18000
+function tzOffsetSeconds(tzName) {
+  const now     = new Date();
+  const tzDate  = new Date(now.toLocaleString("en-US", { timeZone: tzName }));
+  const utcDate = new Date(now.toLocaleString("en-US", { timeZone: "UTC"   }));
+  return Math.round((tzDate - utcDate) / 1000);
+}
+
 function buildQueryParams(videoId, phone = null) {
   const ts               = Math.floor(Date.now() / 1000);
   const _rticket         = Date.now();
@@ -666,6 +710,10 @@ function buildQueryParams(videoId, phone = null) {
     version_code: "2023501030",
   };
 
+  // Per-phone timezone — fallback to New York for legacy phones without the field
+  const tzName   = phone?.timezone_name ?? "America/New_York";
+  const tzOffset = String(tzOffsetSeconds(tzName));
+
   const params = new URLSearchParams({
     ...STATIC_DEVICE_BASE,
     ...profileFields,
@@ -673,9 +721,11 @@ function buildQueryParams(videoId, phone = null) {
     iid,
     openudid,
     cdid,
-    _rticket: String(_rticket),
-    ts:       String(ts),
+    _rticket:        String(_rticket),
+    ts:              String(ts),
     last_install_time,
+    timezone_name:   tzName,
+    timezone_offset: tzOffset,
   });
 
   return params.toString();
