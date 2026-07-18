@@ -201,13 +201,12 @@ export default function DownloaderBox({ highlightFormat }: Props) {
             {/* ── Author + Title + Tags ── */}
             <div style={{ padding:"14px 16px 16px" }}>
               {/* Avatar | Username + Title + Tags */}
-              <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
                 <div style={{
-                  width:54, height:54, borderRadius:"50%", flexShrink:0,
+                  width:62, height:62, borderRadius:"50%", flexShrink:0,
                   background:"linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)",
                   display:"flex", alignItems:"center", justifyContent:"center",
-                  fontWeight:800, fontSize:22, color:"#fff",
-                  boxShadow:"0 0 0 2.5px rgba(124,58,237,0.4), 0 4px 14px rgba(124,58,237,0.4)",
+                  fontWeight:800, fontSize:24, color:"#fff",
                   overflow:"hidden",
                 }}>
                   {info.author_avatar ? (
@@ -220,7 +219,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                   ) : avatarLetter}
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
-                  <p style={{ margin:"0 0 6px", fontWeight:700, fontSize:15, color:"#ffffff" }}>
+                  <p style={{ margin:"0 0 4px", fontWeight:600, fontSize:13, color:"#ffffff" }}>
                     {info.author}
                   </p>
                   {cleanTitle && (
