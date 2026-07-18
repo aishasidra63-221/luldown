@@ -201,7 +201,7 @@ export default function DownloaderBox({ highlightFormat }: Props) {
             {/* ── Author + Title + Tags ── */}
             <div style={{ padding:"14px 16px 16px" }}>
               {/* Avatar | Username + Title + Tags */}
-              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+              <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
                 <div style={{
                   width:62, height:62, borderRadius:"50%", flexShrink:0,
                   background:"linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)",
