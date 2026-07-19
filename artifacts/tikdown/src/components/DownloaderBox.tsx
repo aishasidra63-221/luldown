@@ -227,48 +227,66 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                 </div>
 
                 {/* Right column: username on top, title+tags below */}
-                <div style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column", justifyContent:"flex-start" }}>
-                  <p style={{ margin:"0 0 4px", fontWeight:700, fontSize:13.5, color:"#ffffff", textAlign:"left" }}>
+                <div style={{ flex:1, minWidth:0, textAlign:"left" }}>
+                  <p style={{ margin:"0 0 3px", fontWeight:700, fontSize:13.5, color:"#ffffff", textAlign:"left" }}>
                     {info.author}
                   </p>
                   {cleanTitle && (
-                    <div style={{ display:"flex", alignItems:"flex-end", gap:8 }}>
-                      <p style={{
-                        flex:1, margin:0, fontSize:11.5, fontWeight:500,
-                        color:"rgba(255,255,255,0.75)", lineHeight:1.55,
-                        wordBreak:"break-word",
-                        ...(!expanded ? {
+                    <>
+                      {/* Title — clamped when collapsed, full when expanded */}
+                      {!expanded ? (
+                        <p style={{
+                          margin:0, fontSize:11.5, fontWeight:500,
+                          color:"rgba(255,255,255,0.75)", lineHeight:1.55,
+                          wordBreak:"break-word",
                           display:"-webkit-box",
                           WebkitLineClamp: 2,
                           WebkitBoxOrient: "vertical" as const,
                           overflow:"hidden",
-                        } : {}),
-                      }}>
-                        {cleanTitle}
-                        {tags.length > 0 && (
-                          <>{" "}{tags.slice(0, 6).map(tag => (
+                        }}>
+                          {cleanTitle}{" "}
+                          {tags.slice(0, 6).map(tag => (
                             <span key={tag} style={{ color:"#a78bfa", fontWeight:600 }}>{tag}{" "}</span>
-                          ))}</>
-                        )}
-                      </p>
-                      <button
-                        onClick={() => setExpanded(v => !v)}
-                        style={{
-                          flexShrink:0,
-                          background:"rgba(255,255,255,0.07)",
-                          border:"1px solid rgba(255,255,255,0.14)",
-                          borderRadius:20,
-                          color:"rgba(255,255,255,0.65)",
-                          fontSize:11, fontWeight:600,
-                          padding:"3px 10px",
-                          cursor:"pointer",
-                          display:"flex", alignItems:"center", gap:4,
-                          whiteSpace:"nowrap",
-                        }}
-                      >
-                        {expanded ? "Less ∧" : "More ∨"}
-                      </button>
-                    </div>
+                          ))}
+                        </p>
+                      ) : (
+                        <>
+                          <p style={{
+                            margin:"0 0 5px", fontSize:11.5, fontWeight:500,
+                            color:"rgba(255,255,255,0.75)", lineHeight:1.55,
+                            wordBreak:"break-word",
+                          }}>
+                            {cleanTitle}
+                          </p>
+                          {tags.length > 0 && (
+                            <div style={{ display:"flex", flexWrap:"wrap", gap:"3px 6px", marginBottom:3 }}>
+                              {tags.slice(0, 6).map(tag => (
+                                <span key={tag} style={{ color:"#a78bfa", fontWeight:600, fontSize:11.5 }}>{tag}</span>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
+                      {/* More button — below text, right aligned */}
+                      <div style={{ display:"flex", justifyContent:"flex-end", marginTop:5 }}>
+                        <button
+                          onClick={() => setExpanded(v => !v)}
+                          style={{
+                            background:"rgba(255,255,255,0.07)",
+                            border:"1px solid rgba(255,255,255,0.14)",
+                            borderRadius:20,
+                            color:"rgba(255,255,255,0.65)",
+                            fontSize:11, fontWeight:600,
+                            padding:"3px 10px",
+                            cursor:"pointer",
+                            display:"flex", alignItems:"center", gap:4,
+                            whiteSpace:"nowrap",
+                          }}
+                        >
+                          {expanded ? "Less ∧" : "More ∨"}
+                        </button>
+                      </div>
+                    </>
                   )}
                 </div>
 
