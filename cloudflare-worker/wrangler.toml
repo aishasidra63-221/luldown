@@ -48,3 +48,14 @@ simple = { limit = 60, period = 60 }
 [[kv_namespaces]]
 binding = "META_KV"
 id = "d30ad05db4f4451d9bc0e6802fa4799f"
+
+# ── Durable Object — race-free phone pool ────────────────────────────────────
+# Single global instance, single-threaded — eliminates KV last-write-wins race.
+# On first run it auto-migrates existing phones from KV, nothing is lost.
+[[durable_objects.bindings]]
+name = "PHONE_POOL"
+class_name = "PhonePoolDO"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["PhonePoolDO"]
