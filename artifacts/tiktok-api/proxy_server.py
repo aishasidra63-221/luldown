@@ -5,7 +5,7 @@ from flask import Flask, request, Response, stream_with_context
 app = Flask(__name__)
 
 PROXY_SECRET = os.environ.get("PROXY_SECRET", "")
-CDN_DOMAINS = ["tiktok.com", "tiktokcdn.com", "tiktokv.com", "musical.ly", "douyin.com", "bytecdn.cn", "snssdk.com"]
+CDN_DOMAINS = ["tiktok.com", "tiktokcdn.com", "tiktokcdn-us.com", "tiktokv.com", "musical.ly", "douyin.com", "bytecdn.cn", "snssdk.com"]
 CDN_HEADERS = {
     "User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Referer":         "https://www.tiktok.com/",
