@@ -1,4 +1,5 @@
 import os
+import re
 import httpx
 from flask import Flask, request, Response, stream_with_context
 
@@ -15,6 +16,30 @@ CDN_HEADERS = {
     "Range":           "bytes=0-",
     "Sec-Fetch-Dest":  "video",
 }
+
+# Music CDN shard retry — sf prefix is not fixed (can be sf1–sf20).
+# Try each shard until one returns HTTP 200.
+MUSIC_PATH_RE = re.compile(r"https?://sf\d+\.tiktokcdn-us\.com(/obj/musically-maliva-obj/.+\.mp3)")
+
+def resolve_music_url(original_url):
+    """Return the first shard URL (sf1–sf20) that returns 200, or None."""
+    m = MUSIC_PATH_RE.match(original_url)
+    if not m:
+        return None
+    path = m.group(1)
+    client = httpx.Client(timeout=httpx.Timeout(10.0, connect=5.0))
+    try:
+        for n in range(1, 21):
+            url = f"https://sf{n}.tiktokcdn-us.com{path}"
+            try:
+                r = client.head(url, headers=CDN_HEADERS)
+                if r.status_code == 200:
+                    return url
+            except Exception:
+                continue
+    finally:
+        client.close()
+    return None
 
 
 @app.route("/health")
@@ -47,6 +72,15 @@ def proxy():
         fallback_media_type = "image/png"
     else:
         fallback_media_type = "video/mp4"
+
+    # For music CDN URLs — shard prefix (sf1–sf20) is not fixed.
+    # Resolve the correct shard before streaming.
+    if "musically-maliva-obj" in url:
+        resolved = resolve_music_url(url)
+        if resolved:
+            url = resolved
+        else:
+            return "Music not found on any CDN shard", 404
 
     # Open the upstream connection before building the Flask Response so we
     # know the real Content-Type (from the CDN) up front, instead of always
