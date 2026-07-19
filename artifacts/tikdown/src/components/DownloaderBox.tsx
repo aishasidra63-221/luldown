@@ -70,7 +70,7 @@ const DEMO_INFO: VideoInfo = {
 };
 
 export default function DownloaderBox({ highlightFormat }: Props) {
-  const isDemo = true; // demo: remove this line when done
+  const isDemo = false;
   const [url, setUrl] = useState("");
   const [step, setStep] = useState<Step>(isDemo ? "info-ready" : "idle");
   const inputRef = useRef<HTMLInputElement>(null);
