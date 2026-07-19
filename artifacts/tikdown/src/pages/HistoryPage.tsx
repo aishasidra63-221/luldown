@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchHistory, clearHistory, HistoryItem } from "@/lib/api";
 import { Trash2, Download, Clock, Video, Music, Image, Film, Inbox, Loader2, User } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import BackHomeButtonLight from "@/components/BackHomeButtonLight";
 
 const FORMAT_META: Record<string, { Icon: React.ElementType; label: string; color: string }> = {
@@ -26,6 +26,7 @@ export default function HistoryPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [clearing, setClearing] = useState(false);
+  const [, navigate] = useLocation();
 
   const load = async () => {
     setLoading(true);
@@ -176,17 +177,21 @@ export default function HistoryPage() {
                   </div>
 
                   {/* Re-download */}
-                  <Link href={`/?url=${encodeURIComponent(item.url)}`}>
-                    <div style={{
+                  <button
+                    onClick={() => {
+                      sessionStorage.setItem("prefill_url", item.url);
+                      navigate("/");
+                    }}
+                    style={{
                       flexShrink: 0, display: "flex", alignItems: "center", gap: 5,
                       padding: "7px 12px", borderRadius: 9, fontSize: 12, fontWeight: 600,
                       color: "#4f6ef7", border: "1px solid rgba(79,110,247,0.25)",
                       background: "rgba(79,110,247,0.06)", cursor: "pointer",
-                    }}>
-                      <Download size={12} />
-                      Again
-                    </div>
-                  </Link>
+                    }}
+                  >
+                    <Download size={12} />
+                    Again
+                  </button>
                 </div>
               );
             })}

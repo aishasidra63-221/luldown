@@ -71,7 +71,9 @@ const DEMO_INFO: VideoInfo = {
 
 export default function DownloaderBox({ highlightFormat }: Props) {
   const isDemo = false;
-  const [url, setUrl] = useState("");
+  const prefill = typeof window !== "undefined" ? (sessionStorage.getItem("prefill_url") || "") : "";
+  if (prefill) sessionStorage.removeItem("prefill_url");
+  const [url, setUrl] = useState(prefill);
   const [step, setStep] = useState<Step>(isDemo ? "info-ready" : "idle");
   const inputRef = useRef<HTMLInputElement>(null);
   const [info, setInfo] = useState<VideoInfo | null>(isDemo ? DEMO_INFO : null);
