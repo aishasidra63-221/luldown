@@ -60,11 +60,21 @@ const FMTS: FmtCfg[] = [
 type Step = "idle" | "loading-info" | "info-ready" | "profile-ready" | "error";
 interface Props { highlightFormat?: DownloadFormat; }
 
+const DEMO_INFO: VideoInfo = {
+  title: "Satisfying ASMR wax scraping process 🎧 #asmr #satisfying #relaxing #wax #oddlysatisfying",
+  author: "@creativeasmr",
+  author_avatar: "https://i.pravatar.cc/150?img=47",
+  thumbnail: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&q=80",
+  download_urls: { mp4_1080: "#", mp4_720: "#", mp3: "#", thumbnail: "#" },
+  is_photo: false,
+};
+
 export default function DownloaderBox({ highlightFormat }: Props) {
+  const isDemo = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("demo") === "1";
   const [url, setUrl] = useState("");
-  const [step, setStep] = useState<Step>("idle");
+  const [step, setStep] = useState<Step>(isDemo ? "info-ready" : "idle");
   const inputRef = useRef<HTMLInputElement>(null);
-  const [info, setInfo] = useState<VideoInfo | null>(null);
+  const [info, setInfo] = useState<VideoInfo | null>(isDemo ? DEMO_INFO : null);
   const [profileInfo, setProfileInfo] = useState<ProfileInfo | null>(null);
   const [error, setError] = useState("");
   const [photoDownloading, setPhotoDownloading] = useState<number | null>(null);
