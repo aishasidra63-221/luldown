@@ -5,31 +5,19 @@ import BackHomeButton from "@/components/BackHomeButton";
 const SECTIONS = [
   {
     title: "No Affiliation with TikTok",
-    content: "Luldown is an independent, third-party service. We are not associated with, sponsored by, funded by, or endorsed by TikTok™ or ByteDance Ltd. in any way. All trademarks, service marks, logos, and company names referenced on this website are the property of their respective owners and are used solely for descriptive and identification purposes.",
+    content: "Luldown is an independent service not associated with, sponsored by, or endorsed by TikTok™ or ByteDance Ltd. All trademarks referenced are property of their respective owners.",
   },
   {
-    title: "Personal Use Only",
-    content: "This service is intended strictly for personal, non-commercial use. Downloading TikTok content for commercial redistribution, public display, or any use that violates the intellectual property rights of the original creator is prohibited. Users are solely responsible for ensuring their use of downloaded content complies with all applicable copyright laws and TikTok's Terms of Service.",
-  },
-  {
-    title: "Copyright & Content Ownership",
-    content: "All videos, images, and audio files accessible through Luldown are protected by copyright and remain the property of their original creators and rights holders. Luldown does not store, reproduce, modify, or redistribute any media. Our service only provides a technical bridge to publicly accessible CDN links that are already hosted on TikTok's own infrastructure.",
+    title: "Personal Use & Copyright",
+    content: "This service is for personal, non-commercial use only. All downloaded content remains the property of its original creators. Do not redistribute, resell, or publicly republish content without the creator's permission. Users are solely responsible for compliance with copyright laws.",
   },
   {
     title: "No Server Storage",
-    content: "Luldown does not download or store any video, audio, or image files on our servers. All media is delivered directly from TikTok's content delivery network (CDN) to your browser. We do not create copies of any content — we only resolve the URL so your browser can fetch it directly from the source.",
+    content: "Luldown does not store any video, audio, or image files. All media is delivered directly from TikTok's CDN to your browser — we only resolve the URL.",
   },
   {
-    title: "Service Availability & Accuracy",
-    content: "We do not guarantee that Luldown will be available at all times, free of errors, or that all videos can be downloaded. The service depends on TikTok's public CDN infrastructure, which may change, restrict access, or become unavailable without notice. We accept no liability for failed downloads, degraded quality, or service interruptions.",
-  },
-  {
-    title: "User Responsibility",
-    content: "By using Luldown, you acknowledge and accept full responsibility for your actions and any content you download. You agree not to download, share, or use content in a way that infringes upon the rights of creators or violates any law. Always respect the original creator and give credit where it is due.",
-  },
-  {
-    title: "Limitation of Liability",
-    content: "Luldown and its operators shall not be held liable for any damages, losses, or legal consequences arising from the use or misuse of this service. This service is provided on an \"as is\" basis without warranties of any kind, either express or implied. Use of this service is at your own risk.",
+    title: "Availability & Liability",
+    content: "This service is provided \"as is\" without warranties of any kind. We do not guarantee availability or that all videos can be downloaded, as this depends on TikTok's infrastructure. Luldown shall not be liable for any damages or legal consequences arising from use of this service.",
   },
 ];
 

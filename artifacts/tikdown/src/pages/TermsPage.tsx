@@ -4,40 +4,20 @@ import BackHomeButton from "@/components/BackHomeButton";
 
 const SECTIONS = [
   {
-    title: "Acceptance of Terms",
-    content: "By accessing or using Luldown (luldown.com), you agree to be bound by these Terms and Conditions and our Privacy Policy. If you do not agree with any part of these terms, you must not use this service. These terms apply to all visitors and users of the service.",
-  },
-  {
-    title: "Description of Service",
-    content: "Luldown is a free online tool that allows users to download publicly available TikTok videos, audio, and photos for personal use. The service resolves publicly accessible CDN URLs and passes them directly to your browser. Luldown does not host, store, or distribute any media content.",
+    title: "Acceptance & Service",
+    content: "By using Luldown (luldown.com), you agree to these Terms and our Privacy Policy. Luldown is a free tool that resolves publicly available TikTok CDN links so your browser can download them directly. We do not host, store, or distribute any media content.",
   },
   {
     title: "Permitted Use",
-    content: "You may use Luldown for personal, non-commercial purposes only — such as saving a video for offline viewing or keeping a backup of your own content. You must not use this service for automated scraping, bulk downloading, commercial redistribution, or any purpose that violates TikTok's Terms of Service or applicable copyright law.",
+    content: "You may use Luldown for personal, non-commercial purposes only — such as saving videos for offline viewing or backing up your own content. Automated scraping, bulk downloading, and commercial redistribution are strictly prohibited.",
   },
   {
-    title: "Copyright & Intellectual Property",
-    content: "All videos, audio, and images downloaded through Luldown are the intellectual property of their respective creators and rights holders. Luldown does not claim ownership over any downloaded content. You are solely responsible for ensuring that your use of any downloaded content complies with copyright law. Unauthorized redistribution, resale, or public republishing of content without the creator's permission is strictly prohibited.",
+    title: "Copyright & No Affiliation",
+    content: "All downloaded content belongs to its original creators. Luldown claims no ownership over any media. Luldown is independent and not affiliated with TikTok™ or ByteDance Ltd. in any way. You are solely responsible for ensuring your use of downloaded content complies with copyright law.",
   },
   {
-    title: "No Affiliation with TikTok",
-    content: "Luldown is an independent service and is not affiliated with, endorsed by, sponsored by, or connected to TikTok, ByteDance Ltd., or any of their subsidiaries in any way. TikTok™ is a registered trademark of ByteDance Ltd. Use of TikTok's name on this website is solely for descriptive purposes.",
-  },
-  {
-    title: "No Guarantee of Service",
-    content: "Luldown is provided on an \"as is\" and \"as available\" basis. We do not guarantee that the service will be available at all times, uninterrupted, or error-free. Video availability depends on TikTok's CDN infrastructure, which may change without notice. We reserve the right to modify, suspend, or discontinue the service at any time without prior notice.",
-  },
-  {
-    title: "Limitation of Liability",
-    content: "To the maximum extent permitted by applicable law, Luldown and its operators shall not be liable for any direct, indirect, incidental, special, or consequential damages arising from your use of or inability to use this service. This includes but is not limited to loss of data, service interruptions, or content unavailability.",
-  },
-  {
-    title: "User Responsibility",
-    content: "You are solely responsible for your use of this service and any content you download. By using Luldown, you represent that you have the right to download the content in question and that you will comply with all applicable local, national, and international laws and regulations.",
-  },
-  {
-    title: "Changes to Terms",
-    content: "We reserve the right to update these Terms and Conditions at any time. Changes will be posted on this page with an updated effective date. Your continued use of Luldown after any changes constitutes your acceptance of the new terms.",
+    title: "Liability & Changes",
+    content: "This service is provided \"as is\" without warranties. We are not liable for damages, interruptions, or content unavailability. We reserve the right to update these Terms at any time — continued use constitutes acceptance of any changes.",
   },
 ];
 
