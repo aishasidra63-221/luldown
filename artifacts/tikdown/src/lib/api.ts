@@ -323,12 +323,28 @@ export async function downloadVideo(
       body: JSON.stringify({ url, format, token }),
     });
 
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({ detail: "Download failed" }));
-      if (res.status === 401) {
-        _cachedToken    = "";
-        _tokenFetchedAt = 0;
+    if (res.status === 401) {
+      // Token expired at the 6-hour boundary — silently fetch a fresh one and retry once
+      _cachedToken    = "";
+      _tokenFetchedAt = 0;
+      const freshToken = await getToken();
+      const retry = await fetch(`${API_BASE}/api/download`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, format, token: freshToken }),
+      });
+      if (!retry.ok) {
+        const errData = await retry.json().catch(() => ({ detail: "Download failed" }));
+        throw new Error(errData.detail || "Download failed");
       }
+      const retryData = await retry.json();
+      cdnUrl   = retryData.cdn_url;
+      filename = retryData.filename || FORMAT_FILENAME[format];
+      title    = retryData.title    || videoMeta?.title  || "TikTok Video";
+      author   = retryData.author   || videoMeta?.author || "Unknown";
+      if (!cdnUrl) throw new Error("No download URL received");
+    } else if (!res.ok) {
+      const errData = await res.json().catch(() => ({ detail: "Download failed" }));
       throw new Error(errData.detail || "Download failed");
     }
 
