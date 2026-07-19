@@ -1124,6 +1124,11 @@ function parseAweme(aweme) {
     (author.avatar_medium || author.avatarMedium || {}).url_list || [],
   );
 
+  // Music ID — stable identifier for the background track.
+  // Used to build: https://sf19.tiktokcdn-us.com/obj/musically-maliva-obj/{musicId}.mp3
+  // The ID never expires so we cache it in meta (not url) KV.
+  const musicId = String(music.id || music.mid || "");
+
   return {
     title:         aweme.desc || "TikTok Video",
     username:      username ? `@${username}` : "",
@@ -1134,6 +1139,7 @@ function parseAweme(aweme) {
     videoUrl:      isPhoto ? photoVideoUrl : url1080,
     videoUrl720:   isPhoto ? ""            : url720,
     audioUrl,
+    musicId,
     thumbUrl:      thumbnail,
     duration:      video.duration || 0,
     view_count:    stats.play_count   || stats.playCount   || 0,
@@ -1207,6 +1213,7 @@ async function fetchTikTokVideo(tiktokUrl, env, ctx) {
     duration:    parsed.duration,
     is_photo:    parsed.is_photo,
     images:      parsed.images,
+    musicId:     parsed.musicId,
   };
 
   const urlPayload = {
@@ -1695,7 +1702,7 @@ async function handleRequest(request, env, ctx) {
       let cdnUrl;
       try { cdnUrl = decodeURIComponent(rawUrl); } catch { return err("Invalid URL encoding", 400, cors); }
 
-      const allowed = ["tiktok.com", "tiktokcdn.com", "tiktokv.com", "musical.ly", "douyin.com", "bytecdn.cn", "snssdk.com"];
+      const allowed = ["tiktok.com", "tiktokcdn.com", "tiktokcdn-us.com", "tiktokv.com", "musical.ly", "douyin.com", "bytecdn.cn", "snssdk.com"];
       let cdnHostname;
       try { cdnHostname = new URL(cdnUrl).hostname; } catch { return err("Invalid CDN URL", 400, cors); }
       if (!allowed.some(d => cdnHostname === d || cdnHostname.endsWith("." + d))) {
@@ -1803,7 +1810,13 @@ async function handleRequest(request, env, ctx) {
       } else if (format === "mp4_720") {
         cdnUrl = p.videoUrl720; filename = "luldown_720p";
       } else if (format === "mp3") {
-        cdnUrl = p.audioUrl; filename = "luldown_audio"; ext = "mp3"; mediaType = "audio/mpeg";
+        // Build music CDN URL from stable Music ID (never expires).
+        // Falls back to audioUrl from play_url list if musicId is unavailable.
+        const musicId = p.musicId || "";
+        cdnUrl = musicId
+          ? `https://sf19.tiktokcdn-us.com/obj/musically-maliva-obj/${musicId}.mp3`
+          : (p.audioUrl || "");
+        filename = "luldown_audio"; ext = "mp3"; mediaType = "audio/mpeg";
       }
 
       if (!cdnUrl) return err(
