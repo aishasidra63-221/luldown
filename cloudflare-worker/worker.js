@@ -1157,12 +1157,14 @@ function parseAweme(aweme) {
 // ── Step 4: fetchTikTokVideo — cache → API → parse → cache → return ──────────
 
 async function fetchTikTokVideo(tiktokUrl, env, ctx) {
-  const t0  = Date.now();
-  const do_ = getPoolDO(env);
+  const t0 = Date.now();
 
-  // Resolve URL first, then check KV cache (only pick a phone on cache miss)
-  const videoId = await resolveVideoId(tiktokUrl, env);
-  console.log(`[timing] fetch: resolve done in ${Date.now()-t0}ms`);
+  // Parallel: resolve URL + load phone pool at the same time
+  const [videoId, pool] = await Promise.all([
+    resolveVideoId(tiktokUrl, env),
+    getOrInitPool(env),
+  ]);
+  console.log(`[timing] fetch: resolve+pool done in ${Date.now()-t0}ms`);
 
   const t1 = Date.now();
   const [metaCached, urlCached] = await Promise.all([
@@ -1177,9 +1179,8 @@ async function fetchTikTokVideo(tiktokUrl, env, ctx) {
     return { ...metaCached, ...urlCached };
   }
 
-  // Cache miss — pick a phone via Durable Object (race-free, single-threaded)
-  const t2    = Date.now();
-  const phone = await do_.fetch("http://do/pick", { method: "POST" }).then(r => r.json());
+  const t2 = Date.now();
+  const phone = pickPhone(pool);
   console.log(`[timing] fetch: pool-pick in ${Date.now()-t2}ms`);
 
   // Call TikTok Android API using the phone's fixed identity
@@ -1191,7 +1192,7 @@ async function fetchTikTokVideo(tiktokUrl, env, ctx) {
     console.log(`[timing] fetch: tiktok-api done in ${Date.now()-t3}ms`);
   } catch (e) {
     console.log(`[timing] fetch: tiktok-api FAILED in ${Date.now()-t3}ms — ${e.message}`);
-    await do_.fetch("http://do/record", { method: "POST", body: JSON.stringify({ id: phone.id, errorType: e.errorType || "network" }) });
+    await recordPhoneResult(env, pool, phone, e.errorType || "network");
     (ctx ? ctx.waitUntil.bind(ctx) : (p) => p)(trackFailureWindow(env, true));
     throw new Error(`TikTok API request failed: ${e.message}`);
   }
@@ -1199,7 +1200,7 @@ async function fetchTikTokVideo(tiktokUrl, env, ctx) {
   const details = data?.aweme_details;
   if (!details || details.length === 0) {
     const status = data?.status_code ?? data?.status ?? "unknown";
-    await do_.fetch("http://do/record", { method: "POST", body: JSON.stringify({ id: phone.id, errorType: "network" }) });
+    await recordPhoneResult(env, pool, phone, "network");
     (ctx ? ctx.waitUntil.bind(ctx) : (p) => p)(trackFailureWindow(env, true));
     throw new Error(`Video not found or private (status: ${status}). The video may have been deleted or is region-restricted.`);
   }
@@ -1227,7 +1228,7 @@ async function fetchTikTokVideo(tiktokUrl, env, ctx) {
   await Promise.all([
     metaCached ? Promise.resolve() : kvSetMeta(env, videoId, metaPayload),
     kvSetUrl(env, videoId, urlPayload),
-    do_.fetch("http://do/record", { method: "POST", body: JSON.stringify({ id: phone.id, errorType: "ok" }) }),
+    recordPhoneResult(env, pool, phone, "ok"),
   ]);
   (ctx ? ctx.waitUntil.bind(ctx) : (p) => p)(trackFailureWindow(env, false));
 
@@ -1346,161 +1347,6 @@ function isBlockedUserAgent(request) {
 
 const RICKROLL_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
 
-// ── PhonePoolDO — Durable Object for race-free phone pool ────────────────────
-// Cloudflare guarantees a single global instance of this DO, and all requests
-// to it are serialized (single-threaded). This eliminates the KV last-write-wins
-// race condition where two isolates could overwrite each other's pool updates.
-//
-// On first run it auto-migrates the existing pool from KV so no phones are lost.
-export class PhonePoolDO {
-  constructor(state, env) {
-    this.state = state;
-    this.env   = env;
-    this.pool  = null; // loaded lazily on first request
-  }
-
-  async fetch(request) {
-    const url = new URL(request.url);
-    if (url.pathname === "/pick"   && request.method === "POST") return this._pick();
-    if (url.pathname === "/record" && request.method === "POST") {
-      const { id, errorType } = await request.json();
-      return this._record(id, errorType);
-    }
-    if (url.pathname === "/grow"  && request.method === "POST") return this._grow();
-    if (url.pathname === "/stats") {
-      const pool   = await this._getPool();
-      const active = pool.filter(p => p.status === "active").length;
-      return Response.json({ total: pool.length, active, max: POOL_SIZE });
-    }
-    return new Response("Not found", { status: 404 });
-  }
-
-  // Load pool: DO storage → KV migration → fresh batch
-  async _getPool() {
-    if (this.pool !== null) return this.pool;
-
-    // 1. DO storage — strongly consistent, fast
-    this.pool = await this.state.storage.get("pool") || null;
-    if (this.pool && this.pool.length > 0) return this.pool;
-
-    // 2. One-time KV migration — preserves all existing phones
-    if (this.env.META_KV) {
-      try {
-        const raw = await this.env.META_KV.get(POOL_KV_KEY);
-        if (raw) {
-          this.pool = JSON.parse(raw);
-          await this.state.storage.put("pool", this.pool);
-          console.log(`PhonePoolDO: migrated ${this.pool.length} phones from KV`);
-          return this.pool;
-        }
-      } catch {}
-    }
-
-    // 3. Fresh start — first batch only, cron fills the rest
-    this.pool = [];
-    for (let i = 1; i <= POOL_BATCH; i++) this.pool.push(generatePhone(i));
-    await this.state.storage.put("pool", this.pool);
-    return this.pool;
-  }
-
-  // Save to DO storage — only for state changes that must survive a restart
-  async _persist() {
-    await this.state.storage.put("pool", this.pool);
-  }
-
-  async _pick() {
-    const pool  = await this._getPool();
-    const phone = pickPhone(pool);
-    // Update last_used in memory only — no storage write needed for happy path
-    const idx = pool.findIndex(p => p.id === phone.id);
-    if (idx !== -1) pool[idx] = { ...phone, last_used: Math.floor(Date.now() / 1000) };
-    return Response.json(phone);
-  }
-
-  async _record(phoneId, errorType) {
-    const pool = await this._getPool();
-    const idx  = pool.findIndex(p => p.id === phoneId);
-    if (idx === -1) return Response.json({ ok: true });
-
-    const now   = Math.floor(Date.now() / 1000);
-    const phone = pool[idx];
-    const p     = { ...phone, last_used: now };
-
-    if (errorType === "ok") {
-      p.failures = 0;
-      pool[idx]  = p;
-      // Memory-only — no persist needed for happy path
-      return Response.json({ ok: true });
-    }
-
-    if (errorType === "api_change") {
-      // Phone is innocent — no penalty
-      return Response.json({ ok: true });
-    }
-
-    if (errorType === "rate_limit") {
-      p.skip_until = now + 600;
-      pool[idx]    = p;
-      await this._persist();
-      return Response.json({ ok: true });
-    }
-
-    if (errorType === "device_block") {
-      p.failures = (p.failures || 0) + 1;
-      if (p.failures >= 3) {
-        pool[idx] = generatePhone(phoneId);
-        await this._persist();
-        return Response.json({ ok: true });
-      }
-      pool[idx] = p;
-      await this._persist();
-      return Response.json({ ok: true });
-    }
-
-    // Auto-replace expired phones (1-year lifespan)
-    if (p.expires_at && now > p.expires_at) {
-      pool[idx] = generatePhone(phoneId);
-      await this._persist();
-      return Response.json({ ok: true });
-    }
-
-    pool[idx] = p;
-    return Response.json({ ok: true });
-  }
-
-  async _grow() {
-    const pool = await this._getPool();
-
-    // One-time migration: patch phones missing the timezone field
-    let patched = false;
-    for (const phone of pool) {
-      if (!phone.timezone_name) {
-        phone.timezone_name = pickTimezone();
-        patched = true;
-      }
-    }
-    if (patched) {
-      await this._persist();
-      console.log("PhonePoolDO: patched missing timezones");
-    }
-
-    if (pool.length >= POOL_SIZE) return Response.json({ ok: true, size: pool.length });
-
-    const start = pool.length + 1;
-    const end   = Math.min(pool.length + POOL_BATCH, POOL_SIZE);
-    for (let i = start; i <= end; i++) pool.push(generatePhone(i));
-    await this._persist();
-    console.log(`PhonePoolDO: grew ${start - 1} → ${pool.length}/${POOL_SIZE}`);
-    return Response.json({ ok: true, size: pool.length });
-  }
-}
-
-// Helper — returns the single global PhonePoolDO stub
-function getPoolDO(env) {
-  const id = env.PHONE_POOL.idFromName("main");
-  return env.PHONE_POOL.get(id);
-}
-
 export default {
   async fetch(request, env, ctx) {
     // ── Country geo-block — must run before ANY other logic ──────────────────
@@ -1545,7 +1391,8 @@ export default {
       );
     }
     // 2. Grow phone pool — adds 50 phones per cron run until 2000 reached
-    ctx.waitUntil(getPoolDO(env).fetch("http://do/grow", { method: "POST" }));
+    // Cron runs every 10 min → full 2000-phone pool ready in ~400 min
+    ctx.waitUntil(growPool(env));
   },
 };
 
@@ -1768,10 +1615,11 @@ async function handleRequest(request, env, ctx) {
       if (originBlockProfile) return originBlockProfile;
       const ip = request.headers.get("CF-Connecting-IP") || "unknown";
 
-      // Parallel: rate limit check + body parse at the same time
-      const [rateLimitOkP, bodyP] = await Promise.all([
+      // Parallel: rate limit check + body parse + pool load at the same time
+      const [rateLimitOkP, bodyP, poolP] = await Promise.all([
         checkRateLimit(env, ip),
         request.json().catch(() => null),
+        getOrInitPool(env),
       ]);
       if (!rateLimitOkP) return err("Too many requests. Please slow down.", 429, cors);
       const body = bodyP;
@@ -1788,24 +1636,25 @@ async function handleRequest(request, env, ctx) {
       if (!usernameMatch) return err("Invalid TikTok profile URL. Use a link like tiktok.com/@username", 400, cors);
       const username = usernameMatch[1];
 
-      const phone = await getPoolDO(env).fetch("http://do/pick", { method: "POST" }).then(r => r.json());
+      const pool  = poolP;
+      const phone = pickPhone(pool);
 
       let profileData;
       try {
         const result = await callUserPostsAPI(username, phone);
         profileData  = result.data;
       } catch (e) {
-        await getPoolDO(env).fetch("http://do/record", { method: "POST", body: JSON.stringify({ id: phone.id, errorType: e.errorType || "network" }) });
+        await recordPhoneResult(env, pool, phone, e.errorType || "network");
         return err(`Failed to fetch profile: ${e.message}`, 422, cors);
       }
 
       const awemeList = profileData?.aweme_list || [];
       if (awemeList.length === 0) {
-        await getPoolDO(env).fetch("http://do/record", { method: "POST", body: JSON.stringify({ id: phone.id, errorType: "network" }) });
+        await recordPhoneResult(env, pool, phone, "network");
         return err("No videos found. This account may be private or have no posts.", 404, cors);
       }
 
-      await getPoolDO(env).fetch("http://do/record", { method: "POST", body: JSON.stringify({ id: phone.id, errorType: "ok" }) });
+      await recordPhoneResult(env, pool, phone, "ok");
 
       // Parse videos using existing parseAweme()
       const videos = awemeList.slice(0, 10).map(aweme => {
