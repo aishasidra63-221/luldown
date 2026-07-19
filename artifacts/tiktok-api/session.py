@@ -27,6 +27,7 @@ def _cleanup_tokens():
 
 def generate_token() -> str:
     """Generate a signed session token."""
+    _cleanup_tokens()  # purge expired tokens on every generation, not just on verify
     nonce = secrets.token_urlsafe(16)
     ts = str(int(time.time()))
     payload = f"{nonce}:{ts}"
