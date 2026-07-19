@@ -201,9 +201,9 @@ export default function DownloaderBox({ highlightFormat }: Props) {
 
             {/* ── Author + Title + Tags ── */}
             <div style={{ padding:"14px 16px 16px" }}>
+              <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
 
-              {/* Row 1: Avatar (small) + Username centered */}
-              <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom: cleanTitle ? 10 : 0 }}>
+                {/* Avatar — left column */}
                 <div style={{
                   width:48, height:48, borderRadius:"50%", flexShrink:0,
                   background:"linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)",
@@ -220,51 +220,54 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                     />
                   ) : avatarLetter}
                 </div>
-                <p style={{ margin:0, fontWeight:700, fontSize:14, color:"#ffffff" }}>
-                  {info.author}
-                </p>
-              </div>
 
-              {/* Row 2: Title + Tags (2-line clamp) + More/Less button */}
-              {cleanTitle && (
-                <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
-                  <p style={{
-                    flex:1, margin:0, fontSize:13, fontWeight:500,
-                    color:"rgba(255,255,255,0.75)", lineHeight:1.6,
-                    wordBreak:"break-word",
-                    ...(!expanded ? {
-                      display:"-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical" as const,
-                      overflow:"hidden",
-                    } : {}),
-                  }}>
-                    {cleanTitle}
-                    {tags.length > 0 && (
-                      <>{" "}{tags.slice(0, 6).map(tag => (
-                        <span key={tag} style={{ color:"#a78bfa", fontWeight:600 }}>{tag}{" "}</span>
-                      ))}</>
-                    )}
+                {/* Right column: username on top, title+tags below */}
+                <div style={{ flex:1, minWidth:0 }}>
+                  <p style={{ margin:"0 0 6px", fontWeight:700, fontSize:14, color:"#ffffff" }}>
+                    {info.author}
                   </p>
-                  <button
-                    onClick={() => setExpanded(v => !v)}
-                    style={{
-                      flexShrink:0, marginTop:2,
-                      background:"rgba(255,255,255,0.07)",
-                      border:"1px solid rgba(255,255,255,0.14)",
-                      borderRadius:20,
-                      color:"rgba(255,255,255,0.65)",
-                      fontSize:12, fontWeight:600,
-                      padding:"4px 12px",
-                      cursor:"pointer",
-                      display:"flex", alignItems:"center", gap:4,
-                      whiteSpace:"nowrap",
-                    }}
-                  >
-                    {expanded ? "Less ∧" : "More ∨"}
-                  </button>
+                  {cleanTitle && (
+                    <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
+                      <p style={{
+                        flex:1, margin:0, fontSize:13, fontWeight:500,
+                        color:"rgba(255,255,255,0.75)", lineHeight:1.6,
+                        wordBreak:"break-word",
+                        ...(!expanded ? {
+                          display:"-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical" as const,
+                          overflow:"hidden",
+                        } : {}),
+                      }}>
+                        {cleanTitle}
+                        {tags.length > 0 && (
+                          <>{" "}{tags.slice(0, 6).map(tag => (
+                            <span key={tag} style={{ color:"#a78bfa", fontWeight:600 }}>{tag}{" "}</span>
+                          ))}</>
+                        )}
+                      </p>
+                      <button
+                        onClick={() => setExpanded(v => !v)}
+                        style={{
+                          flexShrink:0, marginTop:2,
+                          background:"rgba(255,255,255,0.07)",
+                          border:"1px solid rgba(255,255,255,0.14)",
+                          borderRadius:20,
+                          color:"rgba(255,255,255,0.65)",
+                          fontSize:12, fontWeight:600,
+                          padding:"4px 12px",
+                          cursor:"pointer",
+                          display:"flex", alignItems:"center", gap:4,
+                          whiteSpace:"nowrap",
+                        }}
+                      >
+                        {expanded ? "Less ∧" : "More ∨"}
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
+
+              </div>
             </div>
 
             {/* Divider */}
