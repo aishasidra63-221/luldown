@@ -191,11 +191,6 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                   src={info.thumbnail} alt=""
                   style={{ width:"100%", height:140, objectFit:"cover", display:"block" }}
                 />
-                {/* Bottom fade to card bg */}
-                <div style={{
-                  position:"absolute", bottom:0, left:0, right:0, height:80,
-                  background:"linear-gradient(to top, #0f0a2e, transparent)",
-                }} />
               </div>
             )}
 
@@ -205,10 +200,10 @@ export default function DownloaderBox({ highlightFormat }: Props) {
 
                 {/* Avatar — left column */}
                 <div style={{
-                  width:48, height:48, borderRadius:"50%", flexShrink:0,
+                  width:56, height:56, borderRadius:"50%", flexShrink:0,
                   background:"linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)",
                   display:"flex", alignItems:"center", justifyContent:"center",
-                  fontWeight:800, fontSize:19, color:"#fff",
+                  fontWeight:800, fontSize:21, color:"#fff",
                   overflow:"hidden",
                 }}>
                   {info.author_avatar ? (
@@ -222,15 +217,15 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                 </div>
 
                 {/* Right column: username on top, title+tags below */}
-                <div style={{ flex:1, minWidth:0 }}>
-                  <p style={{ margin:"0 0 6px", fontWeight:700, fontSize:14, color:"#ffffff" }}>
+                <div style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column", justifyContent:"flex-start" }}>
+                  <p style={{ margin:"0 0 4px", fontWeight:700, fontSize:13.5, color:"#ffffff", textAlign:"left" }}>
                     {info.author}
                   </p>
                   {cleanTitle && (
-                    <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
+                    <div style={{ display:"flex", alignItems:"flex-end", gap:8 }}>
                       <p style={{
-                        flex:1, margin:0, fontSize:13, fontWeight:500,
-                        color:"rgba(255,255,255,0.75)", lineHeight:1.6,
+                        flex:1, margin:0, fontSize:11.5, fontWeight:500,
+                        color:"rgba(255,255,255,0.75)", lineHeight:1.55,
                         wordBreak:"break-word",
                         ...(!expanded ? {
                           display:"-webkit-box",
@@ -249,13 +244,13 @@ export default function DownloaderBox({ highlightFormat }: Props) {
                       <button
                         onClick={() => setExpanded(v => !v)}
                         style={{
-                          flexShrink:0, marginTop:2,
+                          flexShrink:0,
                           background:"rgba(255,255,255,0.07)",
                           border:"1px solid rgba(255,255,255,0.14)",
                           borderRadius:20,
                           color:"rgba(255,255,255,0.65)",
-                          fontSize:12, fontWeight:600,
-                          padding:"4px 12px",
+                          fontSize:11, fontWeight:600,
+                          padding:"3px 10px",
                           cursor:"pointer",
                           display:"flex", alignItems:"center", gap:4,
                           whiteSpace:"nowrap",
