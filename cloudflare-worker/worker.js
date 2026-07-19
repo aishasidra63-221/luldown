@@ -1127,7 +1127,10 @@ function parseAweme(aweme) {
   // Music ID — stable identifier for the background track.
   // Used to build: https://sf19.tiktokcdn-us.com/obj/musically-maliva-obj/{musicId}.mp3
   // The ID never expires so we cache it in meta (not url) KV.
-  const musicId = String(music.id || music.mid || "");
+  // IMPORTANT: use music.mid (string) over music.id (number) to avoid JS
+  // integer precision loss — TikTok music IDs are 19-digit numbers that exceed
+  // Number.MAX_SAFE_INTEGER, so JSON.parse() silently rounds music.id to *000.
+  const musicId = music.mid || music.id_str || String(music.id || "");
 
   return {
     title:         aweme.desc || "TikTok Video",
