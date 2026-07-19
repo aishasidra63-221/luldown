@@ -15,14 +15,6 @@ const FAQS = [
         q: "Is Luldown free to use?",
         a: "Yes, 100% free. No subscription, no account, no hidden fees. You can download unlimited videos at no cost.",
       },
-      {
-        q: "Do I need to install an extension or app?",
-        a: "No installation needed. Luldown works entirely in your browser — just paste the TikTok link and download. No extensions, no apps, no plugins required.",
-      },
-      {
-        q: "Do I need a TikTok account to download videos?",
-        a: "No account required. You can download any public TikTok video without logging in or creating an account.",
-      },
     ],
   },
   {
@@ -37,16 +29,8 @@ const FAQS = [
         a: "TikTok stores two versions of every video on their CDN — one with a watermark (added by the app) and one clean original file. Luldown resolves the clean CDN URL directly, bypassing the app-layer watermark.",
       },
       {
-        q: "How to download TikTok video in HD 1080p?",
-        a: "Paste the TikTok link and click Download Now. When the result card appears, choose 'Download HD 1080p — No Watermark'. This gives you the highest quality version available.",
-      },
-      {
         q: "Can I download only the audio (MP3)?",
         a: "Yes. After pasting the link and clicking Download Now, select 'Download MP3 Audio — 192kbps'. The audio is extracted at 192kbps quality.",
-      },
-      {
-        q: "Can I download TikTok photo slideshows?",
-        a: "Yes. If a TikTok post is a photo slideshow, Luldown will show all images. You can download each photo individually or save all at once.",
       },
     ],
   },
@@ -61,14 +45,6 @@ const FAQS = [
         q: "How to download TikTok videos on Android?",
         a: "Copy the TikTok link from the Share menu, open Luldown in Chrome, paste and tap Download. The file will save to your Downloads folder automatically. You can then move it to Gallery from there.",
       },
-      {
-        q: "Does Luldown work on desktop (PC/Mac)?",
-        a: "Yes. Luldown works on all desktop browsers — Chrome, Firefox, Safari, Edge. Paste the link, click Download, then right-click the file and choose 'Save As' to pick your save location.",
-      },
-      {
-        q: "Why does the download open in a new tab instead of saving?",
-        a: "This is a browser security restriction for cross-origin files. On desktop, right-click the video and choose 'Save As'. On mobile, long-press and tap 'Save'. The file comes directly from TikTok's CDN.",
-      },
     ],
   },
   {
@@ -77,14 +53,6 @@ const FAQS = [
       {
         q: "Is my data safe? Do you store my history?",
         a: "Your download history is stored only in your browser's localStorage — it never leaves your device and is never sent to our servers. We do not collect or store any personal data. You can clear your history anytime from the History page.",
-      },
-      {
-        q: "Can Luldown see what I download?",
-        a: "No. Luldown acts as a URL resolver only — your browser fetches the file directly from TikTok's CDN. We do not receive, log, or store the content of any download.",
-      },
-      {
-        q: "Can I download videos from private TikTok accounts?",
-        a: "No. Luldown can only download videos from public TikTok accounts. Private account videos are not publicly accessible and cannot be downloaded.",
       },
       {
         q: "Is it legal to download TikTok videos?",
@@ -98,14 +66,6 @@ const FAQS = [
       {
         q: "The video failed to load — what should I do?",
         a: "Try copying the link again fresh from TikTok and pasting it into Luldown. Some videos may be temporarily unavailable or region-restricted. If the issue persists, the video may have been deleted or set to private.",
-      },
-      {
-        q: "Where are TikTok videos saved after downloading?",
-        a: "On desktop, files go to your browser's Downloads folder. On iPhone, use 'Download Linked File' in Safari to save to the Files app. On Android, files save to your Downloads folder and can be moved to Gallery.",
-      },
-      {
-        q: "Why is the download speed slow?",
-        a: "Download speed depends on TikTok's CDN and your internet connection — Luldown does not throttle or limit downloads in any way. Large 1080p files may take a moment on slower connections.",
       },
       {
         q: "The link I pasted is not working — why?",
