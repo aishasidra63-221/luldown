@@ -600,6 +600,11 @@ async function resolveVideoId(rawUrl, env) {
     return cacheAndReturn(env, shortCode, fromUrl);
   }
 
+  // Final URL landed on /@username with no /video/ or /photo/ → story/profile
+  if (/\/@[\w.]+/.test(resolveRes.url) && !/\/(video|photo)\//.test(resolveRes.url)) {
+    throw new Error("Story download is not supported.");
+  }
+
   // Final URL didn't have the ID — read body and parse HTML
   console.log(`[timing] resolve: step3-html-parse after ${Date.now()-t0}ms`);
   const html = await resolveRes.text();
