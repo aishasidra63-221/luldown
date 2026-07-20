@@ -154,14 +154,14 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
                 ) : (
                   <>
                     <p style={{
-                      margin: "0 0 5px", fontSize: 11.5, fontWeight: 500,
+                      margin: "0 0 2px", fontSize: 11.5, fontWeight: 500,
                       color: "rgba(255,255,255,0.75)", lineHeight: 1.55,
                       wordBreak: "break-word",
                     }}>
                       {cleanTitle}
                     </p>
                     {tags.length > 0 && (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "3px 6px", marginBottom: 3 }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "2px 5px", marginBottom: 2 }}>
                         {tags.slice(0, 6).map(tag => (
                           <span key={tag} style={{ color: "#a78bfa", fontWeight: 600, fontSize: 11.5 }}>{tag}</span>
                         ))}
