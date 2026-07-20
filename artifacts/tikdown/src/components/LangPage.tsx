@@ -94,9 +94,10 @@ interface Props {
   lang: Lang;
   pageKey: PageKey;
   highlightFormat?: DownloadFormat;
+  notice?: React.ReactNode;
 }
 
-export default function LangPage({ lang, pageKey, highlightFormat }: Props) {
+export default function LangPage({ lang, pageKey, highlightFormat, notice }: Props) {
   const tr = T[lang][pageKey];
   const meta = LANG_META[lang];
   const dir = meta.dir;
@@ -132,6 +133,7 @@ export default function LangPage({ lang, pageKey, highlightFormat }: Props) {
           </p>
           <div style={{ maxWidth: 780, margin: "0 auto" }}>
             <DownloaderBox highlightFormat={highlightFormat} />
+            {notice && <div style={{ marginTop: 10 }}>{notice}</div>}
           </div>
           <div style={{ marginTop: 28, height: 52 }} />
         </div>
