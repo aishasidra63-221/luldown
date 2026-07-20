@@ -26,6 +26,7 @@ export default function HistoryPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [clearing, setClearing] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [, navigate] = useLocation();
 
   const load = async () => {
@@ -37,7 +38,7 @@ export default function HistoryPage() {
   useEffect(() => { load(); }, []);
 
   const handleClear = async () => {
-    if (!confirm("Clear all download history?")) return;
+    setShowConfirm(false);
     setClearing(true);
     await clearHistory();
     setHistory([]);
@@ -46,6 +47,74 @@ export default function HistoryPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
+
+      {/* ── Confirm popup ── */}
+      {showConfirm && (
+        <div
+          onClick={() => setShowConfirm(false)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000,
+            background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "0 20px",
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: "#fff", borderRadius: 18,
+              padding: "28px 24px 24px",
+              maxWidth: 360, width: "100%",
+              boxShadow: "0 24px 60px rgba(0,0,0,0.2)",
+              textAlign: "center",
+            }}
+          >
+            {/* Icon */}
+            <div style={{
+              width: 52, height: 52, borderRadius: "50%",
+              background: "rgba(239,68,68,0.1)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              margin: "0 auto 16px",
+            }}>
+              <Trash2 size={22} color="#ef4444" />
+            </div>
+
+            <h2 style={{ fontSize: 17, fontWeight: 800, color: "#111827", margin: "0 0 8px" }}>
+              Clear all history?
+            </h2>
+            <p style={{ fontSize: 13.5, color: "#6b7280", margin: "0 0 24px", lineHeight: 1.55 }}>
+              This will permanently delete all your download history from this device. This cannot be undone.
+            </p>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setShowConfirm(false)}
+                style={{
+                  flex: 1, padding: "11px 0", borderRadius: 10,
+                  background: "#f3f4f6", border: "none",
+                  fontSize: 14, fontWeight: 600, color: "#374151",
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleClear}
+                style={{
+                  flex: 1, padding: "11px 0", borderRadius: 10,
+                  background: "#ef4444", border: "none",
+                  fontSize: 14, fontWeight: 700, color: "#fff",
+                  cursor: "pointer",
+                  boxShadow: "0 4px 14px rgba(239,68,68,0.35)",
+                }}
+              >
+                Yes, Clear All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="history-shell" style={{ margin: "0 auto", padding: "24px 16px 64px" }}>
 
         <div style={{ marginBottom: 20 }}>
@@ -65,7 +134,7 @@ export default function HistoryPage() {
           </div>
           {history.length > 0 && (
             <button
-              onClick={handleClear}
+              onClick={() => setShowConfirm(true)}
               disabled={clearing}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
