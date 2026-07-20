@@ -13,10 +13,10 @@ A TikTok video downloader that strips watermarks and supports MP4/MP3 output.
 
 Two workflows run concurrently:
 
-| Workflow | Command | Port |
+| Workflow | Name in Replit | Port |
 |---|---|---|
-| **Start application** | `PORT=5000 pnpm --filter @workspace/tikdown run dev` | 5000 |
-| **TikTok API** | `cd artifacts/tiktok-api && pip install --user -r requirements.txt -q && PORT=8000 WORKERS=1 python3 main.py` | 8000 |
+| **Frontend** | `artifacts/tikdown: web` | auto-assigned |
+| **Python API** | `TikTok API` | 8000 |
 
 Install dependencies once with `pnpm install` from the repo root before starting.
 
