@@ -102,7 +102,7 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
       {info.thumbnail && (
         <div style={{ position: "relative" }}>
           <img
-            src={info.thumbnail} alt=""
+            src={info.thumbnail} alt={info.title ? `${info.author} — ${info.title.slice(0, 60)}` : "TikTok video thumbnail"}
             style={{ width: "100%", height: 140, objectFit: "cover", display: "block" }}
           />
         </div>
@@ -122,7 +122,7 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
           }}>
             {info.author_avatar ? (
               <img
-                src={info.author_avatar} alt=""
+                src={info.author_avatar} alt={info.author || "TikTok creator"}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
               />
@@ -217,7 +217,7 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
                   boxShadow: "0 2px 10px rgba(0,0,0,0.4)",
                 }}
               >
-                <img src={imgUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} loading="lazy" />
+                <img src={imgUrl} alt={`${info.author} photo slide ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} loading="lazy" />
                 <div style={{
                   position: "absolute", top: 5, left: 5,
                   background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)",
