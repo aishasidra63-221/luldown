@@ -15,7 +15,7 @@ export default function StoryPage() {
       notice={
         <div className="error-box">
           <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
-          Story download is not supported. Please paste a direct TikTok video link instead.
+          Story download is not supported.
         </div>
       }
     />
