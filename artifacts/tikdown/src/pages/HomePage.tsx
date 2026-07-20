@@ -213,7 +213,7 @@ export default function HomePage() {
       {/* ══════════ RESULT (below hero, separate section) ══════════ */}
       {result && (
         <section style={{
-          background: "#0d0b1e",
+          background: "transparent",
           padding: "32px 24px",
           borderTop: "1px solid rgba(255,255,255,0.06)",
         }}>
