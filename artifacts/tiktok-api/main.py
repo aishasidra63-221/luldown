@@ -102,6 +102,7 @@ _ALLOWED_CDN_DOMAINS = [
     "musical.ly", "douyin.com", "bytecdn.cn", "snssdk.com",
 ]
 
+# Browser UA — used for direct CDN URLs (tiktokcdn.com, tiktokv.com direct files)
 _CDN_FETCH_HEADERS = {
     "User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Referer":         "https://www.tiktok.com/",
@@ -111,6 +112,23 @@ _CDN_FETCH_HEADERS = {
     "Range":           "bytes=0-",
     "Sec-Fetch-Dest":  "video",
 }
+
+# TikTok App UA — required for aweme/v1/play/ resolver links.
+# These links return a 302 redirect to the actual CDN file only when
+# the request looks like a real TikTok Android app — browser UA gets
+# an empty or error response.
+_TT_APP_FETCH_HEADERS = {
+    "User-Agent":      "com.zhiliaoapp.musically/2024600030 (Linux; U; Android 14; en_US; Pixel 8; Build/AD1A.240405.004; Cronet/113.0.5672.129)",
+    "Accept":          "*/*",
+    "Accept-Encoding": "identity",
+    "Range":           "bytes=0-",
+}
+
+def _pick_cdn_headers(cdn_url: str) -> dict:
+    """Return TikTok App headers for resolver links, browser headers for direct CDN."""
+    if "aweme/v1/play" in cdn_url:
+        return _TT_APP_FETCH_HEADERS
+    return _CDN_FETCH_HEADERS
 
 PROXY_SECRET = os.environ.get("PROXY_SECRET", "")
 
@@ -362,7 +380,7 @@ async def proxy_cdn(request: Request, url: str, filename: str = "luldown.mp4"):
         timeout=httpx.Timeout(120.0, connect=15.0),
     )
     try:
-        req = client.build_request("GET", cdn_url, headers=_CDN_FETCH_HEADERS)
+        req = client.build_request("GET", cdn_url, headers=_pick_cdn_headers(cdn_url))
         resp = await client.send(req, stream=True)
     except Exception as exc:
         await client.aclose()
