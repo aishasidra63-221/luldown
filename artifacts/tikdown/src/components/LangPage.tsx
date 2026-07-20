@@ -44,9 +44,37 @@ function useLangSEO(lang: Lang, pageKey: PageKey, tr: PageTranslation) {
       document.head.appendChild(el);
     });
 
+    // ── HowTo JSON-LD — only on howto pages ──────────────────────────────────
+    const HOWTO_JSONLD_ID = "howto-jsonld";
+    document.getElementById(HOWTO_JSONLD_ID)?.remove();
+    if (pageKey === "howto" && tr.steps?.length) {
+      const schema = {
+        "@context": "https://schema.org",
+        "@type": "HowTo",
+        "name": tr.howItWorksTitle || tr.metaTitle,
+        "description": tr.metaDescription,
+        "totalTime": "PT2M",
+        "estimatedCost": { "@type": "MonetaryAmount", "currency": "USD", "value": "0" },
+        "tool": [{ "@type": "HowToTool", "name": "LulDown.com" }],
+        "step": tr.steps.map((s, i) => ({
+          "@type": "HowToStep",
+          "position": i + 1,
+          "name": s.title,
+          "text": s.desc,
+          "url": `${SITE_URL}${buildPageUrl(lang, pageKey) || "/"}#step-${i + 1}`,
+        })),
+      };
+      const script = document.createElement("script");
+      script.id = HOWTO_JSONLD_ID;
+      script.type = "application/ld+json";
+      script.textContent = JSON.stringify(schema);
+      document.head.appendChild(script);
+    }
+
     return () => {
       document.title = "LUL Downloader — Download TikTok Videos Free";
       document.querySelectorAll('link[rel="alternate"]').forEach(el => el.remove());
+      document.getElementById(HOWTO_JSONLD_ID)?.remove();
     };
   }, [lang, pageKey, tr.metaTitle]);
 }
