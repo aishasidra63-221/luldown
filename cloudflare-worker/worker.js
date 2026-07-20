@@ -529,6 +529,10 @@ async function resolveVideoId(rawUrl, env) {
         console.log(`[timing] resolve: step1-head-fb in ${Date.now()-t0}ms`);
         return cacheAndReturn(env, shortCode, id);
       }
+      // Location has /@username but no /video/ or /photo/ → confirmed story/profile
+      if (/\/@[\w.]+/.test(loc) && !/\/(video|photo)\//.test(loc)) {
+        throw new Error("Story download is not supported.");
+      }
     }
   } catch (e) {
     console.log(`[timing] resolve: step1-head-fb-error in ${Date.now()-t0}ms — ${e.message}`);
