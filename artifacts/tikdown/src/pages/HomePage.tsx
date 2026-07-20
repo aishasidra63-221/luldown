@@ -214,8 +214,7 @@ export default function HomePage() {
       {result && (
         <section style={{
           background: "transparent",
-          padding: "32px 24px",
-          borderTop: "1px solid rgba(255,255,255,0.06)",
+          padding: "16px 24px 32px",
         }}>
           <div style={{ maxWidth: 780, margin: "0 auto" }}>
             {result.info && (
