@@ -1,6 +1,9 @@
 import { useSEO } from "@/hooks/use-seo";
 import DownloaderBox from "@/components/DownloaderBox";
+import VideoResultCard from "@/components/VideoResultCard";
+import ProfileResults from "@/components/ProfileResults";
 import { useState } from "react";
+import type { VideoInfo, ProfileInfo } from "@/lib/api";
 
 const DARK_BG2  = "#1a1730";
 const WHITE     = "#F8F8FC";
@@ -175,6 +178,8 @@ export default function HomePage() {
     jsonLd: HOME_FAQ_JSONLD,
   });
 
+  const [result, setResult] = useState<{ info: VideoInfo | null; profile: ProfileInfo | null; url: string } | null>(null);
+
   return (
     <div style={{ overflowX: "hidden" }}>
 
@@ -199,11 +204,29 @@ export default function HomePage() {
             Fast. Free. High Quality. No Registration.
           </p>
           <div style={{ maxWidth: 780, margin: "0 auto" }}>
-            <DownloaderBox />
+            <DownloaderBox onResult={setResult} />
           </div>
           <div style={{ marginTop: 28, height: 52 }} />
         </div>
       </section>
+
+      {/* ══════════ RESULT (below hero, separate section) ══════════ */}
+      {result && (
+        <section style={{
+          background: "#0d0b1e",
+          padding: "32px 24px",
+          borderTop: "1px solid rgba(255,255,255,0.06)",
+        }}>
+          <div style={{ maxWidth: 780, margin: "0 auto" }}>
+            {result.info && (
+              <VideoResultCard info={result.info} url={result.url} />
+            )}
+            {result.profile && (
+              <ProfileResults profile={result.profile} />
+            )}
+          </div>
+        </section>
+      )}
 
       {/* ══════════ FEATURES ══════════ */}
       <section style={{ background: WHITE, padding: "52px 24px" }}>

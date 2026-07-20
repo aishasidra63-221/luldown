@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { fetchVideoInfo, downloadVideo, downloadPhoto, VideoInfo, DownloadFormat, isProfileUrl, fetchProfileInfo, ProfileInfo } from "@/lib/api";
 import ProfileResults from "@/components/ProfileResults";
+import VideoResultCard from "@/components/VideoResultCard";
 import {
   Music, Clipboard, Download, Image, Video,
   AlertCircle, X,
@@ -58,7 +59,11 @@ const FMTS: FmtCfg[] = [
 
 
 type Step = "idle" | "loading-info" | "info-ready" | "profile-ready" | "error";
-interface Props { highlightFormat?: DownloadFormat; }
+interface Props {
+  highlightFormat?: DownloadFormat;
+  /** When provided, result card/profile renders externally — DownloaderBox only shows input + error */
+  onResult?: (payload: { info: VideoInfo | null; profile: ProfileInfo | null; url: string } | null) => void;
+}
 
 const DEMO_INFO: VideoInfo = {
   success: true,
@@ -71,7 +76,7 @@ const DEMO_INFO: VideoInfo = {
   is_photo: false,
 };
 
-export default function DownloaderBox({ highlightFormat }: Props) {
+export default function DownloaderBox({ highlightFormat, onResult }: Props) {
   const isDemo = false;
   const prefill = typeof window !== "undefined" ? (sessionStorage.getItem("prefill_url") || "") : "";
   if (prefill) sessionStorage.removeItem("prefill_url");
@@ -88,13 +93,18 @@ export default function DownloaderBox({ highlightFormat }: Props) {
     const trimmed = fetchUrl.trim();
     if (!trimmed) return;
     setStep("loading-info"); setError(""); setInfo(null); setProfileInfo(null);
+    onResult?.(null);
     try {
       if (isProfileUrl(trimmed)) {
-        setProfileInfo(await fetchProfileInfo(trimmed));
+        const profile = await fetchProfileInfo(trimmed);
+        setProfileInfo(profile);
         setStep("profile-ready");
+        onResult?.({ info: null, profile, url: trimmed });
       } else {
-        setInfo(await fetchVideoInfo(trimmed));
+        const videoInfo = await fetchVideoInfo(trimmed);
+        setInfo(videoInfo);
         setStep("info-ready");
+        onResult?.({ info: videoInfo, profile: null, url: trimmed });
       }
     } catch (e: any) {
       setError(e.message || "Failed to fetch");
@@ -126,7 +136,10 @@ export default function DownloaderBox({ highlightFormat }: Props) {
     inputRef.current?.focus();
   };
 
-  const reset = () => { setUrl(""); setStep("idle"); setInfo(null); setProfileInfo(null); setError(""); };
+  const reset = () => {
+    setUrl(""); setStep("idle"); setInfo(null); setProfileInfo(null); setError("");
+    onResult?.(null);
+  };
 
   const isPhoto = info?.is_photo && (info.images?.length ?? 0) > 0;
   const fmts = highlightFormat
@@ -177,13 +190,13 @@ export default function DownloaderBox({ highlightFormat }: Props) {
         </div>
       )}
 
-      {/* ══════════ PROFILE RESULT ══════════ */}
-      {step === "profile-ready" && profileInfo && (
+      {/* ══════════ PROFILE RESULT (only when rendering internally) ══════════ */}
+      {!onResult && step === "profile-ready" && profileInfo && (
         <ProfileResults profile={profileInfo} />
       )}
 
-      {/* ══════════ RESULT CARD ══════════ */}
-      {step === "info-ready" && info && (() => {
+      {/* ══════════ RESULT CARD (only when rendering internally) ══════════ */}
+      {!onResult && step === "info-ready" && info && (() => {
         const tags = (info.title || "").match(/#[\w\u0900-\u097F]+/g) ?? [];
         const cleanTitle = (info.title || "").replace(/#[\w\u0900-\u097F]+/g, "").trim();
         const avatarLetter = (info.author || "T").replace("@","").charAt(0).toUpperCase();
