@@ -206,26 +206,22 @@ export default function HomePage() {
           <div style={{ maxWidth: 780, margin: "0 auto" }}>
             <DownloaderBox onResult={setResult} />
           </div>
+
+          {/* ══════════ RESULT (inside hero, purple section) ══════════ */}
+          {result && (
+            <div style={{ maxWidth: 780, margin: "16px auto 0" }}>
+              {result.info && (
+                <VideoResultCard info={result.info} url={result.url} />
+              )}
+              {result.profile && (
+                <ProfileResults profile={result.profile} />
+              )}
+            </div>
+          )}
+
           <div style={{ marginTop: 28, height: 52 }} />
         </div>
       </section>
-
-      {/* ══════════ RESULT (below hero, separate section) ══════════ */}
-      {result && (
-        <section style={{
-          background: "transparent",
-          padding: "16px 24px 32px",
-        }}>
-          <div style={{ maxWidth: 780, margin: "0 auto" }}>
-            {result.info && (
-              <VideoResultCard info={result.info} url={result.url} />
-            )}
-            {result.profile && (
-              <ProfileResults profile={result.profile} />
-            )}
-          </div>
-        </section>
-      )}
 
       {/* ══════════ FEATURES ══════════ */}
       <section style={{ background: WHITE, padding: "52px 24px" }}>
