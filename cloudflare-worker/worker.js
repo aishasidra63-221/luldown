@@ -1990,12 +1990,11 @@ async function handleRequest(request, env, ctx) {
       } else if (format === "mp4_720") {
         cdnUrl = p.videoUrl720; filename = "luldown_720p";
       } else if (format === "mp3") {
-        // Build music CDN URL from stable Music ID (never expires).
-        // Falls back to audioUrl from play_url list if musicId is unavailable.
-        const musicId = p.musicId || "";
-        cdnUrl = musicId
-          ? `https://sf19.tiktokcdn-us.com/obj/musically-maliva-obj/${musicId}.mp3`
-          : (p.audioUrl || "");
+        // Use the actual audioUrl from TikTok API response (music.play_url.url_list).
+        // This gives a direct CDN URL (v16-ies-music.tiktokcdn-us.com etc.) that
+        // works in the browser without auth headers — same as what competitors use.
+        // The old musically-maliva-obj constructed URL required auth headers → 403.
+        cdnUrl = p.audioUrl || "";
         filename = "luldown_audio"; ext = "mp3"; mediaType = "audio/mpeg";
       }
 
