@@ -8,9 +8,10 @@ const HISTORY_KEY = "luldown_history";
 const MAX_HISTORY = 10;
 
 export interface DownloadUrls {
-  mp4_1080?: string;
-  mp4_720?:  string;
-  mp3?:      string;
+  mp4_1080?:  string;
+  mp4_720?:   string;
+  mp3?:       string;
+  thumbnail?: string;
 }
 
 export interface VideoInfo {
@@ -51,6 +52,22 @@ export interface HistoryItem {
   thumbnail: string;
   format: string;
   downloaded_at: number;
+}
+
+export interface StoryItem {
+  title: string;
+  thumbnail: string;
+  create_at: number;
+  expire_at: number;
+  download_urls: DownloadUrls;
+}
+
+export interface StoryInfo {
+  success: boolean;
+  username: string;
+  display_name: string;
+  avatar: string;
+  stories: StoryItem[];
 }
 
 export type DownloadFormat = "mp4_720" | "mp4_1080" | "mp3" | "thumbnail";
@@ -226,6 +243,37 @@ export async function fetchProfileInfo(url: string): Promise<ProfileInfo> {
   if (!res.ok) {
     const errData = await res.json().catch(() => ({ detail: "Failed to fetch profile" }));
     throw new Error(errData.detail || "Failed to fetch profile");
+  }
+  return res.json();
+}
+
+export async function fetchStoryInfo(url: string): Promise<StoryInfo> {
+  const token = await getToken();
+  const res = await fetch(`${API_BASE}/api/story`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url, token }),
+  });
+
+  if (res.status === 401) {
+    _cachedToken    = "";
+    _tokenFetchedAt = 0;
+    const freshToken = await getToken();
+    const retry = await fetch(`${API_BASE}/api/story`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, token: freshToken }),
+    });
+    if (!retry.ok) {
+      const errData = await retry.json().catch(() => ({ detail: "Failed to fetch stories" }));
+      throw new Error(errData.detail || "Failed to fetch stories");
+    }
+    return retry.json();
+  }
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({ detail: "Failed to fetch stories" }));
+    throw new Error(errData.detail || "Failed to fetch stories");
   }
   return res.json();
 }

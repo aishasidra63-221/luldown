@@ -61,6 +61,8 @@ type Step = "idle" | "loading-info" | "info-ready" | "profile-ready" | "error";
 interface Props { highlightFormat?: DownloadFormat; }
 
 const DEMO_INFO: VideoInfo = {
+  success: true,
+  duration: 30,
   title: "Satisfying ASMR wax scraping process 🎧 #asmr #satisfying #relaxing #wax #oddlysatisfying",
   author: "@creativeasmr",
   author_avatar: "https://i.pravatar.cc/150?img=47",

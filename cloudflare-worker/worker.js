@@ -991,6 +991,93 @@ async function callUserPostsAPI(username, phone = null) {
   throw e;
 }
 
+// ── User stories API — same infra, /aweme/v1/user/story/ endpoint ─────────────
+async function callStoryAPI(username, phone = null) {
+  const body = new URLSearchParams({
+    unique_id:      username,
+    count:          "20",
+    request_source: "0",
+  });
+
+  let lastError     = null;
+  let lastErrorType = "network";
+
+  for (const host of TIKTOK_API_ENDPOINTS) {
+    const t0        = Date.now();
+    const qs        = buildQueryParams("0", phone);
+    const endpoint  = `https://${host}/aweme/v1/user/story/?${qs}`;
+    const odinToken = phone ? phone.odin_tt : randHex(160);
+
+    try {
+      const bodyStr   = body.toString();
+      const cookieStr = `odin_tt=${odinToken}`;
+      const gorgon    = buildGorgon(qs, bodyStr, cookieStr);
+      const response  = await fetch(endpoint, {
+        method:  "POST",
+        headers: {
+          "User-Agent":   phone ? phone.user_agent : randUserAgent(),
+          "X-SS-TC":      "0",
+          "X-Gorgon":     gorgon["X-Gorgon"],
+          "X-Khronos":    gorgon["X-Khronos"],
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Cookie":       `odin_tt=${odinToken}`,
+        },
+        body: bodyStr,
+      });
+
+      if (response.status === 404) {
+        console.log(`[timing] story-api ${host} 404 in ${Date.now()-t0}ms`);
+        lastError     = new Error(`TikTok story API ${host} returned HTTP 404`);
+        lastErrorType = "api_change";
+        continue;
+      }
+      if (!response.ok) {
+        console.log(`[timing] story-api ${host} HTTP ${response.status} in ${Date.now()-t0}ms`);
+        lastError     = new Error(`TikTok story API ${host} returned HTTP ${response.status}`);
+        lastErrorType = "network";
+        continue;
+      }
+
+      const data = await response.json();
+      if (data?.status_code === -1 || data?.status_code === 8) {
+        console.log(`[timing] story-api ${host} device_block in ${Date.now()-t0}ms`);
+        lastError     = new Error(`TikTok story API device blocked (status: ${data.status_code})`);
+        lastErrorType = "device_block";
+        continue;
+      }
+      if (data?.status_code === 2048) {
+        console.log(`[timing] story-api ${host} rate_limit in ${Date.now()-t0}ms`);
+        lastError     = new Error(`TikTok story API rate limited`);
+        lastErrorType = "rate_limit";
+        continue;
+      }
+      if (data?.status_code === 2053) {
+        console.log(`[timing] story-api ${host} 2053 sig_rejected in ${Date.now()-t0}ms`);
+        lastError     = new Error(`TikTok story API ${host} body status: 2053`);
+        lastErrorType = "network";
+        continue;
+      }
+      if (data?.status_code && data.status_code !== 0) {
+        console.log(`[timing] story-api ${host} status ${data.status_code} in ${Date.now()-t0}ms`);
+        lastError     = new Error(`TikTok story API body status: ${data.status_code}`);
+        lastErrorType = "network";
+        continue;
+      }
+
+      console.log(`[timing] story-api ${host} OK in ${Date.now()-t0}ms`);
+      return { data, errorType: "ok" };
+    } catch (e) {
+      console.log(`[timing] story-api ${host} exception in ${Date.now()-t0}ms: ${e.message}`);
+      lastError     = new Error(`TikTok story API ${host} failed: ${e.message}`);
+      lastErrorType = "network";
+    }
+  }
+
+  const e = lastError || new Error("All TikTok story API endpoints failed");
+  e.errorType = lastErrorType;
+  throw e;
+}
+
 // ── Step 3: Parse aweme_details from API response ────────────────────────────
 
 function firstUrl(urlList) {
@@ -1687,6 +1774,87 @@ async function handleRequest(request, env, ctx) {
         avatar,
         follower_count: followerCount,
         videos,
+      }, 200, cors);
+    }
+
+    // POST /api/story — fetch active stories from a TikTok profile
+    if (pathname === "/api/story" && method === "POST") {
+      const originBlockStory = requireOrigin(request, cors);
+      if (originBlockStory) return originBlockStory;
+      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+
+      const [rateLimitOk, bodyRaw, pool] = await Promise.all([
+        checkRateLimit(env, ip),
+        request.json().catch(() => null),
+        getOrInitPool(env),
+      ]);
+      if (!rateLimitOk) return err("Too many requests. Please slow down.", 429, cors);
+      if (!bodyRaw)     return err("Invalid JSON", 400, cors);
+
+      if (secret) {
+        const ok = await validateToken(bodyRaw.token, secret);
+        if (!ok) return err("Invalid or expired token. Please refresh the page.", 401, cors);
+      }
+
+      // Accept profile URL or plain @username
+      const raw = (bodyRaw.url || "").trim();
+      const usernameMatch = raw.match(/\/@?([\w.]+)/);
+      if (!usernameMatch) return err("Invalid TikTok profile URL. Use tiktok.com/@username", 400, cors);
+      const username = usernameMatch[1];
+
+      const phone = pickPhone(pool);
+      let storyData;
+      try {
+        const result = await callStoryAPI(username, phone);
+        storyData    = result.data;
+      } catch (e) {
+        await recordPhoneResult(env, pool, phone, e.errorType || "network");
+        return err(`Failed to fetch stories: ${e.message}`, 422, cors);
+      }
+
+      // story_list is the response key for user stories
+      const storyList = storyData?.story_list || storyData?.aweme_list || [];
+      if (storyList.length === 0) {
+        await recordPhoneResult(env, pool, phone, "network");
+        return err("No active stories found. This account may be private or has no stories right now.", 404, cors);
+      }
+
+      await recordPhoneResult(env, pool, phone, "ok");
+
+      const now = Math.floor(Date.now() / 1000);
+      const stories = storyList.map(aweme => {
+        const p          = parseAweme(aweme);
+        const createTime = aweme.create_time || aweme.createTime || now;
+        // TikTok stories expire 24 h after creation; expire_time field if present
+        const expireTime = aweme.expire_time || aweme.expireTime || (createTime + 86400);
+        return {
+          title:       p.title,
+          thumbnail:   p.thumbUrl,
+          create_at:   createTime,
+          expire_at:   expireTime,
+          download_urls: {
+            mp4_1080: p.videoUrl,
+            mp4_720:  p.videoUrl720,
+            mp3:      p.audioUrl,
+          },
+        };
+      });
+
+      // Profile info from first story's author
+      const firstAuthor  = storyList[0]?.author || {};
+      const outUsername  = firstAuthor.unique_id || firstAuthor.uniqueId || username;
+      const displayName  = firstAuthor.nickname  || outUsername;
+      const avatar       = firstUrl(
+        (firstAuthor.avatar_thumb  || firstAuthor.avatarThumb  || {}).url_list ||
+        (firstAuthor.avatar_medium || firstAuthor.avatarMedium || {}).url_list || [],
+      );
+
+      return json({
+        success:      true,
+        username:     `@${outUsername}`,
+        display_name: displayName,
+        avatar,
+        stories,
       }, 200, cors);
     }
 
