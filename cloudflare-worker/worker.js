@@ -321,6 +321,13 @@ async function trackFailureWindow(env, failed) {
   } catch {}
 }
 
+// Safe JSON.parse — returns fallback instead of throwing on corrupt/partial data.
+// Prevents a single bad KV entry from crashing the Worker for all requests.
+function safeParse(raw, fallback = null) {
+  if (!raw) return fallback;
+  try { return JSON.parse(raw); } catch { return fallback; }
+}
+
 // ── Random helpers ────────────────────────────────────────────────────────────
 
 function randInt(min, max) {
@@ -1587,8 +1594,8 @@ async function handleRequest(request, env, ctx) {
         env.META_KV.list({ prefix: FW_PREFIX_FAIL }),
       ]);
 
-      const pool     = poolRaw ? JSON.parse(poolRaw) : [];
-      const degraded = degradedRaw ? JSON.parse(degradedRaw) : null;
+      const pool     = safeParse(poolRaw, []);
+      const degraded = safeParse(degradedRaw, null);
       const now      = Math.floor(Date.now() / 1000);
       const fwTotal  = allList.keys.length;
       const fwFails  = failList.keys.length;
