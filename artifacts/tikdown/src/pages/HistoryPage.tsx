@@ -212,12 +212,13 @@ export default function HistoryPage() {
                     <img
                       src={item.thumbnail}
                       alt={item.title}
-                      style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 10, flexShrink: 0, border: "1px solid rgba(0,0,0,0.08)" }}
+                      className="history-thumb"
+                      style={{ objectFit: "cover", borderRadius: 10, flexShrink: 0, border: "1px solid rgba(0,0,0,0.08)" }}
                       onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                     />
                   ) : (
-                    <div style={{ width: 56, height: 56, borderRadius: 10, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <MetaIcon size={22} color={meta.color} />
+                    <div className="history-thumb" style={{ borderRadius: 10, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <MetaIcon size={26} color={meta.color} />
                     </div>
                   )}
 
@@ -227,7 +228,7 @@ export default function HistoryPage() {
                       {item.title || "TikTok Video"}
                     </p>
                     <p style={{ fontSize: 12, color: "#9ca3af", margin: "0 0 7px", display: "flex", alignItems: "center", gap: 4 }}>
-                      <User size={11} /> @{item.author || "Unknown"}
+                      <User size={11} /> {(item.author || "Unknown").startsWith("@") ? item.author : `@${item.author || "Unknown"}`}
                     </p>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                       <span style={{
@@ -275,11 +276,14 @@ export default function HistoryPage() {
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .history-shell { max-width: 720px; }
+        .history-thumb { width: 72px; height: 72px; }
         @media (min-width: 900px) {
           .history-shell { max-width: 960px; padding-left: 32px; padding-right: 32px; }
+          .history-thumb { width: 100px; height: 100px; }
         }
         @media (min-width: 1280px) {
           .history-shell { max-width: 1080px; }
+          .history-thumb { width: 110px; height: 110px; }
         }
         @media (max-width: 420px) {
           .history-header { flex-wrap: nowrap; }
