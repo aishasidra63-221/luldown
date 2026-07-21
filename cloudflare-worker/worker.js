@@ -285,27 +285,37 @@ async function recordPhoneResult(env, pool, phone, errorType) {
 }
 
 // Track 5-minute failure rate. If >50% of recent calls fail → set api_degraded.
-// This separates "many phones blocked" from "TikTok changed their API".
+// Uses per-event KV keys instead of a shared read-modify-write counter so
+// concurrent Worker isolates never overwrite each other's increments.
+// Key format: pool:fw:a:{ts}:{rand} (all events) / pool:fw:f:{ts}:{rand} (fails)
+// Both expire after 310 s (5 min window + 10 s buffer).
+const FW_PREFIX_ALL  = "pool:fw:a:";
+const FW_PREFIX_FAIL = "pool:fw:f:";
+
 async function trackFailureWindow(env, failed) {
   if (!env.META_KV) return;
   try {
-    const now = Math.floor(Date.now() / 1000);
-    const raw = await env.META_KV.get("pool:fail_window");
-    let   win = raw ? JSON.parse(raw) : { total: 0, failed: 0, reset_at: now + 300 };
+    const now    = Math.floor(Date.now() / 1000);
+    const suffix = now + ":" + Math.random().toString(36).slice(2, 8);
+    const ttl    = 310;
 
-    if (now > win.reset_at) win = { total: 0, failed: 0, reset_at: now + 300 };
-    win.total  += 1;
-    win.failed += failed ? 1 : 0;
-    await env.META_KV.put("pool:fail_window", JSON.stringify(win), { expirationTtl: 600 });
+    // Each isolate writes its own unique key — no concurrent-write conflicts
+    const writes = [env.META_KV.put(FW_PREFIX_ALL + suffix, "1", { expirationTtl: ttl })];
+    if (failed) writes.push(env.META_KV.put(FW_PREFIX_FAIL + suffix, "1", { expirationTtl: ttl }));
+    await Promise.all(writes);
 
-    const rate = win.total >= 5 ? win.failed / win.total : 0;
+    // Count by listing — two list() calls, zero individual reads
+    const [allList, failList] = await Promise.all([
+      env.META_KV.list({ prefix: FW_PREFIX_ALL }),
+      env.META_KV.list({ prefix: FW_PREFIX_FAIL }),
+    ]);
+    const total = allList.keys.length;
+    const fails = failList.keys.length;
+    const rate  = total >= 5 ? fails / total : 0;
+
     if (rate > 0.5) {
-      await env.META_KV.put(
-        "pool:api_degraded",
-        JSON.stringify({ since: now }),
-        { expirationTtl: 3600 },
-      );
-    } else if (!failed && rate < 0.1 && win.total >= 5) {
+      await env.META_KV.put("pool:api_degraded", JSON.stringify({ since: now }), { expirationTtl: 3600 });
+    } else if (!failed && rate < 0.1 && total >= 5) {
       await env.META_KV.delete("pool:api_degraded").catch(() => {});
     }
   } catch {}
@@ -571,20 +581,44 @@ async function resolveVideoId(rawUrl, env) {
     console.log(`[timing] resolve: step2-get-fb-error in ${Date.now()-t0}ms — ${e.message}`);
   }
 
-  // ── Step 3 (fallback): redirect:follow + browser UA ──────────────────────────
-  // Slower — follows all hops, may download full HTML — but catches edge cases.
+  // ── Step 3 (fallback): manual hop loop — up to MAX_REDIRECT_HOPS ─────────────
+  // Follows redirects one at a time so we can enforce a hard hop limit.
+  // Prevents hanging on crafted URLs with very long redirect chains.
+  const MAX_REDIRECT_HOPS = 5;
   let resolveRes;
+  let hopUrl   = url;
+  let hopCount = 0;
   try {
-    resolveRes = await fetch(url, {
-      redirect: "follow",
-      headers: {
-        "User-Agent":      BROWSER_UA,
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      },
-    });
+    while (hopCount <= MAX_REDIRECT_HOPS) {
+      const r = await fetch(hopUrl, {
+        redirect: "manual",
+        headers: {
+          "User-Agent":      BROWSER_UA,
+          "Accept-Language": "en-US,en;q=0.9",
+          "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        },
+      });
+      if (r.status >= 300 && r.status < 400) {
+        const loc = safeLocation(r.headers);
+        if (!loc) { resolveRes = r; break; }             // no valid next hop
+        const id = extractIdFromString(loc);
+        if (id) {
+          console.log(`[timing] resolve: step3-hop${hopCount + 1}-loc in ${Date.now()-t0}ms`);
+          return cacheAndReturn(env, shortCode, id);
+        }
+        hopUrl = loc;
+        hopCount++;
+        continue;
+      }
+      resolveRes = r;
+      break;
+    }
+    if (!resolveRes) {
+      throw new Error(`URL did not resolve after ${MAX_REDIRECT_HOPS} redirects.`);
+    }
   } catch (e) {
-    console.log(`[timing] resolve: step3-follow-error in ${Date.now()-t0}ms — ${e.message}`);
+    console.log(`[timing] resolve: step3-error in ${Date.now()-t0}ms — ${e.message}`);
+    if (e.message.includes("redirects")) throw e;
     throw new Error("Could not reach TikTok. Please check the link and try again.");
   }
 
@@ -1546,21 +1580,23 @@ async function handleRequest(request, env, ctx) {
       }
       if (!env.META_KV) return err("KV not bound", 500, cors);
 
-      const [poolRaw, degradedRaw, winRaw] = await Promise.all([
+      const [poolRaw, degradedRaw, allList, failList] = await Promise.all([
         env.META_KV.get(POOL_KV_KEY),
         env.META_KV.get("pool:api_degraded"),
-        env.META_KV.get("pool:fail_window"),
+        env.META_KV.list({ prefix: FW_PREFIX_ALL }),
+        env.META_KV.list({ prefix: FW_PREFIX_FAIL }),
       ]);
 
       const pool     = poolRaw ? JSON.parse(poolRaw) : [];
       const degraded = degradedRaw ? JSON.parse(degradedRaw) : null;
-      const win      = winRaw ? JSON.parse(winRaw) : { total: 0, failed: 0 };
       const now      = Math.floor(Date.now() / 1000);
+      const fwTotal  = allList.keys.length;
+      const fwFails  = failList.keys.length;
 
       const active   = pool.filter(p => p.status === "active").length;
       const retired  = pool.filter(p => p.status === "retired").length;
       const resting  = pool.filter(p => p.status === "active" && now - (p.last_used || 0) < PHONE_GAP_SEC).length;
-      const failRate = win.total > 0 ? ((win.failed / win.total) * 100).toFixed(1) + "%" : "0%";
+      const failRate = fwTotal > 0 ? ((fwFails / fwTotal) * 100).toFixed(1) + "%" : "0%";
 
       return json({
         pool_size:      pool.length,
