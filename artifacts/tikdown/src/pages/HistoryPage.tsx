@@ -54,17 +54,18 @@ export default function HistoryPage() {
           onClick={() => setShowConfirm(false)}
           style={{
             position: "fixed", inset: 0, zIndex: 1000,
-            background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)",
+            background: "rgba(0,0,0,0.45)", backdropFilter: "blur(2px)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            padding: "0 20px",
+            padding: "0 24px",
           }}
         >
           <div
             onClick={e => e.stopPropagation()}
+            className="confirm-popup"
             style={{
               background: "#fff", borderRadius: 18,
-              padding: "28px 24px 24px",
-              maxWidth: 360, width: "100%",
+              padding: "28px 28px 24px",
+              width: "100%",
               boxShadow: "0 24px 60px rgba(0,0,0,0.2)",
               textAlign: "center",
             }}
@@ -275,6 +276,8 @@ export default function HistoryPage() {
 
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .confirm-popup { max-width: 320px; }
+        @media (min-width: 600px) { .confirm-popup { max-width: 460px; } }
         .history-shell { max-width: 720px; }
         .history-thumb { width: 72px; height: 72px; }
         @media (min-width: 900px) {
