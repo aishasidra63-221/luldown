@@ -134,7 +134,7 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
             <p style={{ margin: "0 0 3px", fontWeight: 700, fontSize: 13.5, color: "#ffffff", textAlign: "left" }}>
               {info.author}
             </p>
-            {cleanTitle && (
+            {(cleanTitle || tags.length > 0) && (
               <>
                 {!expanded ? (
                   <p style={{
