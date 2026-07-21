@@ -662,7 +662,10 @@ async function resolveVideoId(rawUrl, env) {
   const awemeId = html.match(/"aweme_id"\s*:\s*"(\d{10,20})"/);
   if (awemeId) return cacheAndReturn(env, shortCode, awemeId[1]);
 
-  throw new Error("Could not extract video ID. Make sure the link is a valid public TikTok video.");
+  console.error(`[ERROR] resolve_failed hops=${MAX_REDIRECT_HOPS}`);
+  const resolveErr = new Error("Could not extract video ID. Make sure the link is a valid public TikTok video.");
+  resolveErr.errorType = "resolve_failed";
+  throw resolveErr;
 }
 
 // ── Step 2: TikTok Android Private API call ───────────────────────────────────
@@ -895,6 +898,7 @@ async function callAndroidAPI(videoId, phone = null) {
       // 404 = TikTok moved the endpoint (API change) — not a phone problem
       if (response.status === 404) {
         console.log(`[timing] tiktok-api ${host} 404 in ${Date.now()-t0}ms`);
+        console.error(`[ERROR] api_change host=${host}`);
         lastError     = new Error(`TikTok API ${host} returned HTTP 404 — endpoint may have changed`);
         lastErrorType = "api_change";
         continue;
@@ -911,6 +915,7 @@ async function callAndroidAPI(videoId, phone = null) {
 
       if (data?.status_code === -1 || data?.status_code === 8) {
         console.log(`[timing] tiktok-api ${host} device_block in ${Date.now()-t0}ms`);
+        console.error(`[ERROR] device_block phone=${phone?.id ?? "?"} status=${data.status_code}`);
         lastError     = new Error(`TikTok API device blocked (status: ${data.status_code})`);
         lastErrorType = "device_block";
         continue;
@@ -918,6 +923,7 @@ async function callAndroidAPI(videoId, phone = null) {
 
       if (data?.status_code === 2048) {
         console.log(`[timing] tiktok-api ${host} rate_limit in ${Date.now()-t0}ms`);
+        console.error(`[ERROR] rate_limit phone=${phone?.id ?? "?"} skip_until=+600s`);
         lastError     = new Error(`TikTok API rate limited (status: 2048)`);
         lastErrorType = "rate_limit";
         continue;
@@ -925,8 +931,9 @@ async function callAndroidAPI(videoId, phone = null) {
 
       if (data?.status_code === 2053) {
         console.log(`[timing] tiktok-api ${host} 2053 sig_rejected in ${Date.now()-t0}ms`);
+        console.error(`[ERROR] sig_rejected status=2053 host=${host}`);
         lastError     = new Error(`TikTok API ${host} body status: 2053`);
-        lastErrorType = "network";
+        lastErrorType = "sig_rejected";
         continue;
       }
 
@@ -989,6 +996,7 @@ async function callUserPostsAPI(username, phone = null) {
 
       if (response.status === 404) {
         console.log(`[timing] profile-api ${host} 404 in ${Date.now()-t0}ms`);
+        console.error(`[ERROR] api_change host=${host}`);
         lastError     = new Error(`TikTok API ${host} returned HTTP 404`);
         lastErrorType = "api_change";
         continue;
@@ -1003,20 +1011,23 @@ async function callUserPostsAPI(username, phone = null) {
       const data = await response.json();
       if (data?.status_code === -1 || data?.status_code === 8) {
         console.log(`[timing] profile-api ${host} device_block in ${Date.now()-t0}ms`);
+        console.error(`[ERROR] device_block phone=${phone?.id ?? "?"} status=${data.status_code}`);
         lastError     = new Error(`TikTok API device blocked (status: ${data.status_code})`);
         lastErrorType = "device_block";
         continue;
       }
       if (data?.status_code === 2048) {
         console.log(`[timing] profile-api ${host} rate_limit in ${Date.now()-t0}ms`);
+        console.error(`[ERROR] rate_limit phone=${phone?.id ?? "?"} skip_until=+600s`);
         lastError     = new Error(`TikTok API rate limited`);
         lastErrorType = "rate_limit";
         continue;
       }
       if (data?.status_code === 2053) {
         console.log(`[timing] profile-api ${host} 2053 sig_rejected in ${Date.now()-t0}ms`);
+        console.error(`[ERROR] sig_rejected status=2053 host=${host}`);
         lastError     = new Error(`TikTok API ${host} body status: 2053`);
-        lastErrorType = "network";
+        lastErrorType = "sig_rejected";
         continue;
       }
       if (data?.status_code && data.status_code !== 0) {
@@ -1076,6 +1087,7 @@ async function callStoryAPI(username, phone = null) {
 
       if (response.status === 404) {
         console.log(`[timing] story-api ${host} 404 in ${Date.now()-t0}ms`);
+        console.error(`[ERROR] api_change host=${host}`);
         lastError     = new Error(`TikTok story API ${host} returned HTTP 404`);
         lastErrorType = "api_change";
         continue;
@@ -1090,20 +1102,23 @@ async function callStoryAPI(username, phone = null) {
       const data = await response.json();
       if (data?.status_code === -1 || data?.status_code === 8) {
         console.log(`[timing] story-api ${host} device_block in ${Date.now()-t0}ms`);
+        console.error(`[ERROR] device_block phone=${phone?.id ?? "?"} status=${data.status_code}`);
         lastError     = new Error(`TikTok story API device blocked (status: ${data.status_code})`);
         lastErrorType = "device_block";
         continue;
       }
       if (data?.status_code === 2048) {
         console.log(`[timing] story-api ${host} rate_limit in ${Date.now()-t0}ms`);
+        console.error(`[ERROR] rate_limit phone=${phone?.id ?? "?"} skip_until=+600s`);
         lastError     = new Error(`TikTok story API rate limited`);
         lastErrorType = "rate_limit";
         continue;
       }
       if (data?.status_code === 2053) {
         console.log(`[timing] story-api ${host} 2053 sig_rejected in ${Date.now()-t0}ms`);
+        console.error(`[ERROR] sig_rejected status=2053 host=${host}`);
         lastError     = new Error(`TikTok story API ${host} body status: 2053`);
-        lastErrorType = "network";
+        lastErrorType = "sig_rejected";
         continue;
       }
       if (data?.status_code && data.status_code !== 0) {
@@ -1330,7 +1345,7 @@ async function fetchTikTokVideo(tiktokUrl, env, ctx) {
     console.log(`[timing] fetch: tiktok-api FAILED in ${Date.now()-t3}ms — ${e.message}`);
     await recordPhoneResult(env, pool, phone, e.errorType || "network");
     (ctx ? ctx.waitUntil.bind(ctx) : (p) => p)(trackFailureWindow(env, true));
-    throw new Error(`TikTok API request failed: ${e.message}`);
+    throw new Error(userMsg(e.errorType || "network"));
   }
 
   const details = data?.aweme_details;
@@ -1338,7 +1353,8 @@ async function fetchTikTokVideo(tiktokUrl, env, ctx) {
     const status = data?.status_code ?? data?.status ?? "unknown";
     await recordPhoneResult(env, pool, phone, "network");
     (ctx ? ctx.waitUntil.bind(ctx) : (p) => p)(trackFailureWindow(env, true));
-    throw new Error(`Video not found or private (status: ${status}). The video may have been deleted or is region-restricted.`);
+    console.error(`[ERROR] no_details status=${status}`);
+    throw new Error(userMsg("no_details"));
   }
 
   const parsed = parseAweme(details[0]);
@@ -1482,6 +1498,21 @@ function isBlockedUserAgent(request) {
 }
 
 const RICKROLL_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+
+// ── Clean user-facing messages ────────────────────────────────────────────────
+const USER_MESSAGES = {
+  sig_rejected:   "Could not fetch video. Please try again.",
+  device_block:   "Video temporarily unavailable.",
+  rate_limit:     "Too many requests. Try in a minute.",
+  api_change:     "Service temporarily unavailable.",
+  no_details:     "This video is private or has been deleted.",
+  resolve_failed: "Invalid or unsupported TikTok link.",
+  network:        "Connection error. Please try again.",
+};
+
+function userMsg(errorType) {
+  return USER_MESSAGES[errorType] || USER_MESSAGES.network;
+}
 
 export default {
   async fetch(request, env, ctx) {
