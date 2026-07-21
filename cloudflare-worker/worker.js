@@ -1888,8 +1888,47 @@ async function handleRequest(request, env, ctx) {
         return err("Only TikTok CDN URLs are supported", 403, cors);
       }
 
-      // Path A: Python proxy server (Render/any host) — REQUIRED.
-      // Cloudflare Worker IPs are blocked by TikTok CDN (403).
+      // Path A-music: For MP3 files, try fetching directly from Worker edge first.
+      // TikTok *music* CDN (v16-ies-music / v19-ies-music) is less restrictive than
+      // the video CDN — Cloudflare anycast IPs are often not blocked there.
+      // We try TikTok App UA (required for resolver links) and then browser UA.
+      // If both fail we fall through to Render below.
+      if (filename.endsWith(".mp3")) {
+        const musicAppHeaders = {
+          "User-Agent":      "com.zhiliaoapp.musically/2024600030 (Linux; U; Android 14; en_US; Pixel 8; Build/AD1A.240405.004; Cronet/113.0.5672.129)",
+          "Accept":          "*/*",
+          "Accept-Encoding": "identity",
+          "Range":           "bytes=0-",
+        };
+        const musicBrowserHeaders = {
+          "User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+          "Referer":         "https://www.tiktok.com/",
+          "Origin":          "https://www.tiktok.com",
+          "Accept":          "*/*",
+          "Accept-Encoding": "identity",
+          "Range":           "bytes=0-",
+        };
+        for (const hdrs of [musicAppHeaders, musicBrowserHeaders]) {
+          try {
+            const directResp = await fetch(cdnUrl, { headers: hdrs });
+            if (directResp.ok) {
+              const rh = new Headers({
+                ...cors,
+                "Content-Disposition": `attachment; filename="${filename}"`,
+                "Content-Type":        "audio/mpeg",
+                "Cache-Control":       "no-store",
+              });
+              const cl0 = directResp.headers.get("Content-Length");
+              if (cl0) rh.set("Content-Length", cl0);
+              return new Response(directResp.body, { status: 200, headers: rh });
+            }
+          } catch { /* try next */ }
+        }
+        // Both Worker-direct attempts failed — fall through to Render proxy below.
+      }
+
+      // Path A: Python proxy server (Render/any host) — REQUIRED for video.
+      // Cloudflare Worker IPs are blocked by TikTok video CDN (403).
       // The Python server uses non-Cloudflare IPs + browser-like headers, so CDN allows it.
       if (env.RENDER_URL) {
         const proxyUrl =

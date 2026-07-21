@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import re
 from contextlib import asynccontextmanager
 from typing import Literal, Optional
 
@@ -124,9 +125,45 @@ _TT_APP_FETCH_HEADERS = {
     "Range":           "bytes=0-",
 }
 
+_MUSIC_CDN_RE = re.compile(
+    r"https?://(?:sf\d+|v\d+(?:-[a-z]+)*)"
+    r"\.(?:tiktokcdn-us|tiktokcdn|musically)\.com"
+    r"(?:/obj/musically-maliva-obj|.*ies-music.*)"
+)
+_MUSIC_SHARD_PATH_RE = re.compile(
+    r"https?://sf\d+\.tiktokcdn-us\.com(/obj/musically-maliva-obj/.+\.mp3)"
+)
+
+def _resolve_music_shard(url: str) -> str | None:
+    """For musically-maliva-obj URLs, try shards sf1–sf20 until one returns 200."""
+    m = _MUSIC_SHARD_PATH_RE.match(url)
+    if not m:
+        return None
+    path = m.group(1)
+    import httpx as _httpx
+    client = _httpx.Client(timeout=_httpx.Timeout(10.0, connect=5.0))
+    try:
+        for n in range(1, 21):
+            try:
+                r = client.head(f"https://sf{n}.tiktokcdn-us.com{path}", headers=_CDN_FETCH_HEADERS)
+                if r.status_code == 200:
+                    return f"https://sf{n}.tiktokcdn-us.com{path}"
+            except Exception:
+                continue
+    finally:
+        client.close()
+    return None
+
 def _pick_cdn_headers(cdn_url: str) -> dict:
-    """Return TikTok App headers for resolver links, browser headers for direct CDN."""
+    """Return appropriate headers for the CDN URL type.
+    - aweme/v1/play resolver links → TikTok Android App UA (required to follow redirect)
+    - TikTok music CDN (ies-music hostnames) → TikTok Android App UA first, browser as fallback
+    - All other direct CDN URLs → browser Chrome UA
+    """
     if "aweme/v1/play" in cdn_url:
+        return _TT_APP_FETCH_HEADERS
+    # Music CDN hostnames (v16-ies-music, v19-ies-music, etc.) often require App UA
+    if "ies-music" in cdn_url or "musically-maliva-obj" in cdn_url:
         return _TT_APP_FETCH_HEADERS
     return _CDN_FETCH_HEADERS
 
@@ -371,20 +408,52 @@ async def proxy_cdn(request: Request, url: str, filename: str = "luldown.mp4"):
     else:
         fallback_media_type = "video/mp4"
 
+    # For musically-maliva-obj music URLs: resolve the correct shard first (sf1–sf20).
+    if "musically-maliva-obj" in cdn_url:
+        resolved = _resolve_music_shard(cdn_url)
+        if resolved:
+            cdn_url = resolved
+        # If no shard responded, continue with original URL — let the CDN error surface.
+
     # StreamingResponse needs its media_type up front, before any bytes are
     # sent — so open the upstream connection first (this returns headers as
     # soon as the CDN responds, before the body is read) to learn the real
     # Content-Type, then stream the body through afterwards.
-    client = httpx.AsyncClient(
-        follow_redirects=True,
-        timeout=httpx.Timeout(120.0, connect=15.0),
-    )
-    try:
-        req = client.build_request("GET", cdn_url, headers=_pick_cdn_headers(cdn_url))
-        resp = await client.send(req, stream=True)
-    except Exception as exc:
+    #
+    # For music CDN URLs we try TikTok App UA first (set by _pick_cdn_headers),
+    # then fall back to browser Chrome UA if the server returns an error.
+    is_music = lower_name.endswith(".mp3") or "ies-music" in cdn_url or "musically-maliva-obj" in cdn_url
+    headers_to_try = [_pick_cdn_headers(cdn_url)]
+    if is_music and headers_to_try[0] is _TT_APP_FETCH_HEADERS:
+        headers_to_try.append(_CDN_FETCH_HEADERS)  # browser UA as fallback
+
+    client = None
+    resp = None
+    last_exc = None
+    for hdrs in headers_to_try:
+        if client is not None:
+            await client.aclose()
+        client = httpx.AsyncClient(
+            follow_redirects=True,
+            timeout=httpx.Timeout(120.0, connect=15.0),
+        )
+        try:
+            req = client.build_request("GET", cdn_url, headers=hdrs)
+            resp = await client.send(req, stream=True)
+            if not resp.is_error:
+                break  # success — use this response
+            await resp.aclose()
+            resp = None
+        except Exception as exc:
+            last_exc = exc
+            resp = None
+            continue
+
+    if resp is None:
         await client.aclose()
-        raise HTTPException(status_code=502, detail="Failed to fetch from TikTok CDN") from exc
+        if last_exc:
+            raise HTTPException(status_code=502, detail="Failed to fetch from TikTok CDN") from last_exc
+        raise HTTPException(status_code=502, detail="Failed to fetch from TikTok CDN")
 
     if resp.is_error:
         await resp.aclose()
