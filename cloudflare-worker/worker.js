@@ -910,61 +910,9 @@ async function callAndroidAPI(videoId, phone = null) {
   throw e;
 }
 
-// ── Step 1: username → sec_uid via /aweme/v1/user/profile/other/ ──────────────
-async function fetchSecUid(username, phone = null) {
-  for (const host of TIKTOK_API_ENDPOINTS) {
-    const t0        = Date.now();
-    const qs        = buildQueryParams("0", phone);
-    const odinToken = phone ? phone.odin_tt : randHex(160);
-    const fullQs    = `${qs}&unique_id=${encodeURIComponent(username)}`;
-    const endpoint  = `https://${host}/aweme/v1/user/profile/other/?${fullQs}`;
-
-    try {
-      const cookieStr = `odin_tt=${odinToken}`;
-      const gorgon    = buildGorgon(fullQs, null, cookieStr);
-      const response  = await fetch(endpoint, {
-        method:  "GET",
-        headers: {
-          "User-Agent":  phone ? phone.user_agent : randUserAgent(),
-          "X-SS-TC":     "0",
-          "X-Gorgon":    gorgon["X-Gorgon"],
-          "X-Khronos":   gorgon["X-Khronos"],
-          "Cookie":      cookieStr,
-        },
-      });
-
-      if (!response.ok) continue;
-
-      const text = await response.text();
-      if (!text) continue;
-
-      let data;
-      try { data = JSON.parse(text); } catch { continue; }
-
-      const sec_uid =
-        data?.user?.sec_uid ||
-        data?.user_info?.sec_uid ||
-        data?.userInfo?.secUid ||
-        null;
-
-      if (sec_uid) {
-        console.log(`[timing] sec_uid ${host} OK in ${Date.now()-t0}ms`);
-        return sec_uid;
-      }
-    } catch (e) {
-      console.log(`[timing] sec_uid ${host} exception in ${Date.now()-t0}ms: ${e.message}`);
-    }
-  }
-  throw Object.assign(new Error(`Could not resolve sec_uid for @${username}`), { errorType: "network" });
-}
-
-// ── Step 2: sec_uid → latest posts via /aweme/v1/aweme/post/ ─────────────────
+// ── User posts API — same pattern as video API, unique_id in query string ─────
 async function callUserPostsAPI(username, phone = null) {
-  // First resolve username → sec_uid (TikTok's posts endpoint ignores unique_id)
-  const sec_uid = await fetchSecUid(username, phone);
-
   const body = new URLSearchParams({
-    sec_user_id:    sec_uid,
     count:          "10",
     max_cursor:     "0",
     min_cursor:     "0",
@@ -977,7 +925,7 @@ async function callUserPostsAPI(username, phone = null) {
 
   for (const host of TIKTOK_API_ENDPOINTS) {
     const t0        = Date.now();
-    const qs        = buildQueryParams("0", phone);
+    const qs        = buildQueryParams("0", phone) + `&unique_id=${encodeURIComponent(username)}`;
     const endpoint  = `https://${host}/aweme/v1/aweme/post/?${qs}`;
     const odinToken = phone ? phone.odin_tt : randHex(160);
 
