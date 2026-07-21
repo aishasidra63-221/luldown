@@ -14,3 +14,155 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** A TikTok URL list — always an array of strings, at least one entry. */
+const UrlList = zod.object({ url_list: zod.array(zod.string()).min(1) });
+const UrlListAlt = zod.object({ urlList: zod.array(zod.string()).min(1) });
+
+// ─── Raw TikTok aweme_details shape ───────────────────────────────────────────
+// Mirrors the fields parseAweme() accesses in cloudflare-worker/worker.js.
+// Use this to validate the raw TikTok Android API response before parsing so
+// shape changes surface as explicit errors instead of silent `undefined` values.
+
+export const AwemeAuthorSchema = zod.object({
+  unique_id:      zod.string().optional(),
+  uniqueId:       zod.string().optional(),
+  nickname:       zod.string().optional(),
+  avatar_thumb:   UrlList.optional(),
+  avatar_medium:  UrlList.optional(),
+});
+
+export const AwemeBitRateItemSchema = zod.object({
+  bit_rate:   zod.number().optional(),
+  play_addr:  UrlList.optional(),
+});
+
+export const AwemeVideoSchema = zod.object({
+  play_addr:      UrlList.optional(),
+  download_addr:  UrlList.optional(),
+  origin_cover:   UrlList.optional(),
+  cover:          UrlList.optional(),
+  dynamic_cover:  UrlList.optional(),
+  duration:       zod.number().optional(),
+  bit_rate:       zod.array(AwemeBitRateItemSchema).optional(),
+});
+
+export const AwemeMusicSchema = zod.object({
+  play_url:   UrlList.optional(),
+  playUrl:    UrlListAlt.optional(),
+  mid:        zod.string().optional(),
+  id_str:     zod.string().optional(),
+  id:         zod.number().optional(),
+});
+
+export const AwemeStatisticsSchema = zod.object({
+  play_count:     zod.number().optional(),
+  digg_count:     zod.number().optional(),
+  comment_count:  zod.number().optional(),
+  share_count:    zod.number().optional(),
+});
+
+export const AwemeImageSchema = zod.object({
+  display_image:  UrlList.optional(),
+  thumbnail:      UrlList.optional(),
+});
+
+export const AwemeImagePostInfoSchema = zod.object({
+  images: zod.array(AwemeImageSchema).optional(),
+});
+
+/**
+ * Single item from TikTok's aweme_details array.
+ * All fields optional — TikTok shape is not a public contract.
+ */
+export const AwemeSchema = zod.object({
+  aweme_id:         zod.string().optional(),
+  desc:             zod.string().optional(),
+  author:           AwemeAuthorSchema.optional(),
+  video:            AwemeVideoSchema.optional(),
+  music:            AwemeMusicSchema.optional(),
+  statistics:       AwemeStatisticsSchema.optional(),
+  stats:            AwemeStatisticsSchema.optional(),
+  image_post_info:  AwemeImagePostInfoSchema.optional(),
+  imagePost:        AwemeImagePostInfoSchema.optional(),
+  create_time:      zod.number().optional(),
+  expire_time:      zod.number().optional(),
+  expireTime:       zod.number().optional(),
+});
+
+/** Full TikTok Android API response wrapper. */
+export const TikTokApiResponseSchema = zod.object({
+  status_code:    zod.number().optional(),
+  aweme_details:  zod.array(AwemeSchema).optional(),
+});
+
+// ─── Frontend-facing API response schemas ─────────────────────────────────────
+// These match the interfaces in artifacts/tikdown/src/lib/api.ts.
+// Use at the fetch boundary to catch silent Worker → frontend shape mismatches.
+
+export const DownloadUrlsSchema = zod.object({
+  mp4_1080:   zod.string().optional(),
+  mp4_720:    zod.string().optional(),
+  mp3:        zod.string().optional(),
+  thumbnail:  zod.string().optional(),
+});
+
+export const VideoInfoSchema = zod.object({
+  success:        zod.boolean(),
+  title:          zod.string(),
+  author:         zod.string(),
+  author_avatar:  zod.string().optional(),
+  duration:       zod.number(),
+  thumbnail:      zod.string(),
+  view_count:     zod.number().optional(),
+  like_count:     zod.number().optional(),
+  comment_count:  zod.number().optional(),
+  share_count:    zod.number().optional(),
+  is_photo:       zod.boolean().optional(),
+  images:         zod.array(zod.string()).optional(),
+  download_urls:  DownloadUrlsSchema.optional(),
+});
+
+export const ProfileVideoSchema = zod.object({
+  title:          zod.string(),
+  thumbnail:      zod.string(),
+  download_urls:  DownloadUrlsSchema,
+});
+
+export const ProfileInfoSchema = zod.object({
+  success:        zod.boolean(),
+  username:       zod.string(),
+  display_name:   zod.string(),
+  avatar:         zod.string(),
+  follower_count: zod.number(),
+  videos:         zod.array(ProfileVideoSchema),
+});
+
+export const StoryItemSchema = zod.object({
+  title:          zod.string(),
+  thumbnail:      zod.string(),
+  create_at:      zod.number(),
+  expire_at:      zod.number(),
+  download_urls:  DownloadUrlsSchema,
+});
+
+export const StoryInfoSchema = zod.object({
+  success:      zod.boolean(),
+  username:     zod.string(),
+  display_name: zod.string(),
+  avatar:       zod.string(),
+  stories:      zod.array(StoryItemSchema),
+});
+
+// ─── Inferred TypeScript types ────────────────────────────────────────────────
+
+export type Aweme           = zod.infer<typeof AwemeSchema>;
+export type TikTokApiResponse = zod.infer<typeof TikTokApiResponseSchema>;
+export type DownloadUrls    = zod.infer<typeof DownloadUrlsSchema>;
+export type VideoInfo       = zod.infer<typeof VideoInfoSchema>;
+export type ProfileVideo    = zod.infer<typeof ProfileVideoSchema>;
+export type ProfileInfo     = zod.infer<typeof ProfileInfoSchema>;
+export type StoryItem       = zod.infer<typeof StoryItemSchema>;
+export type StoryInfo       = zod.infer<typeof StoryInfoSchema>;
