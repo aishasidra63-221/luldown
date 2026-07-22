@@ -172,7 +172,7 @@ function _saveHistory(items: HistoryItem[]) {
   localStorage.setItem(HISTORY_KEY, JSON.stringify(items));
 }
 
-function _addHistoryEntry(entry: HistoryItem) {
+export function addHistoryEntry(entry: HistoryItem) {
   let items = _loadHistory().filter((h) => h.url !== entry.url);
   items.unshift(entry);
   if (items.length > MAX_HISTORY) items = items.slice(0, MAX_HISTORY);
@@ -336,7 +336,7 @@ export async function downloadVideo(
   if (format === "thumbnail") {
     const thumbUrl = videoMeta?.thumbnail;
     if (!thumbUrl) throw new Error("No thumbnail available for this video");
-    _addHistoryEntry({
+    addHistoryEntry({
       url,
       title:        videoMeta?.title  || "TikTok Video",
       author:       videoMeta?.author || "Unknown",
@@ -405,7 +405,7 @@ export async function downloadVideo(
     if (!cdnUrl) throw new Error("No download URL received");
   }
 
-  _addHistoryEntry({
+  addHistoryEntry({
     url,
     title,
     author,
