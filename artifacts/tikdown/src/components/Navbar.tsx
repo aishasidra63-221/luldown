@@ -175,7 +175,7 @@ export default function Navbar() {
             }}>
               Language
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {ALL_LANGS.map(l => {
                 const active = l === lang;
                 return (
@@ -183,14 +183,13 @@ export default function Navbar() {
                     key={l}
                     onClick={() => switchLang(l)}
                     style={{
-                      padding: "5px 10px", borderRadius: 8, fontSize: 12, fontWeight: active ? 700 : 500,
+                      padding: "5px 14px", borderRadius: 50, fontSize: 12, fontWeight: active ? 700 : 500,
                       cursor: "pointer", border: "1px solid",
                       background: active ? "linear-gradient(135deg, #7c3aed, #4f6ef7)" : "transparent",
                       color: active ? "#ffffff" : "#374151",
                       borderColor: active ? "transparent" : "rgba(0,0,0,0.15)",
                       boxShadow: active ? "0 2px 8px rgba(124,58,237,0.3)" : "none",
                       transition: "all 0.15s",
-                      textAlign: "left",
                       direction: LANG_META[l].dir,
                     }}
                   >

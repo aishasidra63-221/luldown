@@ -89,6 +89,18 @@ export default function DownloaderBox({ highlightFormat, onResult }: Props) {
   const [error, setError] = useState("");
   const [photoDownloading, setPhotoDownloading] = useState<number | null>(null);
   const [expanded, setExpanded] = useState(false);
+
+  // Strip technical internals (API hostnames, JSON parse errors, etc.) so users
+  // see a friendly string instead of raw server details.
+  const sanitizeError = (msg: string): string => {
+    if (!msg) return "Something went wrong. Please try again.";
+    if (/tiktokv\.com|tiktok\.com\/api|Unexpected end of JSON|SyntaxError|fetch failed|Failed to fetch|NetworkError|ECONNREFUSED|ENOTFOUND/i.test(msg)) {
+      if (/profile/i.test(msg)) return "Could not load this profile. Please check the link and try again.";
+      return "Could not connect to TikTok. Please check the link and try again.";
+    }
+    return msg;
+  };
+
   // Core fetch logic — accepts explicit URL so auto-fetch on mount can pass it directly
   const handleFetchUrl = async (fetchUrl: string) => {
     const trimmed = fetchUrl.trim();
@@ -108,7 +120,7 @@ export default function DownloaderBox({ highlightFormat, onResult }: Props) {
         onResult?.({ info: videoInfo, profile: null, url: trimmed });
       }
     } catch (e: any) {
-      setError(e.message || "Failed to fetch");
+      setError(sanitizeError(e.message) || "Failed to fetch");
       setStep("error");
     }
   };
