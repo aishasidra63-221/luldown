@@ -414,11 +414,10 @@ export async function downloadVideo(
     downloaded_at: Math.floor(Date.now() / 1000),
   });
 
-  // MP3 — navigate directly to the audio CDN URL.
-  // window.open() is blocked by popup blockers in iframe contexts (e.g. Replit preview).
-  // window.location.href triggers a download/audio-player dialog without a popup.
+  // MP3 — open the audio CDN URL in a new tab so the browser handles
+  // playback and download natively without navigating away from the page.
   if (format === "mp3") {
-    window.location.href = cdnUrl;
+    window.open(cdnUrl, "_blank", "noopener,noreferrer");
     return;
   }
 
