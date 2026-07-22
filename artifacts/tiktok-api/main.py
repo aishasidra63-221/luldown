@@ -101,6 +101,7 @@ _ALLOWED_TIKTOK_HOSTS = {
 _ALLOWED_CDN_DOMAINS = [
     "tiktok.com", "tiktokcdn.com", "tiktokv.com",
     "musical.ly", "douyin.com", "bytecdn.cn", "snssdk.com",
+    "akamaized.net", "byteimg.com",
 ]
 
 # Browser UA — used for direct CDN URLs (tiktokcdn.com, tiktokv.com direct files)
