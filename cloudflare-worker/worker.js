@@ -1962,11 +1962,11 @@ async function handleRequest(request, env, ctx) {
         return err("Only TikTok CDN URLs are supported", 403, cors);
       }
 
-      // Path A-music: For MP3 files, try fetching directly from Worker edge first.
-      // TikTok *music* CDN (v16-ies-music / v19-ies-music) is less restrictive than
-      // the video CDN — Cloudflare anycast IPs are often not blocked there.
-      // We try TikTok App UA (required for resolver links) and then browser UA.
-      // If both fail we fall through to Render below.
+      // Path A-music: MP3 resolver URL (sf16-ies-music / musically-maliva-obj) —
+      // follow the 302 redirect with App UA to get the fresh expiring CDN URL,
+      // then redirect the browser straight to that CDN URL for a fast direct download.
+      // The resolver URL itself never touches the browser — it stays server-side,
+      // cached in KV for 30 days, exactly like the signaturev3 video resolver.
       if (filename.endsWith(".mp3")) {
         const musicAppHeaders = {
           "User-Agent":      "com.zhiliaoapp.musically/2024600030 (Linux; U; Android 14; en_US; Pixel 8; Build/AD1A.240405.004; Cronet/113.0.5672.129)",
@@ -1974,31 +1974,36 @@ async function handleRequest(request, env, ctx) {
           "Accept-Encoding": "identity",
           "Range":           "bytes=0-",
         };
-        const musicBrowserHeaders = {
-          "User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-          "Referer":         "https://www.tiktok.com/",
-          "Origin":          "https://www.tiktok.com",
-          "Accept":          "*/*",
-          "Accept-Encoding": "identity",
-          "Range":           "bytes=0-",
-        };
-        for (const hdrs of [musicAppHeaders, musicBrowserHeaders]) {
-          try {
-            const directResp = await fetch(cdnUrl, { headers: hdrs });
-            if (directResp.ok) {
-              const rh = new Headers({
-                ...cors,
-                "Content-Disposition": `attachment; filename="${filename}"`,
-                "Content-Type":        "audio/mpeg",
-                "Cache-Control":       "no-store",
-              });
-              const cl0 = directResp.headers.get("Content-Length");
-              if (cl0) rh.set("Content-Length", cl0);
-              return new Response(directResp.body, { status: 200, headers: rh });
-            }
-          } catch { /* try next */ }
-        }
-        // Both Worker-direct attempts failed — fall through to Render proxy below.
+        try {
+          // Step 1: follow redirect manually → extract fresh CDN URL
+          const resolveResp = await fetch(cdnUrl, {
+            headers:  musicAppHeaders,
+            redirect: "manual",
+          });
+          const freshCdnUrl =
+            resolveResp.headers.get("location") ||
+            resolveResp.headers.get("Location");
+
+          if (freshCdnUrl) {
+            // Redirect browser straight to the fresh CDN URL — fastest path,
+            // no Worker bandwidth used, download starts immediately.
+            return Response.redirect(freshCdnUrl, 302);
+          }
+
+          // 200 with no redirect — URL is already a direct CDN link, stream it.
+          if (resolveResp.ok) {
+            const rh = new Headers({
+              ...cors,
+              "Content-Disposition": `attachment; filename="${filename}"`,
+              "Content-Type":        "audio/mpeg",
+              "Cache-Control":       "no-store",
+            });
+            const cl0 = resolveResp.headers.get("Content-Length");
+            if (cl0) rh.set("Content-Length", cl0);
+            return new Response(resolveResp.body, { status: 200, headers: rh });
+          }
+        } catch { /* fall through to Render proxy */ }
+        // Resolve failed — fall through to Render proxy below.
       }
 
       // Path A: Python proxy server (Render/any host) — REQUIRED for video.

@@ -414,13 +414,10 @@ export async function downloadVideo(
     downloaded_at: Math.floor(Date.now() / 1000),
   });
 
-  // MP3 — open the audio CDN URL in a new tab so the browser handles
-  // playback and download natively without navigating away from the page.
-  if (format === "mp3") {
-    window.open(cdnUrl, "_blank", "noopener,noreferrer");
-    return;
-  }
-
+  // MP3 — route through /api/proxy exactly like video.
+  // The resolver URL (sf16-ies-music / signaturev3) stays server-side;
+  // the Worker extracts the fresh expiring CDN URL and redirects the
+  // browser straight to TikTok CDN for a fast, direct download.
   await _cdnDownload(cdnUrl, filename);
 }
 
