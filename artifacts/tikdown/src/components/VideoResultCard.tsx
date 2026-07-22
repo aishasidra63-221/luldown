@@ -285,23 +285,13 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
           ) : null}
 
           {info.download_urls?.mp3 ? (
-            <a
-              href={info.download_urls.mp3}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => addHistoryEntry({
-                url,
-                title:         info?.title  || "TikTok Video",
-                author:        info?.author || "Unknown",
-                thumbnail:     info?.thumbnail || "",
-                format:        "mp3",
-                downloaded_at: Math.floor(Date.now() / 1000),
-              })}
+            <button
+              onClick={() => handleDownload("mp3")}
               style={{
                 display: "flex", alignItems: "center", gap: 0,
                 borderRadius: 13, overflow: "hidden",
                 background: "#16a34a",
-                textDecoration: "none",
+                border: "none",
                 width: "100%", textAlign: "left",
                 cursor: "pointer",
                 boxShadow: "0 4px 16px rgba(22,163,74,0.35)",
@@ -318,7 +308,7 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
                   <Download size={15} color="#fff" strokeWidth={2.4} />
                 </div>
               </div>
-            </a>
+            </button>
           ) : null}
         </div>
       ) : (
