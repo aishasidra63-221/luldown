@@ -414,10 +414,14 @@ export async function downloadVideo(
     downloaded_at: Math.floor(Date.now() / 1000),
   });
 
-  // MP3 — route through /api/proxy exactly like video.
-  // The resolver URL (sf16-ies-music / signaturev3) stays server-side;
-  // the Worker extracts the fresh expiring CDN URL and redirects the
-  // browser straight to TikTok CDN for a fast, direct download.
+  // MP3 — open the fresh CDN URL directly in a new tab so the browser
+  // handles preview and download natively. The Worker already resolved
+  // the music resolver URL to a fresh expiring CDN URL before returning it.
+  if (format === "mp3") {
+    window.open(cdnUrl, "_blank", "noopener,noreferrer");
+    return;
+  }
+
   await _cdnDownload(cdnUrl, filename);
 }
 

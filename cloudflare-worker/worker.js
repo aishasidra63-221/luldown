@@ -1962,11 +1962,11 @@ async function handleRequest(request, env, ctx) {
         return err("Only TikTok CDN URLs are supported", 403, cors);
       }
 
-      // Path A-music: MP3 resolver URL (sf16-ies-music / musically-maliva-obj) —
-      // follow the 302 redirect with App UA to get the fresh expiring CDN URL,
-      // then redirect the browser straight to that CDN URL for a fast direct download.
-      // The resolver URL itself never touches the browser — it stays server-side,
-      // cached in KV for 30 days, exactly like the signaturev3 video resolver.
+      // Path A-music: For MP3 files, try fetching directly from Worker edge first.
+      // TikTok *music* CDN (v16-ies-music / v19-ies-music) is less restrictive than
+      // the video CDN — Cloudflare anycast IPs are often not blocked there.
+      // We try TikTok App UA (required for resolver links) and then browser UA.
+      // If both fail we fall through to Render below.
       if (filename.endsWith(".mp3")) {
         const musicAppHeaders = {
           "User-Agent":      "com.zhiliaoapp.musically/2024600030 (Linux; U; Android 14; en_US; Pixel 8; Build/AD1A.240405.004; Cronet/113.0.5672.129)",
@@ -1974,36 +1974,31 @@ async function handleRequest(request, env, ctx) {
           "Accept-Encoding": "identity",
           "Range":           "bytes=0-",
         };
-        try {
-          // Step 1: follow redirect manually → extract fresh CDN URL
-          const resolveResp = await fetch(cdnUrl, {
-            headers:  musicAppHeaders,
-            redirect: "manual",
-          });
-          const freshCdnUrl =
-            resolveResp.headers.get("location") ||
-            resolveResp.headers.get("Location");
-
-          if (freshCdnUrl) {
-            // Redirect browser straight to the fresh CDN URL — fastest path,
-            // no Worker bandwidth used, download starts immediately.
-            return Response.redirect(freshCdnUrl, 302);
-          }
-
-          // 200 with no redirect — URL is already a direct CDN link, stream it.
-          if (resolveResp.ok) {
-            const rh = new Headers({
-              ...cors,
-              "Content-Disposition": `attachment; filename="${filename}"`,
-              "Content-Type":        "audio/mpeg",
-              "Cache-Control":       "no-store",
-            });
-            const cl0 = resolveResp.headers.get("Content-Length");
-            if (cl0) rh.set("Content-Length", cl0);
-            return new Response(resolveResp.body, { status: 200, headers: rh });
-          }
-        } catch { /* fall through to Render proxy */ }
-        // Resolve failed — fall through to Render proxy below.
+        const musicBrowserHeaders = {
+          "User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+          "Referer":         "https://www.tiktok.com/",
+          "Origin":          "https://www.tiktok.com",
+          "Accept":          "*/*",
+          "Accept-Encoding": "identity",
+          "Range":           "bytes=0-",
+        };
+        for (const hdrs of [musicAppHeaders, musicBrowserHeaders]) {
+          try {
+            const directResp = await fetch(cdnUrl, { headers: hdrs });
+            if (directResp.ok) {
+              const rh = new Headers({
+                ...cors,
+                "Content-Disposition": `attachment; filename="${filename}"`,
+                "Content-Type":        "audio/mpeg",
+                "Cache-Control":       "no-store",
+              });
+              const cl0 = directResp.headers.get("Content-Length");
+              if (cl0) rh.set("Content-Length", cl0);
+              return new Response(directResp.body, { status: 200, headers: rh });
+            }
+          } catch { /* try next */ }
+        }
+        // Both Worker-direct attempts failed — fall through to Render proxy below.
       }
 
       // Path A: Python proxy server (Render/any host) — REQUIRED for video.
@@ -2107,12 +2102,30 @@ async function handleRequest(request, env, ctx) {
       } else if (format === "mp4_720") {
         cdnUrl = p.videoUrl720; filename = "luldown_720p";
       } else if (format === "mp3") {
-        // Use the actual audioUrl from TikTok API response (music.play_url.url_list).
-        // This gives a direct CDN URL (v16-ies-music.tiktokcdn-us.com etc.) that
-        // works in the browser without auth headers — same as what competitors use.
-        // The old musically-maliva-obj constructed URL required auth headers → 403.
-        cdnUrl = p.audioUrl || "";
+        // Music resolver URL (sf16-ies-music / musically-maliva-obj) is cached
+        // in KV for 30 days. Resolve it here server-side (App UA required) to
+        // get the fresh expiring CDN URL, then give that to the browser.
+        // Browser never sees the resolver URL — same pattern as signaturev3 for video.
+        const resolverUrl = p.audioUrl || "";
         filename = "luldown_audio"; ext = "mp3"; mediaType = "audio/mpeg";
+        if (resolverUrl) {
+          try {
+            const resolveResp = await fetch(resolverUrl, {
+              headers: {
+                "User-Agent":      "com.zhiliaoapp.musically/2024600030 (Linux; U; Android 14; en_US; Pixel 8; Build/AD1A.240405.004; Cronet/113.0.5672.129)",
+                "Accept":          "*/*",
+                "Accept-Encoding": "identity",
+              },
+              redirect: "manual",
+            });
+            const freshUrl =
+              resolveResp.headers.get("location") ||
+              resolveResp.headers.get("Location");
+            cdnUrl = freshUrl || resolverUrl;
+          } catch {
+            cdnUrl = resolverUrl; // fallback: return resolver as-is
+          }
+        }
       }
 
       if (!cdnUrl) return err(
