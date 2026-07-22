@@ -414,10 +414,11 @@ export async function downloadVideo(
     downloaded_at: Math.floor(Date.now() / 1000),
   });
 
-  // MP3 — open audio CDN URL directly in a new tab.
-  // The proxy fails for TikTok music CDN; the browser handles audio natively.
+  // MP3 — navigate directly to the audio CDN URL.
+  // window.open() is blocked by popup blockers in iframe contexts (e.g. Replit preview).
+  // window.location.href triggers a download/audio-player dialog without a popup.
   if (format === "mp3") {
-    window.open(cdnUrl, "_blank", "noopener");
+    window.location.href = cdnUrl;
     return;
   }
 
