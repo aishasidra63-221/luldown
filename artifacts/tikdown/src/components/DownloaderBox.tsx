@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { fetchVideoInfo, downloadVideo, downloadPhoto, VideoInfo, DownloadFormat, isProfileUrl, fetchProfileInfo, ProfileInfo } from "@/lib/api";
 import ProfileResults from "@/components/ProfileResults";
 import VideoResultCard from "@/components/VideoResultCard";
@@ -83,6 +83,7 @@ export default function DownloaderBox({ highlightFormat, onResult }: Props) {
   const [url, setUrl] = useState(prefill);
   const [step, setStep] = useState<Step>(isDemo ? "info-ready" : "idle");
   const inputRef = useRef<HTMLInputElement>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
   const [info, setInfo] = useState<VideoInfo | null>(isDemo ? DEMO_INFO : null);
   const [profileInfo, setProfileInfo] = useState<ProfileInfo | null>(null);
   const [error, setError] = useState("");
@@ -140,6 +141,15 @@ export default function DownloaderBox({ highlightFormat, onResult }: Props) {
     setUrl(""); setStep("idle"); setInfo(null); setProfileInfo(null); setError("");
     onResult?.(null);
   };
+
+  useEffect(() => {
+    if (step === "info-ready" && resultRef.current) {
+      setTimeout(() => {
+        const top = resultRef.current!.getBoundingClientRect().top + window.scrollY - 70;
+        window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+      }, 120);
+    }
+  }, [step]);
 
   const isPhoto = info?.is_photo && (info.images?.length ?? 0) > 0;
   const fmts = highlightFormat
@@ -202,7 +212,7 @@ export default function DownloaderBox({ highlightFormat, onResult }: Props) {
         const avatarLetter = (info.author || "T").replace("@","").charAt(0).toUpperCase();
 
         return (
-          <div style={{
+          <div ref={resultRef} style={{
             animation:"fadeUp 0.4s ease both",
             borderRadius:20,
             overflow:"hidden",
