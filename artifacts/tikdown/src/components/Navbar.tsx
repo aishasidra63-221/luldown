@@ -183,11 +183,11 @@ export default function Navbar() {
                     key={l}
                     onClick={() => switchLang(l)}
                     style={{
-                      padding: "7px 12px", borderRadius: 9, fontSize: 13, fontWeight: active ? 700 : 500,
+                      padding: "5px 10px", borderRadius: 8, fontSize: 12, fontWeight: active ? 700 : 500,
                       cursor: "pointer", border: "1.5px solid",
-                      background: active ? "linear-gradient(135deg, #7c3aed, #4f6ef7)" : "transparent",
+                      background: active ? "linear-gradient(135deg, #7c3aed, #4f6ef7)" : "#ffffff",
                       color: active ? "#ffffff" : "#374151",
-                      borderColor: active ? "transparent" : "rgba(0,0,0,0.12)",
+                      borderColor: active ? "transparent" : "#111111",
                       boxShadow: active ? "0 2px 8px rgba(124,58,237,0.3)" : "none",
                       transition: "all 0.15s",
                       textAlign: "left",

@@ -228,8 +228,11 @@ export default function HistoryPage() {
                     <p style={{ fontWeight: 600, fontSize: 14, color: "#111827", margin: "0 0 3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {item.title || "TikTok Video"}
                     </p>
-                    <p style={{ fontSize: 12, color: "#9ca3af", margin: "0 0 7px", display: "flex", alignItems: "center", gap: 4 }}>
-                      <User size={11} /> {(item.author || "Unknown").startsWith("@") ? item.author : `@${item.author || "Unknown"}`}
+                    <p style={{ fontSize: 11, color: "#9ca3af", margin: "0 0 7px", display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}>
+                      <User size={10} style={{ flexShrink: 0 }} />
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {(item.author || "Unknown").startsWith("@") ? item.author : `@${item.author || "Unknown"}`}
+                      </span>
                     </p>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                       <span style={{
