@@ -183,13 +183,16 @@ export function addHistoryEntry(entry: HistoryItem) {
 // Worker /api/proxy streams the TikTok CDN file with proper Referer headers.
 // Browser never touches TikTok CDN directly → no "Access Denied".
 
-function _sanitizeFilename(title: string): string {
-  return title
-    .replace(/[^\w\s-]/g, "")   // keep letters, digits, spaces, hyphens
-    .trim()
-    .replace(/\s+/g, "_")        // spaces → underscores
-    .slice(0, 60)                 // max 60 chars
-    || "luldown";                 // fallback if title is blank after sanitize
+function _extractVideoId(url: string): string {
+  try {
+    // Match long numeric video ID from full TikTok URLs
+    const m = url.match(/\/(?:video|photo)\/(\d{10,25})/);
+    if (m) return m[1];
+    // Fallback: last long numeric segment anywhere in URL
+    const n = url.match(/(\d{10,25})/);
+    if (n) return n[1];
+  } catch { /* ignore */ }
+  return Date.now().toString();
 }
 
 async function _cdnDownload(cdnUrl: string, filename: string): Promise<void> {
@@ -284,7 +287,8 @@ export async function downloadProfileVideo(
   format: "mp4_1080" | "mp4_720" | "mp3",
 ): Promise<void> {
   const ext      = format === "mp3" ? "mp3" : "mp4";
-  const filename = `${_sanitizeFilename(title)}_${format}.${ext}`;
+  const videoId  = _extractVideoId(cdnUrl) || Date.now().toString();
+  const filename = `luldown_${videoId}.${ext}`;
   await _cdnDownload(cdnUrl, filename);
 }
 
@@ -320,18 +324,13 @@ export async function fetchVideoInfo(url: string): Promise<VideoInfo> {
   return res.json();
 }
 
-const FORMAT_FILENAME: Record<DownloadFormat, string> = {
-  mp4_1080:  "luldown_1080p.mp4",
-  mp4_720:   "luldown_720p.mp4",
-  mp3:       "luldown_audio.mp3",
-  thumbnail: "luldown_thumbnail.jpg",
-};
-
 export async function downloadVideo(
   url: string,
   format: DownloadFormat,
   videoMeta?: { title?: string; author?: string; thumbnail?: string; download_urls?: DownloadUrls },
 ): Promise<void> {
+  const videoId = _extractVideoId(url);
+
   // Thumbnail — download the cover image directly, no API call needed
   if (format === "thumbnail") {
     const thumbUrl = videoMeta?.thumbnail;
@@ -344,7 +343,7 @@ export async function downloadVideo(
       format,
       downloaded_at: Math.floor(Date.now() / 1000),
     });
-    await _cdnDownload(thumbUrl, FORMAT_FILENAME.thumbnail);
+    await _cdnDownload(thumbUrl, `luldown_${videoId}.jpg`);
     return;
   }
 
@@ -361,7 +360,7 @@ export async function downloadVideo(
     title    = videoMeta?.title  || "TikTok Video";
     author   = videoMeta?.author || "Unknown";
     const ext = format === "mp3" ? "mp3" : "mp4";
-    filename = `${_sanitizeFilename(title)}_${format}.${ext}`;
+    filename = `luldown_${videoId}.${ext}`;
   } else {
     // Fallback — call /api/download (e.g. if info was fetched by older code)
     const token = await getToken();
@@ -387,9 +386,10 @@ export async function downloadVideo(
       }
       const retryData = await retry.json();
       cdnUrl   = retryData.cdn_url;
-      filename = retryData.filename || FORMAT_FILENAME[format];
       title    = retryData.title    || videoMeta?.title  || "TikTok Video";
       author   = retryData.author   || videoMeta?.author || "Unknown";
+      const retryExt = format === "mp3" ? "mp3" : "mp4";
+      filename = `luldown_${videoId}.${retryExt}`;
       if (!cdnUrl) throw new Error("No download URL received");
     } else if (!res.ok) {
       const errData = await res.json().catch(() => ({ detail: "Download failed" }));
@@ -398,9 +398,10 @@ export async function downloadVideo(
 
     const data  = await res.json();
     cdnUrl   = data.cdn_url;
-    filename = data.filename || FORMAT_FILENAME[format];
     title    = data.title    || videoMeta?.title  || "TikTok Video";
     author   = data.author   || videoMeta?.author || "Unknown";
+    const fallbackExt = format === "mp3" ? "mp3" : "mp4";
+    filename = `luldown_${videoId}.${fallbackExt}`;
 
     if (!cdnUrl) throw new Error("No download URL received");
   }
@@ -427,7 +428,8 @@ export async function downloadVideo(
 
 // Photo CDN-direct download — no server call at all, pure CDN
 export async function downloadPhoto(cdnUrl: string, index: number): Promise<void> {
-  const filename = `luldown_photo_${index + 1}.jpg`;
+  const videoId  = _extractVideoId(cdnUrl) || Date.now().toString();
+  const filename = `luldown_${videoId}_${index + 1}.jpg`;
   await _cdnDownload(cdnUrl, filename);
 }
 
