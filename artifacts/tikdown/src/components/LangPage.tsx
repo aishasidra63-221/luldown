@@ -160,7 +160,7 @@ export default function LangPage({ lang, pageKey, highlightFormat, notice }: Pro
             {tr.subheading}
           </p>
           <div style={{ maxWidth: 780, margin: "0 auto" }}>
-            <DownloaderBox highlightFormat={highlightFormat} />
+            <DownloaderBox highlightFormat={highlightFormat} lang={lang} />
             {notice && <div style={{ marginTop: 10 }}>{notice}</div>}
           </div>
           <div style={{ marginTop: 28, height: 52 }} />

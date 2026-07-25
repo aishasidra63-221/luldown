@@ -6,6 +6,8 @@ import {
   Music, Clipboard, Download, Image, Video,
   AlertCircle, X,
 } from "lucide-react";
+import { Lang } from "@/i18n/langMeta";
+import { DOWNLOADER_UI } from "@/i18n/downloaderUi";
 
 /* ── Download row configs ── */
 interface FmtCfg {
@@ -61,6 +63,7 @@ const FMTS: FmtCfg[] = [
 type Step = "idle" | "loading-info" | "info-ready" | "profile-ready" | "error";
 interface Props {
   highlightFormat?: DownloadFormat;
+  lang?: Lang;
   /** When provided, result card/profile renders externally — DownloaderBox only shows input + error */
   onResult?: (payload: { info: VideoInfo | null; profile: ProfileInfo | null; url: string } | null) => void;
 }
@@ -76,7 +79,8 @@ const DEMO_INFO: VideoInfo = {
   is_photo: false,
 };
 
-export default function DownloaderBox({ highlightFormat, onResult }: Props) {
+export default function DownloaderBox({ highlightFormat, lang = "en", onResult }: Props) {
+  const ui = DOWNLOADER_UI[lang] ?? DOWNLOADER_UI["en"];
   const isDemo = false;
   const prefill = typeof window !== "undefined" ? (sessionStorage.getItem("prefill_url") || "") : "";
   if (prefill) sessionStorage.removeItem("prefill_url");
@@ -193,8 +197,7 @@ export default function DownloaderBox({ highlightFormat, onResult }: Props) {
   useEffect(() => {
     if (step === "info-ready" && resultRef.current) {
       setTimeout(() => {
-        const top = resultRef.current!.getBoundingClientRect().top + window.scrollY - 70;
-        window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+        resultRef.current!.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }, 120);
     }
   }, [step]);
@@ -214,17 +217,17 @@ export default function DownloaderBox({ highlightFormat, onResult }: Props) {
             ref={inputRef} type="text" inputMode="url"
             value={url} onChange={e => setUrl(e.target.value)}
             onKeyDown={e => e.key === "Enter" && handleFetch()}
-            placeholder="Paste TikTok link here..."
+            placeholder={ui.placeholder}
             disabled={step === "loading-info"}
             style={{ flex:1, minWidth:0, background:"transparent", padding:"15px 8px 15px 16px", fontSize:14.5, outline:"none", color:"var(--text-primary)", fontWeight:400, fontFamily:"inherit" }}
           />
           {step === "loading-info" ? null : url ? (
             <button onClick={reset} className="btn-ghost" style={{ margin:"0 10px", padding:"7px 14px", fontSize:13 }}>
-              <X size={14} /> Clear
+              <X size={14} /> {ui.clear}
             </button>
           ) : (
             <button onClick={handlePaste} className="btn-ghost" style={{ margin:"0 10px", padding:"7px 14px", fontSize:13 }}>
-              <Clipboard size={14} /> Paste
+              <Clipboard size={14} /> {ui.paste}
             </button>
           )}
         </div>
@@ -236,8 +239,8 @@ export default function DownloaderBox({ highlightFormat, onResult }: Props) {
                 borderTopColor:"#ffffff",
                 borderRadius:"50%",
                 animation:"spin 0.75s linear infinite",
-              }} /> Please wait…</>
-            : <><Download size={18} /> Download Now</>}
+              }} /> {ui.pleaseWait}</>
+            : <><Download size={18} /> {ui.downloadNow}</>}
         </button>
       </div>
 
@@ -245,7 +248,7 @@ export default function DownloaderBox({ highlightFormat, onResult }: Props) {
       {rateLimited && (
         <div className="error-box" style={{ background:"rgba(217,119,6,0.13)", borderColor:"#d97706", color:"#fbbf24", gap:8 }}>
           <span style={{ fontSize:18 }}>🔔</span>
-          <span>You are making requests too fast! Please wait ~{rateCountdown} seconds...</span>
+          <span>{ui.rateLimitMsg.replace("{s}", String(rateCountdown))}</span>
         </div>
       )}
 
