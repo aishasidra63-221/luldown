@@ -52,8 +52,12 @@ export default function BlogIndexPage() {
       </div>
 
       {/* Blog Grid */}
-      <div style={{ maxWidth: 860, margin: "0 auto", padding: "36px 20px 60px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 16 }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 16px 72px" }}>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 320px), 1fr))",
+          gap: 20,
+        }}>
           {BLOGS.map((post) => {
             const dateFormatted = new Date(post.date).toLocaleDateString("en-US", {
               year: "numeric", month: "short", day: "numeric",
@@ -63,45 +67,60 @@ export default function BlogIndexPage() {
               <Link key={post.slug} href={`/blog/${post.slug}`}>
                 <article style={{
                   background: "#ffffff",
-                  borderRadius: 16,
-                  border: "1px solid rgba(0,0,0,0.09)",
-                  padding: "20px 22px",
+                  borderRadius: 18,
+                  border: "1px solid rgba(0,0,0,0.08)",
+                  padding: "0",
                   cursor: "pointer",
                   transition: "box-shadow 0.18s, transform 0.18s",
                   display: "flex",
                   flexDirection: "column",
                   height: "100%",
+                  overflow: "hidden",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
                 }}
                   onMouseEnter={e => {
-                    (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 24px rgba(79,110,247,0.10)";
-                    (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
+                    (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 32px rgba(79,110,247,0.13)";
+                    (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)";
                   }}
                   onMouseLeave={e => {
-                    (e.currentTarget as HTMLElement).style.boxShadow = "none";
+                    (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)";
                     (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 11, color: "#6b7280", marginBottom: 12 }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <Calendar size={12} /> {dateFormatted}
-                    </span>
-                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <Clock size={12} /> {post.readTime} min read
+                  {/* Accent top bar */}
+                  <div style={{
+                    height: 4,
+                    background: "linear-gradient(90deg, #7c3aed 0%, #4f6ef7 60%, #06b6d4 100%)",
+                  }} />
+
+                  <div style={{ padding: "22px 24px 24px", display: "flex", flexDirection: "column", flexGrow: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 12, color: "#9ca3af", marginBottom: 14 }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                        <Calendar size={13} /> {dateFormatted}
+                      </span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                        <Clock size={13} /> {post.readTime} min read
+                      </span>
+                    </div>
+
+                    <h2 style={{ fontWeight: 800, fontSize: 16, color: "#111827", marginBottom: 10, lineHeight: 1.45 }}>
+                      {post.title}
+                    </h2>
+
+                    <p style={{
+                      fontSize: 13.5, color: "#6b7280", lineHeight: 1.75, marginBottom: 20, flexGrow: 1,
+                      display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden",
+                    }}>
+                      {post.intro}
+                    </p>
+
+                    <span style={{
+                      display: "inline-flex", alignItems: "center", gap: 5,
+                      fontSize: 13, fontWeight: 700, color: "#4f6ef7",
+                    }}>
+                      Read Guide <ChevronRight size={14} />
                     </span>
                   </div>
-
-                  <h2 style={{ fontWeight: 800, fontSize: 15, color: "#111827", marginBottom: 8, lineHeight: 1.4 }}>
-                    {post.title}
-                  </h2>
-
-                  <p style={{ fontSize: 13, color: "#4b5563", lineHeight: 1.7, marginBottom: 16, flexGrow: 1,
-                    display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                    {post.intro}
-                  </p>
-
-                  <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, fontWeight: 700, color: "#4f6ef7" }}>
-                    Read Guide <ChevronRight size={14} />
-                  </span>
                 </article>
               </Link>
             );
