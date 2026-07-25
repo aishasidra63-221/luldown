@@ -146,4 +146,28 @@ export const DOWNLOADER_UI: Record<Lang, DownloaderStrings> = {
     pleaseWait:   "Proszę czekać…",
     rateLimitMsg: "Zbyt wiele żądań! Poczekaj ~{s} sekund...",
   },
+  tl: {
+    placeholder:  "I-paste ang TikTok link dito...",
+    paste:        "I-paste",
+    clear:        "Burahin",
+    downloadNow:  "I-download Na",
+    pleaseWait:   "Mangyaring maghintay…",
+    rateLimitMsg: "Masyadong maraming kahilingan! Maghintay ng ~{s} segundo...",
+  },
+  ms: {
+    placeholder:  "Tampal pautan TikTok di sini...",
+    paste:        "Tampal",
+    clear:        "Padam",
+    downloadNow:  "Muat Turun Sekarang",
+    pleaseWait:   "Sila tunggu…",
+    rateLimitMsg: "Terlalu banyak permintaan! Sila tunggu ~{s} saat...",
+  },
+  uk: {
+    placeholder:  "Вставте посилання TikTok сюди...",
+    paste:        "Вставити",
+    clear:        "Очистити",
+    downloadNow:  "Завантажити",
+    pleaseWait:   "Будь ласка, зачекайте…",
+    rateLimitMsg: "Забагато запитів! Зачекайте ~{s} секунд...",
+  },
 };
