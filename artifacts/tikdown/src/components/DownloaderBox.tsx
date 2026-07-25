@@ -90,6 +90,41 @@ export default function DownloaderBox({ highlightFormat, onResult }: Props) {
   const [photoDownloading, setPhotoDownloading] = useState<number | null>(null);
   const [expanded, setExpanded] = useState(false);
 
+  // ── Rate limiting: 3 requests within 5 seconds → block ──────────────────
+  const RATE_WINDOW_MS  = 5000; // 5 second window
+  const RATE_MAX        = 3;    // max requests in that window
+  const RATE_WAIT_SEC   = 5;    // how long to wait
+  const reqTimestamps   = useRef<number[]>([]);
+  const [rateLimited, setRateLimited]     = useState(false);
+  const [rateCountdown, setRateCountdown] = useState(0);
+  const rateTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const checkRateLimit = (): boolean => {
+    const now  = Date.now();
+    // Keep only timestamps within the window
+    reqTimestamps.current = reqTimestamps.current.filter(t => now - t < RATE_WINDOW_MS);
+    if (reqTimestamps.current.length >= RATE_MAX) {
+      // Block — start countdown
+      setRateLimited(true);
+      setRateCountdown(RATE_WAIT_SEC);
+      if (rateTimer.current) clearInterval(rateTimer.current);
+      rateTimer.current = setInterval(() => {
+        setRateCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(rateTimer.current!);
+            setRateLimited(false);
+            reqTimestamps.current = []; // reset after wait
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return true; // is rate limited
+    }
+    reqTimestamps.current.push(now);
+    return false; // not rate limited
+  };
+
   // Strip technical internals (API hostnames, JSON parse errors, etc.) so users
   // see a friendly string instead of raw server details.
   const sanitizeError = (msg: string): string => {
@@ -105,6 +140,7 @@ export default function DownloaderBox({ highlightFormat, onResult }: Props) {
   const handleFetchUrl = async (fetchUrl: string) => {
     const trimmed = fetchUrl.trim();
     if (!trimmed) return;
+    if (checkRateLimit()) return; // blocked — countdown already started
     setStep("loading-info"); setError(""); setInfo(null); setProfileInfo(null);
     onResult?.(null);
     try {
@@ -204,6 +240,14 @@ export default function DownloaderBox({ highlightFormat, onResult }: Props) {
             : <><Download size={18} /> Download Now</>}
         </button>
       </div>
+
+      {/* Rate limit warning */}
+      {rateLimited && (
+        <div className="error-box" style={{ background:"rgba(217,119,6,0.13)", borderColor:"#d97706", color:"#fbbf24", gap:8 }}>
+          <span style={{ fontSize:18 }}>🔔</span>
+          <span>You are making requests too fast! Please wait ~{rateCountdown} seconds...</span>
+        </div>
+      )}
 
       {/* Error */}
       {step === "error" && (
