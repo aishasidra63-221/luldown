@@ -678,13 +678,11 @@ const STATIC_DEVICE_BASE = {
   device_platform: "android",
   app_name:        "trill",
   channel:         "googleplay",
-  sys_region:      "US",
   app_language:    "en",
 
   host_abi:        "arm64-v8a",
   aid:             "1988",
   ssmix:           "a",
-  residence:       "US",
   app_type:        "normal",
   ac:              "wifi",
 };
