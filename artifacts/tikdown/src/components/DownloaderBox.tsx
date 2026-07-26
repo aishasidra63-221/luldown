@@ -296,10 +296,10 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
 
                 {/* Avatar — left column */}
                 <div style={{
-                  width:56, height:56, borderRadius:"50%", flexShrink:0,
+                  width:64, height:64, borderRadius:"50%", flexShrink:0,
                   background:"linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)",
                   display:"flex", alignItems:"center", justifyContent:"center",
-                  fontWeight:800, fontSize:21, color:"#fff",
+                  fontWeight:800, fontSize:24, color:"#fff",
                   overflow:"hidden",
                 }}>
                   {info.author_avatar ? (
@@ -314,7 +314,7 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
 
                 {/* Right column: username on top, title+tags below */}
                 <div style={{ flex:1, minWidth:0, textAlign:"left" }}>
-                  <p style={{ margin:"0 0 3px", fontWeight:700, fontSize:13.5, color:"#ffffff", textAlign:"left" }}>
+                  <p style={{ margin:"0 0 3px", fontWeight:700, fontSize:15, color:"#ffffff", textAlign:"left" }}>
                     {info.author}
                   </p>
                   {cleanTitle && (
@@ -322,7 +322,7 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
                       {/* Title — clamped when collapsed, full when expanded */}
                       {!expanded ? (
                         <p style={{
-                          margin:0, fontSize:11.5, fontWeight:500,
+                          margin:0, fontSize:13, fontWeight:500,
                           color:"rgba(255,255,255,0.75)", lineHeight:1.55,
                           wordBreak:"break-word",
                           display:"-webkit-box",
