@@ -2,7 +2,7 @@ import { useSEO } from "@/hooks/use-seo";
 import DownloaderBox from "@/components/DownloaderBox";
 import VideoResultCard from "@/components/VideoResultCard";
 import ProfileResults from "@/components/ProfileResults";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { VideoInfo, ProfileInfo } from "@/lib/api";
 
 const DARK_BG2  = "#1a1730";
@@ -179,6 +179,14 @@ export default function HomePage() {
   });
 
   const [result, setResult] = useState<{ info: VideoInfo | null; profile: ProfileInfo | null; url: string } | null>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (result) {
+      setTimeout(() => {
+        resultRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }, 120);
+    }
+  }, [result]);
 
   return (
     <div style={{ overflowX: "hidden" }}>
@@ -209,7 +217,7 @@ export default function HomePage() {
 
           {/* ══════════ RESULT (inside hero, purple section) ══════════ */}
           {result && (
-            <div style={{ maxWidth: 780, margin: "16px auto 0" }}>
+            <div ref={resultRef} style={{ maxWidth: 780, margin: "16px auto 0" }}>
               {result.info && (
                 <VideoResultCard info={result.info} url={result.url} />
               )}
