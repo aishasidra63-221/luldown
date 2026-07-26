@@ -4,8 +4,8 @@ const COLS = [
   {
     heading: "Tools",
     links: [
-      { href: "/",        label: "Video Downloader" },
-      { href: "/",        label: "MP3 Extractor"    },
+      { href: "/thumbnail", label: "Thumbnail Downloader" },
+      { href: "/mp3",       label: "MP3 Downloader"      },
       { href: "/history", label: "Download History" },
     ],
   },
