@@ -338,14 +338,14 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
                       ) : (
                         <>
                           <p style={{
-                            margin:"0 0 5px", fontSize:11.5, fontWeight:500,
-                            color:"rgba(255,255,255,0.75)", lineHeight:1.55,
+                            margin:"0 0 2px", fontSize:11.5, fontWeight:500,
+                            color:"rgba(255,255,255,0.75)", lineHeight:1.4,
                             wordBreak:"break-word",
                           }}>
                             {cleanTitle}
                           </p>
                           {tags.length > 0 && (
-                            <div style={{ display:"flex", flexWrap:"wrap", gap:"3px 6px", marginBottom:3 }}>
+                            <div style={{ display:"flex", flexWrap:"wrap", gap:"2px 4px", marginBottom:1 }}>
                               {tags.slice(0, 6).map(tag => (
                                 <span key={tag} style={{ color:"#a78bfa", fontWeight:600, fontSize:11.5 }}>{tag}</span>
                               ))}
@@ -354,7 +354,7 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
                         </>
                       )}
                       {/* More button — below text, right aligned */}
-                      <div style={{ display:"flex", justifyContent:"flex-end", marginTop:5 }}>
+                      <div style={{ display:"flex", justifyContent:"flex-end", marginTop:2 }}>
                         <button
                           onClick={() => setExpanded(v => !v)}
                           style={{
