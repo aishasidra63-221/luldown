@@ -456,6 +456,134 @@ export const BLOGS: BlogPost[] = [
       { q: "Can I download TikTok ads without watermark?", a: "TikTok ads are not regular videos and cannot be downloaded through standard TikTok downloader tools." },
     ],
   },
+  // ── Blog 4 ──────────────────────────────────────────────────────────────────
+  {
+    slug: "tiktok-video-for-whatsapp-status",
+    title: "How to Use TikTok Videos as WhatsApp Status (No Watermark)",
+    metaTitle: "TikTok Video Download for WhatsApp Status — No Watermark | Free",
+    metaDescription: "Learn how to download TikTok videos without watermark and post them as WhatsApp Status. Works on iPhone & Android. Free, no app needed.",
+    date: "2026-07-26",
+    readTime: 4,
+    intro: "Want to share a funny or inspiring TikTok video as your WhatsApp Status? The problem is TikTok's built-in save adds a watermark and username overlay — which looks messy on WhatsApp. Here's how to download any TikTok video clean and post it as your WhatsApp Status in under a minute.",
+    sections: [
+      {
+        heading: "Why TikTok Videos Have a Watermark",
+        content: "Every video you download using TikTok's native save button gets a watermark: the TikTok logo and the creator's @username stamped on the video. This looks unprofessional when you share it as WhatsApp Status. Luldown bypasses this by fetching TikTok's original clean CDN file — no overlay, no logo.",
+      },
+      {
+        heading: "Step-by-Step: TikTok to WhatsApp Status",
+        content: "Follow these 4 steps:\n\n1. Open TikTok and find the video you want.\n2. Tap Share → Copy Link.\n3. Open Luldown in your browser. Paste the link and tap Download Now.\n4. Choose MP4 720p (best size for WhatsApp Status — under 30 seconds, 16MB limit).\n5. Save the video to your phone's gallery.\n6. Open WhatsApp → Status tab → pencil icon → Video → select the downloaded file.",
+      },
+      {
+        heading: "WhatsApp Status Video Limits You Must Know",
+        content: "WhatsApp Status has specific limits:\n\n• Maximum length: 30 seconds. If the TikTok video is longer, trim it before uploading.\n• Maximum file size: 16MB. MP4 720p from Luldown is usually well under this limit.\n• Supported format: MP4 (which Luldown downloads by default).\n• Visibility: Your status is visible for 24 hours to your contacts.",
+      },
+      {
+        heading: "Can I Use TikTok Audio as WhatsApp Status?",
+        content: "Yes! If you want only the audio (a song, voiceover, or sound), download the TikTok as MP3 from Luldown. You can then use this MP3 as your WhatsApp voice status, or combine it with a photo/video in any video editor to create a custom status.",
+      },
+      {
+        heading: "Does This Work on iPhone and Android?",
+        content: "Yes, Luldown works on both platforms:\n\nAndroid: Open Luldown in Chrome, download the video. It saves to your Downloads folder. Open WhatsApp → Status → Video → navigate to Downloads.\n\niPhone: Open Luldown in Safari, download the video. In Safari, tap the download icon and choose 'Save to Photos'. Then open WhatsApp → Status → Video → Camera Roll.",
+      },
+      {
+        heading: "Tips for the Best WhatsApp Status",
+        content: "• Pick videos under 30 seconds — or the section will be cut off.\n• Use 720p format for best quality-to-size ratio.\n• Vertical (portrait) videos look best on WhatsApp Status.\n• Add your own caption after posting to personalise it.\n• Download multiple videos and post them as a series of statuses.",
+      },
+    ],
+    faq: [
+      { q: "Is it free to download TikTok for WhatsApp Status?", a: "Yes, Luldown is completely free. No sign-up, no app, no hidden charges." },
+      { q: "Will my WhatsApp contacts see the TikTok watermark?", a: "No. Luldown downloads the clean original video without any TikTok logo or username overlay." },
+      { q: "What if my TikTok video is longer than 30 seconds?", a: "WhatsApp Status only plays the first 30 seconds. Trim the video using any free video editor (CapCut, InShot) before posting." },
+      { q: "Can I download private TikTok videos?", a: "No. Luldown can only download videos from public TikTok accounts." },
+    ],
+  },
+
+  // ── Blog 5 ──────────────────────────────────────────────────────────────────
+  {
+    slug: "tiktok-video-download-free-no-app",
+    title: "TikTok Video Download Free — No App, No Sign Up (2026)",
+    metaTitle: "TikTok Video Download Free — No App, No Sign Up | LulDown",
+    metaDescription: "Download TikTok videos free without any app or sign up. Works directly in your browser on iPhone, Android, and PC. No watermark. HD quality.",
+    date: "2026-07-26",
+    readTime: 5,
+    intro: "Most TikTok downloaders ask you to install an app, create an account, or watch ads before letting you download. Luldown doesn't. It works entirely in your browser — no downloads, no sign-up, no ads. Here's everything you need to know about downloading TikTok videos completely free in 2026.",
+    sections: [
+      {
+        heading: "Why You Don't Need an App to Download TikTok Videos",
+        content: "App-based TikTok downloaders take up storage, request unnecessary permissions (camera, contacts, location), and often come bundled with adware. A browser-based tool like Luldown is safer and more convenient: nothing installs on your device, no permissions are requested, and it works on every device — iPhone, Android, tablet, and desktop — without any setup.",
+      },
+      {
+        heading: "How to Download TikTok Video Free in 3 Steps",
+        content: "1. Copy the TikTok link: Open TikTok, find a video, tap Share → Copy Link.\n2. Paste in Luldown: Open luldown.com in any browser, paste the link in the input box, tap Download Now.\n3. Choose your format: Select MP4 1080p (HD), MP4 720p, or MP3 audio — then save the file.\n\nThat's it. No account, no app, no waiting. The download starts instantly.",
+      },
+      {
+        heading: "Is the Download Really Free — No Hidden Fees?",
+        content: "Yes, completely. Luldown has no:\n\n• Subscription plans\n• Premium tiers\n• Download limits (daily or monthly)\n• Account requirement\n• File size limits\n• Watermark on the downloaded video\n\nThe service is 100% free, funded by keeping the tool simple and efficient — no ads, no bloat.",
+      },
+      {
+        heading: "What Formats Can You Download?",
+        content: "Luldown supports three download formats:\n\n• MP4 1080p — Full HD, no watermark. Best for viewing, editing, or archiving.\n• MP4 720p — Standard HD, smaller file size. Perfect for mobile storage or WhatsApp sharing.\n• MP3 192kbps — Audio only. Download TikTok sounds, songs, voiceovers, or podcast-style content.\n\nFor photo slideshows, all images are displayed individually — save the ones you want.",
+      },
+      {
+        heading: "TikTok Video Download Free on Any Device",
+        content: "• iPhone/iPad: Open luldown.com in Safari. Paste the link, download. Tap the download indicator in Safari's toolbar to access the file.\n• Android: Open in Chrome or any browser. Files save to your Downloads folder automatically.\n• PC/Mac: Paste the link, click Download. Files go to your browser's default Downloads folder.\n• Tablet: Works the same as mobile — no extra steps needed.",
+      },
+      {
+        heading: "Is Luldown Safe to Use?",
+        content: "Yes. Luldown does not store any video files on its servers — it resolves the TikTok CDN link and passes it directly to your browser. Your download history is stored only in your own browser's local storage and never sent to any server. No personal data is collected, no analytics beyond basic server logs.",
+      },
+    ],
+    faq: [
+      { q: "Do I need to create an account to download TikTok videos?", a: "No. Luldown requires no account, no email, and no sign-up of any kind." },
+      { q: "Is there a daily download limit?", a: "No. You can download as many TikTok videos as you want, completely free." },
+      { q: "Does Luldown work without an internet connection?", a: "No. You need an active internet connection to fetch and download TikTok videos." },
+      { q: "Can I download TikTok videos on a school or work network?", a: "This depends on your network's firewall settings. If TikTok.com is blocked on your network, Luldown may not be able to fetch the video." },
+    ],
+  },
+
+  // ── Blog 6 ──────────────────────────────────────────────────────────────────
+  {
+    slug: "tiktok-iphone-download-guide-2026",
+    title: "How to Download TikTok Videos on iPhone (2026 Complete Guide)",
+    metaTitle: "How to Download TikTok Videos on iPhone — Free, No Watermark (2026)",
+    metaDescription: "Step-by-step guide to downloading TikTok videos on iPhone without watermark. Works on iOS Safari, no app needed, saves directly to Photos.",
+    date: "2026-07-26",
+    readTime: 5,
+    intro: "Downloading TikTok videos on iPhone is slightly different from Android due to iOS restrictions — but it's easy once you know the steps. This guide shows you exactly how to save any TikTok video to your iPhone's Camera Roll for free, without the TikTok watermark, using just Safari.",
+    sections: [
+      {
+        heading: "Why iPhone Downloads Are Different",
+        content: "iOS Safari handles file downloads differently from Android Chrome. When you tap a download link on iPhone, files save to the Files app (not directly to Photos). You then need one extra step to move it to your Camera Roll. We'll show you both methods below.",
+      },
+      {
+        heading: "Method 1: Download to Files App (Safari — Recommended)",
+        content: "1. Open TikTok on your iPhone → find the video → tap Share → Copy Link.\n2. Open Safari → go to luldown.com.\n3. Paste the link → tap Download Now → choose MP4 1080p or 720p.\n4. A download prompt appears — tap Download.\n5. After downloading, tap the download icon (↓) in Safari's top-right corner.\n6. Tap the downloaded file → it opens in a video player.\n7. Tap the Share icon → Save Video → the video saves to your Camera Roll.",
+      },
+      {
+        heading: "Method 2: Using the Files App",
+        content: "If the video downloaded to Files instead of Photos:\n\n1. Open the Files app on your iPhone.\n2. Go to On My iPhone → Downloads.\n3. Find the TikTok video file.\n4. Long-press the file → tap Share → Save Video.\n5. The video is now in your Camera Roll and ready to use.",
+      },
+      {
+        heading: "Download TikTok as MP3 on iPhone",
+        content: "To save TikTok audio on iPhone:\n1. Paste the TikTok link on Luldown → select Download MP3.\n2. Safari downloads the MP3 to your Files app.\n3. To add it to your Music library, use the Files app to share it with Apple Music or GarageBand.\n\nAlternatively, use the MP3 directly for WhatsApp voice status or video editing apps.",
+      },
+      {
+        heading: "Troubleshooting iPhone TikTok Downloads",
+        content: "Video plays in browser instead of downloading: Long-press the download button → tap 'Download Linked File'.\n\nNo download prompt appears: Make sure you're using Safari (not Chrome or Firefox on iPhone). iOS download managers work best in Safari.\n\nVideo not in Camera Roll: Check the Files app → On My iPhone → Downloads. Then share it to Photos as described above.\n\nFile won't open: Make sure the file is .mp4 format. iPhone supports MP4 natively — if it still won't open, try redownloading.",
+      },
+      {
+        heading: "Best TikTok Download Format for iPhone",
+        content: "• For Camera Roll / WhatsApp Status / iMessage: MP4 720p — ideal file size, great quality.\n• For video editing in CapCut or iMovie: MP4 1080p — full resolution for editing flexibility.\n• For music/audio: MP3 — saves directly to Files, use in GarageBand or share via WhatsApp.\n• For saving a thumbnail/cover image: Use the Thumbnail downloader on Luldown — saves as JPG.",
+      },
+    ],
+    faq: [
+      { q: "Does Luldown work on iPhone without installing an app?", a: "Yes. Open Luldown in Safari on your iPhone — no app or extension needed." },
+      { q: "Why does the video save to Files instead of Photos on iPhone?", a: "This is an iOS security feature. After the video is in Files, share it to Photos using the Share → Save Video option." },
+      { q: "Can I download TikTok videos on iPhone with iOS 17 or 18?", a: "Yes. Luldown works on all modern iOS versions. Safari's download manager handles the file automatically." },
+      { q: "Is there a TikTok downloader app for iPhone on the App Store?", a: "There are apps on the App Store but they often have ads and require subscriptions. Luldown works in Safari with no app needed — simpler and completely free." },
+    ],
+  },
 ];
 
 export function getBlogBySlug(slug: string): BlogPost | undefined {

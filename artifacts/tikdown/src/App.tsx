@@ -28,8 +28,9 @@ const MusicalDownAltPage = lazy(() => import("@/pages/MusicalDownAltPage"));
 const SavetikAltPage    = lazy(() => import("@/pages/SavetikAltPage"));
 const TikmateAltPage    = lazy(() => import("@/pages/TikmateAltPage"));
 const LangHomePage      = lazy(() => import("@/pages/LangHomePage"));
-const ApkPage        = lazy(() => import("@/pages/ApkPage"));
-const HowToPage      = lazy(() => import("@/pages/HowToPage"));
+const ApkPage               = lazy(() => import("@/pages/ApkPage"));
+const HowToPage             = lazy(() => import("@/pages/HowToPage"));
+const WhatsAppStatusPage    = lazy(() => import("@/pages/WhatsAppStatusPage"));
 
 const queryClient = new QueryClient();
 
@@ -72,6 +73,7 @@ function Router() {
       {/* ── English tool pages ── */}
       <Route path="/apk"                             component={ApkPage} />
       <Route path="/how-to-download-tiktok-video"    component={HowToPage} />
+      <Route path="/tiktok-for-whatsapp-status"      component={WhatsAppStatusPage} />
 
       {/* ── Language-prefixed tool pages ── */}
       <Route path="/:lang/mp3"                            component={Mp3Page} />
