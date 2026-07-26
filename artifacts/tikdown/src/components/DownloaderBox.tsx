@@ -280,8 +280,8 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
             boxShadow:"0 20px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(124,58,237,0.15)",
           }}>
 
-            {/* ── Thumbnail ── */}
-            {info.thumbnail && (
+            {/* ── Thumbnail (hidden for photo slideshows) ── */}
+            {info.thumbnail && !isPhoto && (
               <div style={{ position:"relative" }}>
                 <img
                   src={info.thumbnail} alt=""
@@ -391,79 +391,57 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
                   📸 PHOTO SLIDESHOW &nbsp;·&nbsp; {info.images!.length} SLIDES
                 </p>
 
-                {/* ── Horizontal slide strip ── */}
+                {/* ── Horizontal slide strip with individual Save buttons ── */}
                 <div style={{
                   display:"flex", gap:8, overflowX:"auto", paddingBottom:4,
                   scrollbarWidth:"none",
                 }}>
                   {info.images!.map((imgUrl, i) => (
-                    <div
-                      key={i}
-                      onClick={() => handlePhotoDownload(imgUrl, i)}
-                      title={`Save slide ${i+1}`}
-                      style={{
-                        position:"relative", flexShrink:0,
-                        width:80, height:108, borderRadius:10, overflow:"hidden",
-                        border:"1px solid rgba(255,255,255,0.12)",
-                        cursor: photoDownloading !== null ? "wait" : "pointer",
-                        boxShadow:"0 2px 10px rgba(0,0,0,0.4)",
-                      }}
-                    >
-                      <img
-                        src={imgUrl} alt=""
-                        style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}
-                        loading="lazy"
-                      />
-                      {/* slide number badge */}
-                      <div style={{
-                        position:"absolute", top:5, left:5,
-                        background:"rgba(0,0,0,0.65)", backdropFilter:"blur(4px)",
-                        color:"#fff", fontSize:9, fontWeight:800,
-                        padding:"2px 5px", borderRadius:5, lineHeight:1.4,
-                      }}>
-                        {i+1}
+                    <div key={i} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:5, flexShrink:0 }}>
+                      <div
+                        style={{
+                          position:"relative",
+                          width:100, height:135, borderRadius:10, overflow:"hidden",
+                          border:"1px solid rgba(255,255,255,0.12)",
+                          boxShadow:"0 2px 10px rgba(0,0,0,0.4)",
+                        }}
+                      >
+                        <img
+                          src={imgUrl} alt=""
+                          style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}
+                          loading="lazy"
+                        />
+                        {/* slide number badge */}
+                        <div style={{
+                          position:"absolute", top:5, left:5,
+                          background:"rgba(0,0,0,0.65)", backdropFilter:"blur(4px)",
+                          color:"#fff", fontSize:9, fontWeight:800,
+                          padding:"2px 5px", borderRadius:5, lineHeight:1.4,
+                        }}>
+                          {i+1}
+                        </div>
                       </div>
-                      {/* download icon overlay */}
-                      <div style={{
-                        position:"absolute", inset:0,
-                        background:"rgba(124,58,237,0.0)",
-                        display:"flex", alignItems:"center", justifyContent:"center",
-                        transition:"background 0.15s",
-                      }}>
-                        {null}
-                      </div>
+                      {/* Individual Save button */}
+                      <button
+                        onClick={() => handlePhotoDownload(imgUrl, i)}
+                        disabled={photoDownloading !== null}
+                        style={{
+                          width:100, padding:"6px 0",
+                          borderRadius:8, border:"none",
+                          background: photoDownloading === i
+                            ? "rgba(124,58,237,0.5)"
+                            : "linear-gradient(135deg,#7c3aed,#6d28d9)",
+                          color:"#fff", fontSize:11, fontWeight:700,
+                          cursor: photoDownloading !== null ? "wait" : "pointer",
+                          display:"flex", alignItems:"center", justifyContent:"center", gap:4,
+                        }}
+                      >
+                        <Download size={11} color="#fff" strokeWidth={2.5} />
+                        Save
+                      </button>
                     </div>
                   ))}
                 </div>
-
-                {/* ── Download All Slides ── */}
-                <button
-                  onClick={() => info.images!.forEach((u,i) => setTimeout(() => handlePhotoDownload(u,i), i * 400))}
-                  disabled={photoDownloading !== null}
-                  style={{
-                    display:"flex", alignItems:"center", gap:0,
-                    borderRadius:13, overflow:"hidden",
-                    background:"linear-gradient(135deg,#7c3aed,#6d28d9)",
-                    border:"none", width:"100%", textAlign:"left",
-                    opacity: photoDownloading !== null ? 0.5 : 1,
-                    cursor: photoDownloading !== null ? "not-allowed" : "pointer",
-                    boxShadow:"0 4px 16px rgba(124,58,237,0.4)",
-                  }}
-                >
-                  <div style={{ width:54, minWidth:54, alignSelf:"stretch", background:"rgba(0,0,0,0.18)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                    <Image size={19} color="#fff" strokeWidth={2.2} />
-                  </div>
-                  <div style={{ flex:1, padding:"14px 14px" }}>
-                    <p style={{ margin:0, fontSize:13.5, fontWeight:700, color:"#fff", lineHeight:1.3 }}>
-                      Download All {info.images!.length} Slides
-                    </p>
-                  </div>
-                  <div style={{ paddingRight:14, flexShrink:0 }}>
-                    <div style={{ width:32, height:32, borderRadius:"50%", background:"rgba(0,0,0,0.22)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                      <Download size={15} color="#fff" strokeWidth={2.4} />
-                    </div>
-                  </div>
-                </button>
 
                 {/* ── Download as Video ── */}
                 {info.download_urls?.mp4_1080 || info.download_urls?.mp4_720 ? (
