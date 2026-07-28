@@ -8,7 +8,7 @@ from typing import Literal, Optional
 import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -313,6 +313,59 @@ async def download(request: Request, body: DownloadRequest):
         "author": cdn_data.get("author", ""),
         "format": body.format,
     })
+
+
+@app.get("/api/resolve")
+@limiter.limit("60/minute")
+async def resolve_signature_url(request: Request, url: str):
+    """
+    Takes a TikTok signature/resolver URL (aweme/v1/play/...),
+    follows its 302 redirect with Android App UA to get a fresh CDN URL,
+    then redirects the browser straight to that CDN URL.
+    Zero streaming bandwidth — browser downloads directly from TikTok CDN.
+    """
+    from urllib.parse import unquote, urlparse
+
+    # Optional: protect with same shared secret as /api/proxy
+    incoming = request.headers.get("x-proxy-secret", "")
+    if PROXY_SECRET and incoming != PROXY_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    sig_url = unquote(url)
+
+    # Validate host is a known TikTok domain (prevents SSRF)
+    try:
+        parsed = urlparse(sig_url)
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError("bad scheme")
+        host = parsed.netloc.lower().split(":")[0]
+        if not host or not any(host == d or host.endswith("." + d) for d in _ALLOWED_CDN_DOMAINS):
+            raise ValueError("disallowed host")
+    except ValueError as exc:
+        raise HTTPException(status_code=403, detail="Only TikTok URLs are supported") from exc
+
+    # Hit the signature URL with Android App UA but do NOT follow redirects —
+    # we want to capture the Location header (fresh CDN URL) and pass it to
+    # the browser so the browser downloads directly, not through this server.
+    try:
+        async with httpx.AsyncClient(
+            follow_redirects=False,
+            timeout=httpx.Timeout(15.0, connect=10.0),
+        ) as client:
+            resp = await client.get(sig_url, headers=_TT_APP_FETCH_HEADERS)
+
+        if resp.status_code in (301, 302, 303, 307, 308):
+            cdn_url = resp.headers.get("location", "")
+            if cdn_url:
+                return RedirectResponse(url=cdn_url, status_code=302, headers={
+                    "Cache-Control": "no-store",
+                    "Access-Control-Allow-Origin": "*",
+                })
+
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to resolve TikTok URL: {exc}") from exc
+
+    raise HTTPException(status_code=502, detail="Signature URL did not return a redirect")
 
 
 @app.get("/api/history")
