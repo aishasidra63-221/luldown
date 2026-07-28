@@ -415,11 +415,26 @@ export async function downloadVideo(
     downloaded_at: Math.floor(Date.now() / 1000),
   });
 
-  // MP3 — open the fresh CDN URL directly in a new tab so the browser
-  // handles preview and download natively. The Worker already resolved
-  // the music resolver URL to a fresh expiring CDN URL before returning it.
+  // MP3 — TikTok music CDN sends Access-Control-Allow-Origin: * so we can
+  // fetch the file as a blob and trigger a native browser download directly.
+  // No server/proxy needed — pure client-side.
   if (format === "mp3") {
-    window.open(cdnUrl, "_blank", "noopener,noreferrer");
+    try {
+      const res = await fetch(cdnUrl);
+      if (!res.ok) throw new Error("fetch failed");
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+    } catch {
+      // Fallback: open in new tab if blob download fails for any reason
+      window.open(cdnUrl, "_blank", "noopener,noreferrer");
+    }
     return;
   }
 
