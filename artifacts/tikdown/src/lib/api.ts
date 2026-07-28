@@ -423,7 +423,15 @@ export async function downloadVideo(
     return;
   }
 
-  await _cdnDownload(cdnUrl, filename);
+  // MP4 — route through /api/resolve: Render follows the signature URL with
+  // Android UA, gets a fresh CDN URL, and returns a 302 redirect to the browser.
+  // Browser opens the video directly from TikTok CDN in a new tab — zero
+  // server streaming bandwidth. User can preview and save via browser's 3-dot menu.
+  window.open(
+    `${API_BASE}/api/resolve?url=${encodeURIComponent(cdnUrl)}`,
+    "_blank",
+    "noopener,noreferrer",
+  );
 }
 
 // Photo CDN-direct download — no server call at all, pure CDN

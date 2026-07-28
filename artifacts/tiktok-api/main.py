@@ -326,11 +326,6 @@ async def resolve_signature_url(request: Request, url: str):
     """
     from urllib.parse import unquote, urlparse
 
-    # Optional: protect with same shared secret as /api/proxy
-    incoming = request.headers.get("x-proxy-secret", "")
-    if PROXY_SECRET and incoming != PROXY_SECRET:
-        raise HTTPException(status_code=403, detail="Forbidden")
-
     sig_url = unquote(url)
 
     # Validate host is a known TikTok domain (prevents SSRF)
