@@ -13,6 +13,7 @@ export default defineConfig({
   base: basePath,
   define: {
     __WORKER_URL__: JSON.stringify(process.env.WORKER_URL ?? ""),
+    __RENDER_URL__: JSON.stringify(process.env.RENDER_URL ?? ""),
   },
   plugins: [
     react(),

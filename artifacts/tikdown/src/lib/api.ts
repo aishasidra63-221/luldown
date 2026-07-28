@@ -1,8 +1,12 @@
 // If WORKER_URL is set at build time, use the Cloudflare Worker directly.
 // Otherwise fall back to the local Python API proxy (for dev).
 declare const __WORKER_URL__: string;
-const WORKER_URL = typeof __WORKER_URL__ !== "undefined" ? __WORKER_URL__.replace(/\/+$/, "") : "";
-const API_BASE = WORKER_URL || "/tikapi";
+declare const __RENDER_URL__: string;
+const WORKER_URL  = typeof __WORKER_URL__ !== "undefined" ? __WORKER_URL__.replace(/\/+$/, "") : "";
+const RENDER_URL  = typeof __RENDER_URL__ !== "undefined" ? __RENDER_URL__.replace(/\/+$/, "") : "";
+const API_BASE    = WORKER_URL || "/tikapi";
+// /api/resolve lives only on the Render backend — never on the Cloudflare Worker.
+const RESOLVE_BASE = RENDER_URL || "/tikapi";
 
 const HISTORY_KEY = "luldown_history";
 const MAX_HISTORY = 10;
@@ -428,7 +432,7 @@ export async function downloadVideo(
   // Browser opens the video directly from TikTok CDN in a new tab — zero
   // server streaming bandwidth. User can preview and save via browser's 3-dot menu.
   window.open(
-    `${API_BASE}/api/resolve?url=${encodeURIComponent(cdnUrl)}`,
+    `${RESOLVE_BASE}/api/resolve?url=${encodeURIComponent(cdnUrl)}`,
     "_blank",
     "noopener,noreferrer",
   );
