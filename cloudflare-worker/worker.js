@@ -1960,6 +1960,35 @@ async function handleRequest(request, env, ctx) {
         return err("Only TikTok CDN URLs are supported", 403, cors);
       }
 
+      // ── signaturev3 resolver ───────────────────────────────────────────────────
+      // aweme/v1/play?...signaturev3=... is a redirect-resolver URL.
+      // Oracle/Render datacenter IPs are blocked by TikTok for this step (403/302→/about).
+      // Cloudflare Worker anycast IPs are NOT blocked — TikTok returns 302 → direct CDN URL.
+      // Direct CDN URLs (v19-webapp.tiktok.com/...) are not IP-restricted at all.
+      // So: Worker resolves signaturev3 here → gets actual CDN URL → passes that to Oracle.
+      // Oracle then downloads direct CDN URL with no block.
+      // Non-fatal: if resolve fails for any reason, original URL is passed through unchanged.
+      if (cdnUrl.includes("aweme/v1/play") && cdnUrl.includes("signaturev3")) {
+        try {
+          const resolveResp = await fetch(cdnUrl, {
+            method:   "HEAD",
+            redirect: "manual",
+            headers: {
+              "User-Agent": "com.zhiliaoapp.musically/2024600030 (Linux; U; Android 14; en_US; Pixel 7; Build/AP1A.240905.004; Cronet/113.0.5672.129)",
+              "Accept":     "*/*",
+            },
+          });
+          const location = resolveResp.headers.get("Location");
+          if (location && location.startsWith("http")) {
+            let resolvedHostname;
+            try { resolvedHostname = new URL(location).hostname; } catch {}
+            if (resolvedHostname && allowed.some(d => resolvedHostname === d || resolvedHostname.endsWith("." + d))) {
+              cdnUrl = location; // swap signaturev3 → direct CDN URL
+            }
+          }
+        } catch { /* non-fatal — fall through with original URL */ }
+      }
+
       // Path A-music: For MP3 files, try fetching directly from Worker edge first.
       // TikTok *music* CDN (v16-ies-music / v19-ies-music) is less restrictive than
       // the video CDN — Cloudflare anycast IPs are often not blocked there.
