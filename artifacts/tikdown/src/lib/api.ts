@@ -348,7 +348,11 @@ export async function downloadVideo(
   }
 
   // Fast path — use the CDN URL already returned by /api/info (no second API call)
-  const cachedCdnUrl = videoMeta?.download_urls?.[format as Exclude<DownloadFormat, "thumbnail">];
+  // MP3 skips fast path: download_urls.mp3 is a resolver URL that needs server-side
+  // resolution with Android UA → always call /api/download to get the fresh CDN URL.
+  const cachedCdnUrl = format !== "mp3"
+    ? videoMeta?.download_urls?.[format as Exclude<DownloadFormat, "thumbnail">]
+    : undefined;
 
   let cdnUrl: string;
   let filename: string;
