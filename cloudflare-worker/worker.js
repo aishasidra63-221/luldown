@@ -2098,14 +2098,34 @@ async function handleRequest(request, env, ctx) {
       if (format === "mp4_1080" || format === "mp4_720") {
         const rawUrl = format === "mp4_1080" ? p.videoUrl : p.videoUrl720;
         filename     = format === "mp4_1080" ? "luldown_1080p" : "luldown_720p";
-        // Resolve signaturev3 → fresh CDN URL with Android UA (same pattern as MP3).
-        // Browser gets the real CDN URL and opens it directly — no Render proxy needed.
+        // Resolve signaturev3 → fresh CDN URL.
+        // The play endpoint requires phone device credentials (device_id, iid, openudid)
+        // in the query params — plain Android UA alone is not enough.
         if (rawUrl && rawUrl.includes("signaturev3")) {
           try {
-            const rr = await fetch(rawUrl, {
+            const pool  = await getOrInitPool(env);
+            const phone = pickPhone(pool);
+
+            // Append device identity params to the existing signaturev3 URL
+            const playUrl  = new URL(rawUrl);
+            const ts       = Math.floor(Date.now() / 1000);
+            playUrl.searchParams.set("device_id",        phone.device_id);
+            playUrl.searchParams.set("iid",              phone.iid);
+            playUrl.searchParams.set("openudid",         phone.openudid);
+            playUrl.searchParams.set("device_platform",  "android");
+            playUrl.searchParams.set("app_name",         "trill");
+            playUrl.searchParams.set("channel",          "googleplay");
+            playUrl.searchParams.set("app_language",     "en");
+            playUrl.searchParams.set("device_type",      phone.device_type);
+            playUrl.searchParams.set("os_version",       phone.os_version);
+            playUrl.searchParams.set("version_code",     phone.version_code);
+            playUrl.searchParams.set("ts",               String(ts));
+
+            const rr = await fetch(playUrl.toString(), {
               headers: {
-                "User-Agent":      "com.zhiliaoapp.musically/2024600030 (Linux; U; Android 14; en_US; Pixel 8; Build/AD1A.240405.004; Cronet/113.0.5672.129)",
-                "Accept":          "*/*",
+                "User-Agent":   phone.user_agent,
+                "Cookie":       `odin_tt=${phone.odin_tt}`,
+                "Accept":       "*/*",
                 "Accept-Encoding": "identity",
               },
               redirect: "manual",
