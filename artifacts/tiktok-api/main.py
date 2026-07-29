@@ -366,53 +366,6 @@ async def admin_cache_check(request: Request):
 
 # ─── Render Proxy ──────────────────────────────────────────────────────────────
 
-@app.get("/api/resolve")
-@limiter.limit("60/minute")
-async def resolve_cdn_url(request: Request, url: str):
-    """
-    Resolve a TikTok signaturev3/aweme resolver link to its actual CDN URL.
-    Returns only the CDN URL as JSON (~1 KB) — no video streaming, no bandwidth used.
-    Worker calls this, gets the CDN URL, and redirects the browser there directly.
-    """
-    # Verify shared secret (Worker → Render)
-    incoming = request.headers.get("x-proxy-secret", "")
-    if PROXY_SECRET and incoming != PROXY_SECRET:
-        raise HTTPException(status_code=403, detail="Forbidden")
-
-    from urllib.parse import urlparse, unquote
-    try:
-        clean_url = unquote(url.strip())
-        parsed = urlparse(clean_url)
-        if parsed.scheme not in ("http", "https"):
-            raise ValueError("bad scheme")
-        host = parsed.netloc.lower().split(":")[0]
-        # Only allow resolver links from TikTok's own domains
-        if not (host == "tiktok.com" or host.endswith(".tiktok.com")):
-            raise ValueError("not a tiktok domain")
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail="Invalid TikTok URL") from exc
-
-    try:
-        async with httpx.AsyncClient(
-            follow_redirects=False,
-            timeout=httpx.Timeout(15.0, connect=8.0),
-        ) as client:
-            resp = await client.get(clean_url, headers=_TT_APP_FETCH_HEADERS)
-
-            if resp.status_code in (301, 302, 303, 307, 308):
-                location = resp.headers.get("location", "")
-                # Validate it's a real TikTok CDN domain, not a /404 redirect
-                if location and any(
-                    d in location for d in ["tiktokcdn.com", "tiktokv.com", "tiktok.com/obj"]
-                ):
-                    return {"cdn_url": location}
-
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Failed to resolve: {exc}")
-
-    raise HTTPException(status_code=422, detail="Could not resolve CDN URL — IP may be blocked or URL is invalid.")
-
-
 @app.get("/api/proxy")
 @app.get("/proxy")
 @limiter.limit("30/minute")
