@@ -350,10 +350,7 @@ export async function downloadVideo(
   // Fast path — use the CDN URL already returned by /api/info (no second API call)
   // MP3 skips fast path: download_urls.mp3 is a resolver URL that needs server-side
   // resolution with Android UA → always call /api/download to get the fresh CDN URL.
-  // mp3 and mp4_720 both skip fast path — their download_urls entry is a
-  // signaturev3/resolver URL that needs server-side resolution before the
-  // browser can use it directly.
-  const cachedCdnUrl = (format !== "mp3" && format !== "mp4_720")
+  const cachedCdnUrl = format !== "mp3"
     ? videoMeta?.download_urls?.[format as Exclude<DownloadFormat, "thumbnail">]
     : undefined;
 
@@ -442,14 +439,6 @@ export async function downloadVideo(
       // Fallback: open in new tab if blob download fails for any reason
       window.open(cdnUrl, "_blank", "noopener,noreferrer");
     }
-    return;
-  }
-
-  // mp4_720 — Worker resolved signaturev3 → direct CDN URL.
-  // Video CDN has no CORS so blob-fetch won't work, but window.location.href
-  // lets the browser navigate directly to TikTok CDN — zero server bandwidth.
-  if (format === "mp4_720") {
-    window.location.href = cdnUrl;
     return;
   }
 
