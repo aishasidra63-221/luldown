@@ -1999,6 +1999,32 @@ async function handleRequest(request, env, ctx) {
         // Both Worker-direct attempts failed — fall through to Render proxy below.
       }
 
+      // Path A-video-resolve: For video files, try to resolve the signaturev3/aweme
+      // resolver link directly from the Worker edge using full TikTok App UA headers.
+      // If the Worker IP is not blocked, TikTok returns a 302 with the real CDN URL
+      // in the Location header — we redirect the browser there directly, bypassing
+      // Render entirely (zero Render bandwidth).
+      // If blocked (no Location / error), fall through to Render below.
+      if (!filename.endsWith(".mp3") && cdnUrl.includes("signaturev3")) {
+        try {
+          const resolveResp = await fetch(cdnUrl, {
+            method: "GET",
+            headers: {
+              "User-Agent":      "com.zhiliaoapp.musically/2024600030 (Linux; U; Android 14; en_US; Pixel 8; Build/AD1A.240405.004; Cronet/113.0.5672.129)",
+              "Accept":          "*/*",
+              "Accept-Encoding": "identity",
+              "Range":           "bytes=0-",
+            },
+            redirect: "manual",
+          });
+          const location = resolveResp.headers.get("location");
+          if (location && location.startsWith("http")) {
+            // ✅ Got real CDN URL — browser downloads directly, Render not involved
+            return Response.redirect(location, 302);
+          }
+        } catch { /* blocked or error — fall through to Render */ }
+      }
+
       // Path A: Python proxy server (Render/any host) — REQUIRED for video.
       // Cloudflare Worker IPs are blocked by TikTok video CDN (403).
       // The Python server uses non-Cloudflare IPs + browser-like headers, so CDN allows it.
