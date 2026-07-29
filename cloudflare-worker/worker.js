@@ -1999,10 +1999,41 @@ async function handleRequest(request, env, ctx) {
         // Both Worker-direct attempts failed — fall through to Render proxy below.
       }
 
-      // Path A: Python proxy server (Render/any host) — REQUIRED for video.
-      // Cloudflare Worker IPs are blocked by TikTok video CDN (403).
-      // The Python server uses non-Cloudflare IPs + browser-like headers, so CDN allows it.
-      if (env.RENDER_URL) {
+      // Path A-video: For video files — ask Render to resolve the signaturev3 URL to
+      // a real CDN URL, then redirect the browser there directly.
+      // Render's IP is not blocked by TikTok CDN; it resolves the 302 and returns
+      // only the CDN URL (JSON, ~1 KB). Browser downloads straight from TikTok CDN —
+      // zero Render streaming bandwidth used.
+      if (env.RENDER_URL && !filename.endsWith(".mp3")) {
+        const resolveUrl =
+          `${env.RENDER_URL.replace(/\/$/, "")}/api/resolve` +
+          `?url=${encodeURIComponent(cdnUrl)}`;
+
+        let resolveResp;
+        try {
+          resolveResp = await fetch(resolveUrl, {
+            headers: { "x-proxy-secret": env.PROXY_SECRET || "" },
+          });
+        } catch {
+          return err("Resolve server unreachable. Please try again shortly.", 502, cors);
+        }
+
+        if (!resolveResp.ok) return err(`Resolve server returned ${resolveResp.status}`, resolveResp.status, cors);
+
+        let resolveData;
+        try { resolveData = await resolveResp.json(); } catch {
+          return err("Invalid response from resolve server", 502, cors);
+        }
+
+        if (!resolveData.cdn_url) return err("Could not resolve CDN URL", 502, cors);
+
+        // Browser gets the real CDN URL — downloads directly from TikTok CDN
+        return Response.redirect(resolveData.cdn_url, 302);
+      }
+
+      // Path A-mp3: For MP3 files — stream through Render proxy (music CDN is small,
+      // and direct Worker fetch already tried above).
+      if (env.RENDER_URL && filename.endsWith(".mp3")) {
         const proxyUrl =
           `${env.RENDER_URL.replace(/\/$/, "")}/proxy` +
           `?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
@@ -2021,7 +2052,7 @@ async function handleRequest(request, env, ctx) {
         const respHeaders = new Headers({
           ...cors,
           "Content-Disposition": `attachment; filename="${filename}"`,
-          "Content-Type":        filename.endsWith(".mp3") ? "audio/mpeg" : (upstream.headers.get("Content-Type") || "video/mp4"),
+          "Content-Type":        "audio/mpeg",
           "Cache-Control":       "no-store",
         });
         const cl = upstream.headers.get("Content-Length");
