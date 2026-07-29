@@ -1,44 +1,48 @@
 # LulDown — TikTok Video Downloader
 
-A TikTok video downloader that strips watermarks and supports MP4/MP3 output.
+A full-stack TikTok video downloader with no-watermark downloads, MP3 extraction, and multilingual support.
 
 ## Stack
 
-- **Frontend:** React 19, Vite, TypeScript, Tailwind CSS 4, Radix UI, TanStack Query, Wouter
-- **Dev backend:** Python 3.11 + FastAPI (`artifacts/tiktok-api/`) — proxied from Vite at `/tikapi`
-- **Production backend:** Cloudflare Worker (`cloudflare-worker/worker.js`)
-- **Monorepo:** pnpm workspaces
+- **Frontend**: React + Vite + Tailwind CSS (`artifacts/tikdown`)
+- **Backend**: Python FastAPI (`artifacts/tiktok-api`)
 
-## How to run
+## Running the project
 
-Two workflows run concurrently:
+Two workflows run in parallel:
 
-| Workflow | Name in Replit | Port |
+| Workflow | Command | Port |
 |---|---|---|
-| **Frontend** | `artifacts/tikdown: web` | auto-assigned |
-| **Python API** | `TikTok API` | 8000 |
+| `artifacts/tikdown: web` | `pnpm --filter @workspace/tikdown run dev` | auto (proxied) |
+| `TikTok API` | `cd artifacts/tiktok-api && pip install --user -r requirements.txt -q && PORT=8000 WORKERS=1 python3 main.py` | 8000 |
 
-Install dependencies once with `pnpm install` from the repo root before starting.
+The frontend proxies `/tikapi/*` requests to the backend at `http://localhost:8000`.
 
-## Optional environment variables
+## Installing dependencies
 
-| Variable | Purpose |
-|---|---|
-| `WORKER_URL` | Cloudflare Worker URL (production API) |
-| `RENDER_URL` | Render.com fallback URL |
-| `PROXY_SECRET` | Shared secret between frontend and worker |
-| `TOKEN_SECRET` | JWT signing secret |
-| `RECAPTCHA_SITE_KEY` | Google reCAPTCHA v3 site key |
+```bash
+# JS/TS (from workspace root)
+pnpm install
 
-These are optional in dev — the Python backend handles scraping locally without them.
+# Python (handled automatically by the TikTok API workflow)
+pip install --user -r artifacts/tiktok-api/requirements.txt
+```
 
-## Key directories
+## Project structure
 
-- `artifacts/tikdown/` — React frontend
-- `artifacts/tiktok-api/` — Python FastAPI dev backend
-- `cloudflare-worker/` — Production Cloudflare Worker
-- `lib/` — Shared packages (`api-spec`, `api-zod`, `db`)
+```
+artifacts/
+  tikdown/          # React frontend
+    src/
+      pages/        # Route pages
+      components/   # UI components
+      i18n/         # Translations (10 languages)
+  tiktok-api/       # FastAPI backend
+    main.py         # Entry point
+    downloader.py   # yt-dlp video fetching
+    cache.py        # In-memory / Redis cache
+    history.py      # Download history
+    session.py      # Session tokens
+```
 
 ## User preferences
-
-_None recorded yet._
