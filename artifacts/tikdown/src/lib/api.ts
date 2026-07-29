@@ -347,9 +347,12 @@ export async function downloadVideo(
     return;
   }
 
-  // Always call /api/download — worker resolves signaturev3 → fresh CDN URL
-  // (Android UA required; browser cannot hit resolver links directly).
-  const cachedCdnUrl = undefined;
+  // Fast path — use the CDN URL already returned by /api/info (no second API call)
+  // MP3 skips fast path: download_urls.mp3 is a resolver URL that needs server-side
+  // resolution with Android UA → always call /api/download to get the fresh CDN URL.
+  const cachedCdnUrl = format !== "mp3"
+    ? videoMeta?.download_urls?.[format as Exclude<DownloadFormat, "thumbnail">]
+    : undefined;
 
   let cdnUrl: string;
   let filename: string;
@@ -439,8 +442,7 @@ export async function downloadVideo(
     return;
   }
 
-  // Worker resolved signaturev3 → fresh CDN URL. Open directly in browser.
-  window.open(cdnUrl, "_blank", "noopener,noreferrer");
+  await _cdnDownload(cdnUrl, filename);
 }
 
 // Photo CDN-direct download — no server call at all, pure CDN
