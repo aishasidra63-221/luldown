@@ -2098,7 +2098,28 @@ async function handleRequest(request, env, ctx) {
       if (format === "mp4_1080") {
         cdnUrl = p.videoUrl;   filename = "luldown_1080p";
       } else if (format === "mp4_720") {
-        cdnUrl = p.videoUrl720; filename = "luldown_720p";
+        // Resolve signaturev3 → actual CDN URL (same pattern as mp3).
+        // Browser gets the direct CDN URL and navigates there — zero server bandwidth.
+        const resolverUrl720 = p.videoUrl720 || "";
+        filename = "luldown_720p";
+        if (resolverUrl720) {
+          try {
+            const resolveResp720 = await fetch(resolverUrl720, {
+              headers: {
+                "User-Agent":      "com.zhiliaoapp.musically/2024600030 (Linux; U; Android 14; en_US; Pixel 8; Build/AD1A.240405.004; Cronet/113.0.5672.129)",
+                "Accept":          "*/*",
+                "Accept-Encoding": "identity",
+              },
+              redirect: "manual",
+            });
+            const freshUrl720 =
+              resolveResp720.headers.get("location") ||
+              resolveResp720.headers.get("Location");
+            cdnUrl = freshUrl720 || resolverUrl720;
+          } catch {
+            cdnUrl = resolverUrl720; // fallback: return resolver as-is
+          }
+        }
       } else if (format === "mp3") {
         // Music resolver URL (sf16-ies-music / musically-maliva-obj) is cached
         // in KV for 30 days. Resolve it here server-side (App UA required) to
