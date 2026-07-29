@@ -2095,10 +2095,27 @@ async function handleRequest(request, env, ctx) {
       let ext      = "mp4";
       let mediaType = "video/mp4";
 
-      if (format === "mp4_1080") {
-        cdnUrl = p.videoUrl;   filename = "luldown_1080p";
-      } else if (format === "mp4_720") {
-        cdnUrl = p.videoUrl720; filename = "luldown_720p";
+      if (format === "mp4_1080" || format === "mp4_720") {
+        const rawUrl = format === "mp4_1080" ? p.videoUrl : p.videoUrl720;
+        filename     = format === "mp4_1080" ? "luldown_1080p" : "luldown_720p";
+        // Resolve signaturev3 → fresh CDN URL with Android UA (same pattern as MP3).
+        // Browser gets the real CDN URL and opens it directly — no Render proxy needed.
+        if (rawUrl && rawUrl.includes("signaturev3")) {
+          try {
+            const rr = await fetch(rawUrl, {
+              headers: {
+                "User-Agent":      "com.zhiliaoapp.musically/2024600030 (Linux; U; Android 14; en_US; Pixel 8; Build/AD1A.240405.004; Cronet/113.0.5672.129)",
+                "Accept":          "*/*",
+                "Accept-Encoding": "identity",
+              },
+              redirect: "manual",
+            });
+            const loc = rr.headers.get("location") || rr.headers.get("Location");
+            cdnUrl = loc || rawUrl;
+          } catch { cdnUrl = rawUrl; }
+        } else {
+          cdnUrl = rawUrl || "";
+        }
       } else if (format === "mp3") {
         // Music resolver URL (sf16-ies-music / musically-maliva-obj) is cached
         // in KV for 30 days. Resolve it here server-side (App UA required) to
