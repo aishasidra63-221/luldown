@@ -2000,9 +2000,12 @@ async function handleRequest(request, env, ctx) {
       }
 
       // Path A-video: Resolve CDN URL via Render, then redirect browser straight
-      // to TikTok CDN.  Render only does a lightweight HEAD request — no video
-      // bytes flow through Render, saving all streaming bandwidth.
-      if (env.RENDER_URL && !filename.endsWith(".mp3")) {
+      // to TikTok CDN.  Render only does a streaming GET to follow the redirect —
+      // no video bytes flow through Render, saving all streaming bandwidth.
+      // Images (thumbnails) and MP3 still go through Render proxy so
+      // Content-Disposition: attachment is set and the browser downloads them.
+      const isVideo = filename.endsWith(".mp4") || filename.endsWith(".webm");
+      if (env.RENDER_URL && isVideo) {
         const resolveUrl =
           `${env.RENDER_URL.replace(/\/$/, "")}/resolve` +
           `?url=${encodeURIComponent(cdnUrl)}`;
