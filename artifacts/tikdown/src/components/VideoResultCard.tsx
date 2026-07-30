@@ -138,7 +138,7 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
               <>
                 {!expanded ? (
                   <p style={{
-                    margin: 0, fontSize: 13, fontWeight: 500,
+                    margin: 0, fontSize: 11.5, fontWeight: 500,
                     color: "rgba(255,255,255,0.75)", lineHeight: 1.55,
                     wordBreak: "break-word",
                     display: "-webkit-box",
