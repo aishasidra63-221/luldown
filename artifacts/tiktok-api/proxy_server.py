@@ -125,6 +125,46 @@ def proxy():
     return Response(stream_with_context(generate()), content_type=media_type, headers=headers)
 
 
+@app.route("/resolve")
+def resolve():
+    """Resolve a TikTok CDN/resolver URL and return the final CDN URL as JSON.
+
+    Instead of streaming video bytes through Render, the Worker calls this
+    endpoint to get the final CDN URL, then redirects the browser there
+    directly.  Render only does a lightweight HEAD request — no video data
+    flows through Render, saving bandwidth.
+    """
+    secret = request.headers.get("x-proxy-secret", "")
+    if PROXY_SECRET and secret != PROXY_SECRET:
+        return {"error": "Forbidden"}, 403
+
+    url = request.args.get("url", "")
+    if not url.startswith("http"):
+        return {"error": "Invalid URL"}, 400
+    if not any(d in url for d in CDN_DOMAINS):
+        return {"error": "Forbidden"}, 403
+
+    # Music CDN shard resolution (sf1–sf20 prefix not fixed).
+    if "musically-maliva-obj" in url:
+        resolved = resolve_music_url(url)
+        if resolved:
+            return {"url": resolved}
+        return {"error": "Music not found on any CDN shard"}, 404
+
+    # Follow redirect chain and return the final URL.
+    # A signaturev3 resolver link typically 302-redirects to a fresh
+    # time-signed CDN URL — we capture that URL without downloading the body.
+    try:
+        with httpx.Client(
+            follow_redirects=True,
+            timeout=httpx.Timeout(15.0, connect=10.0),
+        ) as client:
+            resp = client.head(url, headers=CDN_HEADERS)
+        return {"url": str(resp.url)}
+    except Exception as e:
+        return {"error": str(e)}, 502
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host="0.0.0.0", port=port, threaded=True)

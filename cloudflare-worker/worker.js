@@ -1999,8 +1999,34 @@ async function handleRequest(request, env, ctx) {
         // Both Worker-direct attempts failed — fall through to Render proxy below.
       }
 
-      // Path A: Stream through Render proxy (handles both video and MP3)
-      if (env.RENDER_URL) {
+      // Path A-video: Resolve CDN URL via Render, then redirect browser straight
+      // to TikTok CDN.  Render only does a lightweight HEAD request — no video
+      // bytes flow through Render, saving all streaming bandwidth.
+      if (env.RENDER_URL && !filename.endsWith(".mp3")) {
+        const resolveUrl =
+          `${env.RENDER_URL.replace(/\/$/, "")}/resolve` +
+          `?url=${encodeURIComponent(cdnUrl)}`;
+
+        let resolveResp;
+        try {
+          resolveResp = await fetch(resolveUrl, {
+            headers: { "x-proxy-secret": env.PROXY_SECRET || "" },
+          });
+        } catch {
+          return err("Proxy server unreachable. Please try again shortly.", 502, cors);
+        }
+        if (!resolveResp.ok) return err(`Resolve server returned ${resolveResp.status}`, resolveResp.status, cors);
+
+        let finalUrl;
+        try { ({ url: finalUrl } = await resolveResp.json()); } catch { finalUrl = null; }
+        if (!finalUrl) return err("Could not resolve CDN URL.", 502, cors);
+
+        // Browser downloads directly from TikTok CDN — zero Render bandwidth used.
+        return Response.redirect(finalUrl, 302);
+      }
+
+      // Path A-mp3: Stream MP3 through Render proxy (needs music CDN shard resolution).
+      if (env.RENDER_URL && filename.endsWith(".mp3")) {
         const proxyUrl =
           `${env.RENDER_URL.replace(/\/$/, "")}/proxy` +
           `?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
