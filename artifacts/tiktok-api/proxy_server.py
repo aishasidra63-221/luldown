@@ -131,8 +131,8 @@ def resolve():
 
     Instead of streaming video bytes through Render, the Worker calls this
     endpoint to get the final CDN URL, then redirects the browser there
-    directly.  Render only does a lightweight HEAD request — no video data
-    flows through Render, saving bandwidth.
+    directly.  Render does a streaming GET (no body read) to follow the
+    redirect chain — no video bytes flow through Render, saving bandwidth.
     """
     secret = request.headers.get("x-proxy-secret", "")
     if PROXY_SECRET and secret != PROXY_SECRET:
