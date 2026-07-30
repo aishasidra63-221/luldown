@@ -250,6 +250,7 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
               onClick={() => handleDownload("mp4_1080")}
               style={{
                 display: "flex", alignItems: "center", gap: 0,
+                direction: "ltr",
                 borderRadius: 13, overflow: "hidden",
                 background: "#2563eb",
                 border: "none", width: "100%", textAlign: "left",
@@ -276,6 +277,7 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
               onClick={() => handleDownload("mp3")}
               style={{
                 display: "flex", alignItems: "center", gap: 0,
+                direction: "ltr",
                 borderRadius: 13, overflow: "hidden",
                 background: "#16a34a",
                 border: "none",
@@ -306,6 +308,7 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
               onClick={() => handleDownload(cfg.format)}
               style={{
                 display: "flex", alignItems: "center", gap: 0,
+                direction: "ltr",
                 borderRadius: 13, overflow: "hidden",
                 background: cfg.btnBg,
                 border: "none", width: "100%", textAlign: "left",
