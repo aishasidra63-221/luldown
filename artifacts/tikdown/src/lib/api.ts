@@ -205,16 +205,6 @@ async function _cdnDownload(cdnUrl: string, filename: string): Promise<void> {
   window.location.href = proxyUrl;
 }
 
-// ─── Story input detection (plain username or @username, not a URL) ──────────
-export function isStoryInput(input: string): boolean {
-  const trimmed = input.trim();
-  if (!trimmed) return false;
-  // Must NOT be a URL
-  if (/^https?:\/\//i.test(trimmed) || /^www\./i.test(trimmed)) return false;
-  // @username or plain username (letters, numbers, dots, underscores, 1–30 chars)
-  return /^@?[\w.]{1,30}$/.test(trimmed);
-}
-
 // ─── Profile URL detection ────────────────────────────────────────────────────
 export function isProfileUrl(url: string): boolean {
   try {
