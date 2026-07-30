@@ -152,15 +152,17 @@ def resolve():
         return {"error": "Music not found on any CDN shard"}, 404
 
     # Follow redirect chain and return the final URL.
-    # A signaturev3 resolver link typically 302-redirects to a fresh
-    # time-signed CDN URL — we capture that URL without downloading the body.
+    # signaturev3 resolver links require GET (HEAD is rejected by TikTok).
+    # We open a streaming GET so we can read the final URL without downloading
+    # the video body — close the stream immediately after capturing the URL.
     try:
         with httpx.Client(
             follow_redirects=True,
             timeout=httpx.Timeout(15.0, connect=10.0),
         ) as client:
-            resp = client.head(url, headers=CDN_HEADERS)
-        return {"url": str(resp.url)}
+            with client.stream("GET", url, headers=CDN_HEADERS) as resp:
+                final_url = str(resp.url)
+        return {"url": final_url}
     except Exception as e:
         return {"error": str(e)}, 502
 
