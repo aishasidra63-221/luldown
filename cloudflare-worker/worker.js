@@ -1999,10 +1999,37 @@ async function handleRequest(request, env, ctx) {
         // Both Worker-direct attempts failed — fall through to Render proxy below.
       }
 
-      // Path A: Python proxy server (Render/any host) — REQUIRED for video.
-      // Cloudflare Worker IPs are blocked by TikTok video CDN (403).
-      // The Python server uses non-Cloudflare IPs + browser-like headers, so CDN allows it.
-      if (env.RENDER_URL) {
+      // Path A-video: Render resolves signaturev3 URL → returns CDN URL → browser
+      // downloads directly from TikTok CDN. Zero Render streaming bandwidth.
+      if (env.RENDER_URL && !filename.endsWith(".mp3")) {
+        const resolveUrl =
+          `${env.RENDER_URL.replace(/\/$/, "")}/api/resolve` +
+          `?url=${encodeURIComponent(cdnUrl)}`;
+
+        let resolveResp;
+        try {
+          resolveResp = await fetch(resolveUrl, {
+            headers: { "x-proxy-secret": env.PROXY_SECRET || "" },
+          });
+        } catch {
+          return err("Server unreachable. Please try again shortly.", 502, cors);
+        }
+
+        if (!resolveResp.ok) return err(`Could not resolve video URL (${resolveResp.status})`, resolveResp.status, cors);
+
+        let data;
+        try { data = await resolveResp.json(); } catch {
+          return err("Invalid response from server", 502, cors);
+        }
+
+        if (!data.cdn_url) return err("CDN URL not found", 502, cors);
+
+        // Browser downloads directly from TikTok CDN — Render not involved in streaming
+        return Response.redirect(data.cdn_url, 302);
+      }
+
+      // Path A-mp3: Stream MP3 through Render (music CDN, small file, Worker direct already tried)
+      if (env.RENDER_URL && filename.endsWith(".mp3")) {
         const proxyUrl =
           `${env.RENDER_URL.replace(/\/$/, "")}/proxy` +
           `?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
@@ -2021,7 +2048,7 @@ async function handleRequest(request, env, ctx) {
         const respHeaders = new Headers({
           ...cors,
           "Content-Disposition": `attachment; filename="${filename}"`,
-          "Content-Type":        filename.endsWith(".mp3") ? "audio/mpeg" : (upstream.headers.get("Content-Type") || "video/mp4"),
+          "Content-Type":        "audio/mpeg",
           "Cache-Control":       "no-store",
         });
         const cl = upstream.headers.get("Content-Length");

@@ -366,6 +366,49 @@ async def admin_cache_check(request: Request):
 
 # ─── Render Proxy ──────────────────────────────────────────────────────────────
 
+@app.get("/api/resolve")
+@limiter.limit("60/minute")
+async def resolve_cdn_url(request: Request, url: str):
+    """
+    Resolve a TikTok signaturev3/aweme resolver link → return only the CDN URL.
+    No video is streamed — just a tiny JSON response (~1 KB).
+    Worker redirects browser to this CDN URL so browser downloads directly.
+    """
+    incoming = request.headers.get("x-proxy-secret", "")
+    if PROXY_SECRET and incoming != PROXY_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    from urllib.parse import urlparse, unquote
+    try:
+        clean_url = unquote(url.strip())
+        parsed = urlparse(clean_url)
+        host = parsed.netloc.lower().split(":")[0]
+        if parsed.scheme not in ("http", "https") or not (
+            host == "tiktok.com" or host.endswith(".tiktok.com")
+        ):
+            raise ValueError("invalid")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid TikTok URL") from exc
+
+    try:
+        async with httpx.AsyncClient(
+            follow_redirects=False,
+            timeout=httpx.Timeout(15.0, connect=8.0),
+        ) as client:
+            resp = await client.get(clean_url, headers=_TT_APP_FETCH_HEADERS)
+
+        if resp.status_code in (301, 302, 303, 307, 308):
+            location = resp.headers.get("location", "")
+            # Accept any CDN domain — tiktokcdn, tiktokv, bytecdn, etc.
+            cdn_domains = ["tiktokcdn.com", "tiktokv.com", "bytecdn.cn", "snssdk.com", "tiktok.com/obj"]
+            if location and location.startswith("http") and any(d in location for d in cdn_domains):
+                return {"cdn_url": location}
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to resolve: {exc}")
+
+    raise HTTPException(status_code=422, detail="Could not resolve CDN URL")
+
+
 @app.get("/api/proxy")
 @app.get("/proxy")
 @limiter.limit("30/minute")
