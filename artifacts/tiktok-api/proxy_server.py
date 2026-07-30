@@ -47,53 +47,6 @@ def health():
     return {"status": "ok"}
 
 
-@app.route("/api/resolve")
-def resolve_cdn():
-    """Resolve a TikTok signaturev3 URL → return CDN URL only. No streaming."""
-    secret = request.headers.get("x-proxy-secret", "")
-    if PROXY_SECRET and secret != PROXY_SECRET:
-        return {"error": "Forbidden"}, 403
-
-    url = request.args.get("url", "")
-    if not url.startswith("http"):
-        return {"error": "Invalid URL"}, 400
-
-    # Only allow TikTok resolver domains
-    try:
-        from urllib.parse import urlparse, unquote
-        clean_url = unquote(url.strip())
-        host = urlparse(clean_url).netloc.lower().split(":")[0]
-        if not (host == "tiktok.com" or host.endswith(".tiktok.com")):
-            return {"error": "Only TikTok URLs allowed"}, 400
-    except Exception:
-        return {"error": "Invalid URL"}, 400
-
-    app_headers = {
-        "User-Agent":      "com.zhiliaoapp.musically/2024600030 (Linux; U; Android 14; en_US; Pixel 8; Build/AD1A.240405.004; Cronet/113.0.5672.129)",
-        "Accept":          "*/*",
-        "Accept-Encoding": "identity",
-        "Range":           "bytes=0-",
-    }
-
-    try:
-        client = httpx.Client(follow_redirects=False, timeout=httpx.Timeout(15.0, connect=8.0))
-        try:
-            resp = client.get(clean_url, headers=app_headers)
-        finally:
-            client.close()
-
-        if resp.status_code in (301, 302, 303, 307, 308):
-            location = resp.headers.get("location", "")
-            cdn_domains = ["tiktokcdn.com", "tiktokv.com", "bytecdn.cn", "snssdk.com"]
-            if location and location.startswith("http") and any(d in location for d in cdn_domains):
-                return {"cdn_url": location}
-
-    except Exception as e:
-        return {"error": f"Failed to resolve: {e}"}, 502
-
-    return {"error": "Could not resolve CDN URL"}, 422
-
-
 @app.route("/proxy")
 def proxy():
     secret = request.headers.get("x-proxy-secret", "")
