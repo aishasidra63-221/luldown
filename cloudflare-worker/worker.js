@@ -1876,9 +1876,9 @@ async function handleRequest(request, env, ctx) {
         if (!ok) return err("Invalid or expired token. Please refresh the page.", 401, cors);
       }
 
-      // Accept profile URL or plain @username
+      // Accept profile URL, plain @username, or plain username
       const raw = (bodyRaw.url || "").trim();
-      const usernameMatch = raw.match(/\/@?([\w.]+)/);
+      const usernameMatch = raw.match(/\/@?([\w.]+)/) || raw.match(/^@?([\w.]+)$/);
       if (!usernameMatch) return err("Invalid TikTok profile URL. Use tiktok.com/@username", 400, cors);
       const username = usernameMatch[1];
 

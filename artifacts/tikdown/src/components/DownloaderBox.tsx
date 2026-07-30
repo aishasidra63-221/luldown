@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { fetchVideoInfo, downloadVideo, downloadPhoto, VideoInfo, DownloadFormat, isProfileUrl, fetchProfileInfo, ProfileInfo } from "@/lib/api";
+import { fetchVideoInfo, downloadVideo, downloadPhoto, VideoInfo, DownloadFormat, isProfileUrl, fetchProfileInfo, ProfileInfo, isStoryInput, fetchStoryInfo, StoryInfo } from "@/lib/api";
 import ProfileResults from "@/components/ProfileResults";
 import VideoResultCard from "@/components/VideoResultCard";
+import StoryResultCard from "@/components/StoryResultCard";
 import {
   Music, Clipboard, Download, Image, Video,
   AlertCircle, X,
@@ -60,7 +61,7 @@ const FMTS: FmtCfg[] = [
 ];
 
 
-type Step = "idle" | "loading-info" | "info-ready" | "profile-ready" | "error";
+type Step = "idle" | "loading-info" | "info-ready" | "profile-ready" | "story-ready" | "error";
 interface Props {
   highlightFormat?: DownloadFormat;
   lang?: Lang;
@@ -90,6 +91,7 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
   const resultRef = useRef<HTMLDivElement>(null);
   const [info, setInfo] = useState<VideoInfo | null>(isDemo ? DEMO_INFO : null);
   const [profileInfo, setProfileInfo] = useState<ProfileInfo | null>(null);
+  const [storyInfo, setStoryInfo] = useState<StoryInfo | null>(null);
   const [error, setError] = useState("");
   const [photoDownloading, setPhotoDownloading] = useState<number | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -145,10 +147,14 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
     const trimmed = fetchUrl.trim();
     if (!trimmed) return;
     if (checkRateLimit()) return; // blocked — countdown already started
-    setStep("loading-info"); setError(""); setInfo(null); setProfileInfo(null);
+    setStep("loading-info"); setError(""); setInfo(null); setProfileInfo(null); setStoryInfo(null);
     onResult?.(null);
     try {
-      if (isProfileUrl(trimmed)) {
+      if (isStoryInput(trimmed)) {
+        const story = await fetchStoryInfo(trimmed);
+        setStoryInfo(story);
+        setStep("story-ready");
+      } else if (isProfileUrl(trimmed)) {
         const profile = await fetchProfileInfo(trimmed);
         setProfileInfo(profile);
         setStep("profile-ready");
@@ -190,7 +196,7 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
   };
 
   const reset = () => {
-    setUrl(""); setStep("idle"); setInfo(null); setProfileInfo(null); setError("");
+    setUrl(""); setStep("idle"); setInfo(null); setProfileInfo(null); setStoryInfo(null); setError("");
     onResult?.(null);
   };
 
@@ -257,6 +263,14 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
         <div className="error-box">
           <AlertCircle size={16} style={{ flexShrink:0, marginTop:2 }} /> {error}
         </div>
+      )}
+
+      {/* ══════════ STORY RESULT ══════════ */}
+      {step === "story-ready" && storyInfo && (
+        <StoryResultCard
+          story={storyInfo}
+          onError={msg => { setError(msg); setStep("error"); }}
+        />
       )}
 
       {/* ══════════ PROFILE RESULT (only when rendering internally) ══════════ */}
