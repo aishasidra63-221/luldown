@@ -52,7 +52,7 @@ export default function ProfileResults({ profile }: Props) {
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontWeight: 700, fontSize: 12, color: "#fff" }}>
+          <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: "#fff" }}>
             {profile.username}
           </p>
           {profile.display_name && profile.display_name !== profile.username.replace("@", "") && (

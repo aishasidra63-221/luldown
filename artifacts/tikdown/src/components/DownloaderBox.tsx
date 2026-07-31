@@ -314,7 +314,7 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
 
                 {/* Right column: username on top, title+tags below */}
                 <div style={{ flex:1, minWidth:0, textAlign:"left" }}>
-                  <p style={{ margin:"0 0 3px", fontWeight:700, fontSize:12, color:"#ffffff", textAlign:"left" }}>
+                  <p style={{ margin:"0 0 3px", fontWeight:700, fontSize:13, color:"#ffffff", textAlign:"left" }}>
                     {info.author}
                   </p>
                   {cleanTitle && (

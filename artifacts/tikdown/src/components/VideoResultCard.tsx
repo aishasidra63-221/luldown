@@ -131,7 +131,7 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
 
           {/* Right column */}
           <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
-            <p style={{ margin: "0 0 3px", fontWeight: 700, fontSize: 12, color: "#ffffff", textAlign: "left" }}>
+            <p style={{ margin: "0 0 3px", fontWeight: 700, fontSize: 13, color: "#ffffff", textAlign: "left" }}>
               {info.author}
             </p>
             {(cleanTitle || tags.length > 0) && (
