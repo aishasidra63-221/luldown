@@ -384,7 +384,9 @@ async def resolve_cdn_url(request: Request, url: str):
         parsed = urlparse(clean_url)
         host = parsed.netloc.lower().split(":")[0]
         if parsed.scheme not in ("http", "https") or not (
-            host == "tiktok.com" or host.endswith(".tiktok.com")
+            host == "tiktok.com"
+            or host.endswith(".tiktok.com")
+            or host.endswith(".tiktokv.com")
         ):
             raise ValueError("invalid")
     except ValueError as exc:
