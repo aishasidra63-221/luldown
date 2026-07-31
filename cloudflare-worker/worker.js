@@ -72,7 +72,7 @@ const TTL_URL  = 30 * 24 * 60 * 60;  // 30 days — resolver link (aweme/v1/play
 async function kvGetMeta(env, videoId) {
   if (!env.META_KV) return null;
   try {
-    const raw = await env.META_KV.get(`meta:${videoId}`);
+    const raw = await env.META_KV.get(`meta:${videoId}`, { cacheTtl: 3600 });
     return raw ? JSON.parse(raw) : null;
   } catch (e) {
     return null;
@@ -102,7 +102,7 @@ async function kvSetMeta(env, videoId, value) {
 async function kvGetUrl(env, videoId) {
   if (!env.META_KV) return null;
   try {
-    const raw = await env.META_KV.get(`url:${videoId}`);
+    const raw = await env.META_KV.get(`url:${videoId}`, { cacheTtl: 1800 });
     return raw ? JSON.parse(raw) : null;
   } catch (e) {
     return null;
@@ -168,7 +168,7 @@ async function loadPool(env) {
   if (globalThis._poolCache) return globalThis._poolCache;
   if (!env.META_KV) return null;
   try {
-    const raw  = await env.META_KV.get(POOL_KV_KEY);
+    const raw  = await env.META_KV.get(POOL_KV_KEY, { cacheTtl: 3600 });
     const pool = raw ? JSON.parse(raw) : null;
     if (pool) globalThis._poolCache = pool;
     return pool;
@@ -477,7 +477,7 @@ function extractShortCode(url) {
 
 async function kvGetShortId(env, shortCode) {
   if (!env.META_KV) return null;
-  try { return await env.META_KV.get(`short:${shortCode}`); } catch { return null; }
+  try { return await env.META_KV.get(`short:${shortCode}`, { cacheTtl: 3600 }); } catch { return null; }
 }
 
 async function kvSetShortId(env, shortCode, videoId) {
