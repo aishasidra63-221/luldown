@@ -60,9 +60,12 @@ interface Props {
 
 export default function VideoResultCard({ info, url, highlightFormat, onError }: Props) {
   const [photoDownloading, setPhotoDownloading] = useState<number | null>(null);
+  const [loadingFormat, setLoadingFormat] = useState<DownloadFormat | null>(null);
   const [expanded, setExpanded] = useState(false);
 
   const handleDownload = async (format: DownloadFormat) => {
+    if (loadingFormat) return;
+    setLoadingFormat(format);
     try {
       await downloadVideo(url.trim(), format, {
         title: info?.title, author: info?.author,
@@ -70,6 +73,8 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
       });
     } catch (e: any) {
       onError?.(e.message || "Download failed");
+    } finally {
+      setLoadingFormat(null);
     }
   };
 
@@ -80,9 +85,16 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
   };
 
   const isPhoto = info.is_photo && (info.images?.length ?? 0) > 0;
+
+  // Only show MP3 button when the API actually returned an audio URL.
+  // (Some videos have no separate music track — audioUrl comes back empty.)
+  const availableFmts = FMTS.filter(cfg => {
+    if (cfg.format === "mp3") return !!info.download_urls?.mp3;
+    return true;
+  });
   const fmts = highlightFormat
-    ? [...FMTS].sort(a => a.format === highlightFormat ? -1 : 1)
-    : FMTS;
+    ? [...availableFmts].sort(a => a.format === highlightFormat ? -1 : 1)
+    : availableFmts;
 
   const tags = (info.title || "").match(/#[\w\u0900-\u097F]+/g) ?? [];
   const cleanTitle = (info.title || "").replace(/#[\w\u0900-\u097F]+/g, "").trim();
@@ -302,44 +314,62 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
         </div>
       ) : (
         <div style={{ padding: "12px 12px 14px", display: "flex", flexDirection: "column", gap: 7 }}>
-          {fmts.map(cfg => (
-            <button
-              key={cfg.format}
-              onClick={() => handleDownload(cfg.format)}
-              style={{
-                display: "flex", alignItems: "center", gap: 0,
-                direction: "ltr",
-                borderRadius: 13, overflow: "hidden",
-                background: cfg.btnBg,
-                border: "none", width: "100%", textAlign: "left",
-                cursor: "pointer",
-                boxShadow: `0 4px 16px ${cfg.glowColor}`,
-              }}
-            >
-              <div style={{
-                width: 54, minWidth: 54, alignSelf: "stretch",
-                background: "rgba(0,0,0,0.18)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                flexShrink: 0,
-              }}>
-                {cfg.leftNode}
-              </div>
-              <div style={{ flex: 1, padding: "14px 14px" }}>
-                <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: "#fff", lineHeight: 1.3 }}>
-                  {cfg.label}
-                </p>
-              </div>
-              <div style={{ paddingRight: 14, flexShrink: 0 }}>
+          {fmts.map(cfg => {
+            const isLoading = loadingFormat === cfg.format;
+            const isBusy    = loadingFormat !== null;
+            return (
+              <button
+                key={cfg.format}
+                onClick={() => handleDownload(cfg.format)}
+                disabled={isBusy}
+                style={{
+                  display: "flex", alignItems: "center", gap: 0,
+                  direction: "ltr",
+                  borderRadius: 13, overflow: "hidden",
+                  background: isLoading ? `${cfg.btnBg}99` : cfg.btnBg,
+                  border: "none", width: "100%", textAlign: "left",
+                  cursor: isBusy ? (isLoading ? "wait" : "not-allowed") : "pointer",
+                  opacity: isBusy && !isLoading ? 0.55 : 1,
+                  boxShadow: `0 4px 16px ${cfg.glowColor}`,
+                  transition: "opacity 0.15s, background 0.15s",
+                }}
+              >
                 <div style={{
-                  width: 32, height: 32, borderRadius: "50%",
-                  background: "rgba(0,0,0,0.22)",
+                  width: 54, minWidth: 54, alignSelf: "stretch",
+                  background: "rgba(0,0,0,0.18)",
                   display: "flex", alignItems: "center", justifyContent: "center",
+                  flexShrink: 0,
                 }}>
-                  <Download size={15} color="#fff" strokeWidth={2.4} />
+                  {cfg.leftNode}
                 </div>
-              </div>
-            </button>
-          ))}
+                <div style={{ flex: 1, padding: "14px 14px" }}>
+                  <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: "#fff", lineHeight: 1.3 }}>
+                    {isLoading ? "Preparing…" : cfg.label}
+                  </p>
+                </div>
+                <div style={{ paddingRight: 14, flexShrink: 0 }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: "50%",
+                    background: "rgba(0,0,0,0.22)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    {isLoading ? (
+                      <span style={{
+                        width: 15, height: 15,
+                        border: "2px solid rgba(255,255,255,0.3)",
+                        borderTopColor: "#fff",
+                        borderRadius: "50%",
+                        display: "block",
+                        animation: "spin 0.75s linear infinite",
+                      }} />
+                    ) : (
+                      <Download size={15} color="#fff" strokeWidth={2.4} />
+                    )}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
