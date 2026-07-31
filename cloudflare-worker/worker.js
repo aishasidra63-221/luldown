@@ -1771,7 +1771,9 @@ async function handleRequest(request, env, ctx) {
         download_urls: {
           mp4_1080: p.videoUrl,
           mp4_720:  p.videoUrl720,
-          mp3:      p.audioUrl,
+          mp3:      p.musicId
+            ? `https://sf16.tiktokcdn-us.com/obj/musically-maliva-obj/${p.musicId}.mp3`
+            : p.audioUrl,
         },
       }, 200, cors);
     }
@@ -1832,7 +1834,9 @@ async function handleRequest(request, env, ctx) {
           download_urls: {
             mp4_1080: p.videoUrl,
             mp4_720:  p.videoUrl720,
-            mp3:      p.audioUrl,
+            mp3:      p.musicId
+              ? `https://sf16.tiktokcdn-us.com/obj/musically-maliva-obj/${p.musicId}.mp3`
+              : p.audioUrl,
           },
         };
       });
@@ -1915,7 +1919,9 @@ async function handleRequest(request, env, ctx) {
           download_urls: {
             mp4_1080: p.videoUrl,
             mp4_720:  p.videoUrl720,
-            mp3:      p.audioUrl,
+            mp3:      p.musicId
+              ? `https://sf16.tiktokcdn-us.com/obj/musically-maliva-obj/${p.musicId}.mp3`
+              : p.audioUrl,
           },
         };
       });
