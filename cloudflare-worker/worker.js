@@ -2004,7 +2004,10 @@ async function handleRequest(request, env, ctx) {
       // no video bytes flow through Render, saving all streaming bandwidth.
       // Images (thumbnails) and MP3 still go through Render proxy so
       // Content-Disposition: attachment is set and the browser downloads them.
-      const isVideo = filename.endsWith(".mp4") || filename.endsWith(".webm");
+      // MP3 also uses resolve path — Render resolves the permanent audio resolver URL
+      // to a CDN URL, then browser downloads directly from TikTok CDN.
+      // No audio bytes flow through Render, same bandwidth saving as video.
+      const isVideo = filename.endsWith(".mp4") || filename.endsWith(".webm") || filename.endsWith(".mp3");
       if (env.RENDER_URL && isVideo) {
         const resolveUrl =
           `${env.RENDER_URL.replace(/\/$/, "")}/resolve` +
