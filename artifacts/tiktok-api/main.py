@@ -132,11 +132,12 @@ _MUSIC_CDN_RE = re.compile(
     r"(?:/obj/musically-maliva-obj|.*ies-music.*)"
 )
 _MUSIC_SHARD_PATH_RE = re.compile(
-    r"https?://sf\d+\.tiktokcdn-us\.com(/obj/musically-maliva-obj/.+\.mp3)"
+    r"https?://(?:sf\d+\.tiktokcdn-us\.com|sf\d+-ies-music-va\.tiktokcdn\.com)"
+    r"(/obj/musically-maliva-obj/.+\.mp3)"
 )
 
 def _resolve_music_shard(url: str) -> str | None:
-    """For musically-maliva-obj URLs, try shards sf1–sf20 until one returns 200."""
+    """For musically-maliva-obj URLs, try shards sf1–sf20 on both CDN domains until one returns 200."""
     m = _MUSIC_SHARD_PATH_RE.match(url)
     if not m:
         return None
@@ -144,13 +145,19 @@ def _resolve_music_shard(url: str) -> str | None:
     import httpx as _httpx
     client = _httpx.Client(timeout=_httpx.Timeout(10.0, connect=5.0))
     try:
+        # Try ies-music-va (tiktokcdn.com) shards first — that's where video music lives.
+        # Then fall back to tiktokcdn-us.com shards (photo/slide audio).
         for n in range(1, 21):
-            try:
-                r = client.head(f"https://sf{n}.tiktokcdn-us.com{path}", headers=_CDN_FETCH_HEADERS)
-                if r.status_code == 200:
-                    return f"https://sf{n}.tiktokcdn-us.com{path}"
-            except Exception:
-                continue
+            for base in (
+                f"https://sf{n}-ies-music-va.tiktokcdn.com",
+                f"https://sf{n}.tiktokcdn-us.com",
+            ):
+                try:
+                    r = client.head(f"{base}{path}", headers=_CDN_FETCH_HEADERS)
+                    if r.status_code == 200:
+                        return f"{base}{path}"
+                except Exception:
+                    continue
     finally:
         client.close()
     return None

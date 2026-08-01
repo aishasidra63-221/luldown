@@ -1996,7 +1996,35 @@ async function handleRequest(request, env, ctx) {
             }
           } catch { /* try next */ }
         }
-        // Both Worker-direct attempts failed — fall through to Render proxy below.
+        // Both direct attempts failed.
+        // Try other musically-maliva-obj shards (sf1–sf20, ies-music-va then tiktokcdn-us).
+        const malivaMatch = cdnUrl.match(/\/obj\/musically-maliva-obj\/(\d+\.mp3)$/);
+        if (malivaMatch) {
+          const musicFile = malivaMatch[1];
+          const shardBases = [
+            ...Array.from({ length: 20 }, (_, i) => `https://sf${i + 1}-ies-music-va.tiktokcdn.com`),
+            ...Array.from({ length: 20 }, (_, i) => `https://sf${i + 1}.tiktokcdn-us.com`),
+          ];
+          for (const base of shardBases) {
+            const shardUrl = `${base}/obj/musically-maliva-obj/${musicFile}`;
+            if (shardUrl === cdnUrl) continue; // already tried
+            try {
+              const shardResp = await fetch(shardUrl, { headers: musicAppHeaders });
+              if (shardResp.ok) {
+                const rh = new Headers({
+                  ...cors,
+                  "Content-Disposition": `attachment; filename="${filename}"`,
+                  "Content-Type":        "audio/mpeg",
+                  "Cache-Control":       "no-store",
+                });
+                const cl0 = shardResp.headers.get("Content-Length");
+                if (cl0) rh.set("Content-Length", cl0);
+                return new Response(shardResp.body, { status: 200, headers: rh });
+              }
+            } catch { /* try next shard */ }
+          }
+        }
+        // All shard attempts failed — fall through to Render proxy below.
       }
 
       // Path A-video: Resolve CDN URL via Render, then redirect browser straight
