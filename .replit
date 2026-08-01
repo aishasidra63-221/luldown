@@ -20,10 +20,6 @@ author = "agent"
 task = "workflow.run"
 args = "TikTok API"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Start application"
-
 [[workflows.workflow]]
 name = "TikTok API"
 author = "agent"
@@ -35,18 +31,6 @@ outputType = "console"
 task = "shell.exec"
 args = "cd artifacts/tiktok-api && pip install --user -r requirements.txt -q && PORT=8000 WORKERS=1 python3 main.py"
 waitForPort = 8000
-
-[[workflows.workflow]]
-name = "Start application"
-author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "webview"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "PORT=5000 pnpm --filter @workspace/tikdown run dev"
-waitForPort = 5000
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"

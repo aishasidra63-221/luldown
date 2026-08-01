@@ -1,48 +1,44 @@
-# LulDown — TikTok Video Downloader
+# TikDown — TikTok Video Downloader
 
-A full-stack TikTok video downloader with no-watermark downloads, MP3 extraction, and multilingual support.
+A full-stack TikTok video downloader with a React/Vite frontend and a Python FastAPI backend.
 
 ## Stack
 
-- **Frontend**: React + Vite + Tailwind CSS (`artifacts/tikdown`)
+- **Frontend**: React + Vite + Tailwind CSS + shadcn/ui (`artifacts/tikdown`)
 - **Backend**: Python FastAPI (`artifacts/tiktok-api`)
+- **Package manager**: pnpm (workspace monorepo)
 
-## Running the project
+## How to run
 
 Two workflows run in parallel:
 
 | Workflow | Command | Port |
 |---|---|---|
-| `artifacts/tikdown: web` | `pnpm --filter @workspace/tikdown run dev` | auto (proxied) |
-| `TikTok API` | `cd artifacts/tiktok-api && pip install --user -r requirements.txt -q && PORT=8000 WORKERS=1 python3 main.py` | 8000 |
+| `artifacts/tikdown: web` | `pnpm --filter @workspace/tikdown run dev` | 25828 |
+| `TikTok API` | `cd artifacts/tiktok-api && python3 main.py` | 8000 |
 
-The frontend proxies `/tikapi/*` requests to the backend at `http://localhost:8000`.
+The Vite dev server proxies `/tikapi/*` → `http://localhost:8000` so the frontend and API run as one origin.
 
-## Installing dependencies
+## Environment / secrets
 
-```bash
-# JS/TS (from workspace root)
-pnpm install
+| Secret | Purpose |
+|---|---|
+| `SESSION_SECRET` | Session token signing |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare deployment (Workers / Pages) |
 
-# Python (handled automatically by the TikTok API workflow)
-pip install --user -r artifacts/tiktok-api/requirements.txt
-```
+Optional (app works without them):
+- **Redis**: Falls back to in-memory cache if unavailable.
+- **reCAPTCHA**: Feature-flagged; disabled when no site key is set.
 
 ## Project structure
 
 ```
 artifacts/
-  tikdown/          # React frontend
-    src/
-      pages/        # Route pages
-      components/   # UI components
-      i18n/         # Translations (10 languages)
+  tikdown/          # React frontend (Vite artifact)
   tiktok-api/       # FastAPI backend
-    main.py         # Entry point
-    downloader.py   # yt-dlp video fetching
-    cache.py        # In-memory / Redis cache
-    history.py      # Download history
-    session.py      # Session tokens
+scripts/            # Post-merge setup script
 ```
 
 ## User preferences
+
+<!-- Add remembered preferences here -->
