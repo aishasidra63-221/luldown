@@ -19,30 +19,33 @@ CDN_HEADERS = {
 
 # Music CDN shard retry — sf prefix is not fixed (can be sf1–sf20).
 # Try each shard until one returns HTTP 200.
-MUSIC_PATH_RE = re.compile(r"https?://sf\d+\.tiktokcdn-us\.com(/obj/musically-maliva-obj/.+\.mp3)")
+MUSIC_PATH_RE = re.compile(r"https?://sf[\w-]+\.tiktokcdn(?:-us)?\.com(/obj/musically-maliva-obj/.+\.mp3)")
 
 def resolve_music_url(original_url):
-    """Return the first shard URL (sf1–sf20) that serves the file, or None.
-    Uses a tiny GET (Range: bytes=0-1) instead of HEAD — TikTok CDN blocks HEAD
-    requests but responds correctly to partial GETs.
+    """Return the first shard URL that serves the file, or None.
+    Tries the original URL first, then sf1-sf20 on both CDN domains.
+    Uses GET Range:bytes=0-1 — TikTok CDN blocks HEAD requests.
     """
     m = MUSIC_PATH_RE.match(original_url)
     if not m:
         return None
     path = m.group(1)
     headers = {**CDN_HEADERS, "Range": "bytes=0-1"}
-    try:
-        for n in range(1, 21):
-            url = f"https://sf{n}.tiktokcdn-us.com{path}"
-            try:
-                with httpx.Client(timeout=httpx.Timeout(8.0, connect=4.0)) as client:
-                    with client.stream("GET", url, headers=headers) as r:
-                        if r.status_code in (200, 206):
-                            return url
-            except Exception:
-                continue
-    except Exception:
-        pass
+
+    # Try original URL first, then enumerate shards on both domain formats
+    candidates = [original_url]
+    for n in range(1, 21):
+        candidates.append(f"https://sf{n}-ies-music-va.tiktokcdn.com{path}")
+        candidates.append(f"https://sf{n}.tiktokcdn-us.com{path}")
+
+    for url in candidates:
+        try:
+            with httpx.Client(timeout=httpx.Timeout(8.0, connect=4.0)) as client:
+                with client.stream("GET", url, headers=headers) as r:
+                    if r.status_code in (200, 206):
+                        return url
+        except Exception:
+            continue
     return None
 
 
