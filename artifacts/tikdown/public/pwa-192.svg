@@ -5,7 +5,7 @@
       <stop offset="100%" stop-color="#06b6d4"/>
     </linearGradient>
   </defs>
-  <rect width="192" height="192" rx="43" fill="url(#bg)"/>
+  <rect width="192" height="192" rx="0" fill="url(#bg)"/>
   <line x1="96" y1="34" x2="96" y2="118" stroke="white" stroke-width="16" stroke-linecap="round"/>
   <polyline points="61,91 96,126 131,91" stroke="white" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
   <path d="M45,150 L45,158 Q45,166 53,166 L139,166 Q147,166 147,158 L147,150" stroke="white" stroke-width="16" stroke-linecap="round" fill="none"/>
