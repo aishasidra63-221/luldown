@@ -137,27 +137,44 @@ _MUSIC_SHARD_PATH_RE = re.compile(
 )
 
 def _resolve_music_shard(url: str) -> str | None:
-    """For musically-maliva-obj URLs, try shards sf1–sf20 on both CDN domains until one returns 200."""
+    """For musically-maliva-obj URLs, probe known music CDN hosts until one returns 200.
+
+    Music CDN requires TikTok App UA — browser UA always gets 404.
+    Known hosts: v16/v19-ies-music.tiktokcdn.com, sf16/sf19-ies-music-va.tiktokcdn.com,
+    and sf1–sf20.tiktokcdn-us.com as fallback.
+    """
     m = _MUSIC_SHARD_PATH_RE.match(url)
     if not m:
         return None
     path = m.group(1)
     import httpx as _httpx
+    # Music CDN requires App UA — browser UA returns 404.
+    music_headers = {**_TT_APP_FETCH_HEADERS}
     client = _httpx.Client(timeout=_httpx.Timeout(10.0, connect=5.0))
     try:
-        # Try ies-music-va (tiktokcdn.com) shards first — that's where video music lives.
-        # Then fall back to tiktokcdn-us.com shards (photo/slide audio).
+        # Priority order: well-known ies-music hosts first (video music lives here),
+        # then sf-numbered tiktokcdn-us.com shards (photo/slide audio).
+        priority_bases = [
+            "https://v16-ies-music.tiktokcdn.com",
+            "https://v19-ies-music.tiktokcdn.com",
+            "https://sf16-ies-music-va.tiktokcdn.com",
+            "https://sf19-ies-music-va.tiktokcdn.com",
+        ]
+        for base in priority_bases:
+            try:
+                r = client.head(f"{base}{path}", headers=music_headers)
+                if r.status_code == 200:
+                    return f"{base}{path}"
+            except Exception:
+                continue
+        # Fall back to numbered tiktokcdn-us.com shards
         for n in range(1, 21):
-            for base in (
-                f"https://sf{n}-ies-music-va.tiktokcdn.com",
-                f"https://sf{n}.tiktokcdn-us.com",
-            ):
-                try:
-                    r = client.head(f"{base}{path}", headers=_CDN_FETCH_HEADERS)
-                    if r.status_code == 200:
-                        return f"{base}{path}"
-                except Exception:
-                    continue
+            try:
+                r = client.head(f"https://sf{n}.tiktokcdn-us.com{path}", headers=music_headers)
+                if r.status_code == 200:
+                    return f"https://sf{n}.tiktokcdn-us.com{path}"
+            except Exception:
+                continue
     finally:
         client.close()
     return None
