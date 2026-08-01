@@ -2031,16 +2031,13 @@ async function handleRequest(request, env, ctx) {
         // All shard attempts failed — fall through to Render proxy below.
       }
 
-      // Path A-video: Resolve CDN URL via Render, then redirect browser straight
-      // to TikTok CDN.  Render only does a streaming GET to follow the redirect —
-      // no video bytes flow through Render, saving all streaming bandwidth.
-      // Images (thumbnails) and MP3 still go through Render proxy so
-      // Content-Disposition: attachment is set and the browser downloads them.
-      // MP3 also uses resolve path — Render resolves the permanent audio resolver URL
-      // to a CDN URL, then browser downloads directly from TikTok CDN.
-      // No audio bytes flow through Render, same bandwidth saving as video.
+      // Path A-video/mp3: Resolve CDN/resolver URL via Render, then redirect
+      // browser straight to TikTok CDN.  Render follows the redirect chain
+      // (signaturev3 for video, aweme/v1/play?media_type=4 for music) and
+      // returns the final time-based CDN URL.  No bytes flow through Render.
       const isVideo = filename.endsWith(".mp4") || filename.endsWith(".webm");
-      if (env.RENDER_URL && isVideo) {
+      const isMp3   = filename.endsWith(".mp3");
+      if (env.RENDER_URL && (isVideo || isMp3)) {
         const resolveUrl =
           `${env.RENDER_URL.replace(/\/$/, "")}/resolve` +
           `?url=${encodeURIComponent(cdnUrl)}`;
@@ -2053,43 +2050,48 @@ async function handleRequest(request, env, ctx) {
         } catch {
           return err("Proxy server unreachable. Please try again shortly.", 502, cors);
         }
-        if (!resolveResp.ok) return err(`Resolve server returned ${resolveResp.status}`, resolveResp.status, cors);
 
-        let finalUrl;
-        try { ({ url: finalUrl } = await resolveResp.json()); } catch { finalUrl = null; }
-        if (!finalUrl) return err("Could not resolve CDN URL.", 502, cors);
-
-        // Browser downloads directly from TikTok CDN — zero Render bandwidth used.
-        return Response.redirect(finalUrl, 302);
-      }
-
-      // Path A-mp3: Stream MP3 through Render proxy (needs music CDN shard resolution).
-      if (env.RENDER_URL && filename.endsWith(".mp3")) {
-        const proxyUrl =
-          `${env.RENDER_URL.replace(/\/$/, "")}/proxy` +
-          `?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
-
-        let upstream;
-        try {
-          upstream = await fetch(proxyUrl, {
-            headers: { "x-proxy-secret": env.PROXY_SECRET || "" },
-          });
-        } catch {
-          return err("Proxy server unreachable. Please try again shortly.", 502, cors);
+        let finalUrl = null;
+        if (resolveResp.ok) {
+          try { ({ url: finalUrl } = await resolveResp.json()); } catch { finalUrl = null; }
         }
 
-        if (!upstream.ok) return err(`Proxy server returned ${upstream.status}`, upstream.status, cors);
+        if (finalUrl) {
+          // Browser downloads directly from TikTok CDN — zero Render bandwidth used.
+          return Response.redirect(finalUrl, 302);
+        }
 
-        const respHeaders = new Headers({
-          ...cors,
-          "Content-Disposition": `attachment; filename="${filename}"`,
-          "Content-Type":        "audio/mpeg",
-          "Cache-Control":       "no-store",
-        });
-        const cl = upstream.headers.get("Content-Length");
-        if (cl) respHeaders.set("Content-Length", cl);
+        // Resolve failed for mp3 — fall back to streaming through Render proxy.
+        if (isMp3) {
+          const proxyUrl =
+            `${env.RENDER_URL.replace(/\/$/, "")}/proxy` +
+            `?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
 
-        return new Response(upstream.body, { status: 200, headers: respHeaders });
+          let upstream;
+          try {
+            upstream = await fetch(proxyUrl, {
+              headers: { "x-proxy-secret": env.PROXY_SECRET || "" },
+            });
+          } catch {
+            return err("Proxy server unreachable. Please try again shortly.", 502, cors);
+          }
+
+          if (!upstream.ok) return err(`Proxy server returned ${upstream.status}`, upstream.status, cors);
+
+          const respHeaders = new Headers({
+            ...cors,
+            "Content-Disposition": `attachment; filename="${filename}"`,
+            "Content-Type":        "audio/mpeg",
+            "Cache-Control":       "no-store",
+          });
+          const cl = upstream.headers.get("Content-Length");
+          if (cl) respHeaders.set("Content-Length", cl);
+
+          return new Response(upstream.body, { status: 200, headers: respHeaders });
+        }
+
+        // Video resolve failed — hard error (no streaming fallback for video).
+        return err(`Resolve server returned ${resolveResp.status}`, resolveResp.status, cors);
       }
 
       // Path B: Direct CDN fetch — only works if TikTok CDN hasn't blocked this Worker's IP.
