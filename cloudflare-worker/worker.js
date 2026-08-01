@@ -1771,7 +1771,7 @@ async function handleRequest(request, env, ctx) {
         download_urls: {
           mp4_1080: p.videoUrl,
           mp4_720:  p.videoUrl720,
-          mp3:      p.audioUrl,
+          mp3:      p.audioUrl || (p.musicId ? `https://sf16-ies-music-va.tiktokcdn.com/obj/musically-maliva-obj/${p.musicId}.mp3` : ""),
         },
       }, 200, cors);
     }
@@ -1832,7 +1832,7 @@ async function handleRequest(request, env, ctx) {
           download_urls: {
             mp4_1080: p.videoUrl,
             mp4_720:  p.videoUrl720,
-            mp3:      p.audioUrl,
+            mp3:      p.audioUrl || (p.musicId ? `https://sf16-ies-music-va.tiktokcdn.com/obj/musically-maliva-obj/${p.musicId}.mp3` : ""),
           },
         };
       });
@@ -1915,7 +1915,7 @@ async function handleRequest(request, env, ctx) {
           download_urls: {
             mp4_1080: p.videoUrl,
             mp4_720:  p.videoUrl720,
-            mp3:      p.audioUrl,
+            mp3:      p.audioUrl || (p.musicId ? `https://sf16-ies-music-va.tiktokcdn.com/obj/musically-maliva-obj/${p.musicId}.mp3` : ""),
           },
         };
       });
@@ -2007,7 +2007,12 @@ async function handleRequest(request, env, ctx) {
       // MP3 also uses resolve path — Render resolves the permanent audio resolver URL
       // to a CDN URL, then browser downloads directly from TikTok CDN.
       // No audio bytes flow through Render, same bandwidth saving as video.
-      const isVideo = filename.endsWith(".mp4") || filename.endsWith(".webm") || filename.endsWith(".mp3");
+      // MP3 with direct CDN URL — skip Render, redirect browser straight to music CDN.
+      if (filename.endsWith(".mp3") && cdnUrl.includes("tiktokcdn")) {
+        return Response.redirect(cdnUrl, 302);
+      }
+
+      const isVideo = filename.endsWith(".mp4") || filename.endsWith(".webm");
       if (env.RENDER_URL && isVideo) {
         const resolveUrl =
           `${env.RENDER_URL.replace(/\/$/, "")}/resolve` +
