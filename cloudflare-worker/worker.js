@@ -1168,9 +1168,13 @@ function bestCoverUrl(urlList) {
 // with bt=/ft=, expire in hours) followed by ONE resolver link
 // (.../aweme/v1/play/?...&signaturev3=...) that resolves live on every hit
 // and does not expire. Always prefer the resolver link when present.
+// For music, the permanent resolver is aweme/v1/play/?...&media_type=4...
+// (no signaturev3 in music URLs — different pattern but same resolver mechanism).
 function resolverUrl(urlList) {
   if (!urlList || !Array.isArray(urlList)) return "";
-  return urlList.find(u => u && u.includes("signaturev3")) || firstUrl(urlList);
+  return urlList.find(u => u && u.includes("signaturev3"))
+    || urlList.find(u => u && u.includes("aweme/v1/play"))
+    || firstUrl(urlList);
 }
 
 function parseAweme(aweme) {
