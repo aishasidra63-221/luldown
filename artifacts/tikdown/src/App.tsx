@@ -27,6 +27,18 @@ const SnaptikAltPage    = lazy(() => import("@/pages/SnaptikAltPage"));
 const MusicalDownAltPage = lazy(() => import("@/pages/MusicalDownAltPage"));
 const SavetikAltPage    = lazy(() => import("@/pages/SavetikAltPage"));
 const TikmateAltPage    = lazy(() => import("@/pages/TikmateAltPage"));
+// Not Working pages
+const SsstikNotWorkingPage     = lazy(() => import("@/pages/SsstikNotWorkingPage"));
+const SnaptikNotWorkingPage    = lazy(() => import("@/pages/SnaptikNotWorkingPage"));
+const TikmateNotWorkingPage    = lazy(() => import("@/pages/TikmateNotWorkingPage"));
+const MusicalDownNotWorkingPage = lazy(() => import("@/pages/MusicalDownNotWorkingPage"));
+const SavettNotWorkingPage     = lazy(() => import("@/pages/SavettNotWorkingPage"));
+// Vs pages
+const SsstikVsPage       = lazy(() => import("@/pages/SsstikVsPage"));
+const SnaptikVsPage      = lazy(() => import("@/pages/SnaptikVsPage"));
+const TikmateVsPage      = lazy(() => import("@/pages/TikmateVsPage"));
+const MusicalDownVsPage  = lazy(() => import("@/pages/MusicalDownVsPage"));
+const SavettVsPage       = lazy(() => import("@/pages/SavettVsPage"));
 const LangHomePage      = lazy(() => import("@/pages/LangHomePage"));
 const ApkPage               = lazy(() => import("@/pages/ApkPage"));
 const HowToPage             = lazy(() => import("@/pages/HowToPage"));
@@ -60,6 +72,18 @@ function Router() {
       <Route path="/musicaldown-alternative" component={MusicalDownAltPage} />
       <Route path="/savetik-alternative"     component={SavetikAltPage} />
       <Route path="/tikmate-alternative"     component={TikmateAltPage} />
+      {/* ── Not Working pages ── */}
+      <Route path="/ssstik-not-working"       component={SsstikNotWorkingPage} />
+      <Route path="/snaptik-not-working"      component={SnaptikNotWorkingPage} />
+      <Route path="/tikmate-not-working"      component={TikmateNotWorkingPage} />
+      <Route path="/musicaldown-not-working"  component={MusicalDownNotWorkingPage} />
+      <Route path="/savett-not-working"       component={SavettNotWorkingPage} />
+      {/* ── Vs pages ── */}
+      <Route path="/ssstik-vs-luldown"        component={SsstikVsPage} />
+      <Route path="/snaptik-vs-luldown"       component={SnaptikVsPage} />
+      <Route path="/tikmate-vs-luldown"       component={TikmateVsPage} />
+      <Route path="/musicaldown-vs-luldown"   component={MusicalDownVsPage} />
+      <Route path="/savett-vs-luldown"        component={SavettVsPage} />
 
       {/* ── Utility pages ── */}
       <Route path="/history"    component={HistoryPage} />
