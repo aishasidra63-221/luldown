@@ -2007,11 +2007,6 @@ async function handleRequest(request, env, ctx) {
       // MP3 also uses resolve path — Render resolves the permanent audio resolver URL
       // to a CDN URL, then browser downloads directly from TikTok CDN.
       // No audio bytes flow through Render, same bandwidth saving as video.
-      // MP3 with direct CDN URL — skip Render, redirect browser straight to music CDN.
-      if (filename.endsWith(".mp3") && cdnUrl.includes("tiktokcdn")) {
-        return Response.redirect(cdnUrl, 302);
-      }
-
       const isVideo = filename.endsWith(".mp4") || filename.endsWith(".webm");
       if (env.RENDER_URL && isVideo) {
         const resolveUrl =
