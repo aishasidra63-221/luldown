@@ -178,7 +178,28 @@ export default function HomePage() {
     jsonLd: HOME_FAQ_JSONLD,
   });
 
-  const [result, setResult] = useState<{ info: VideoInfo | null; profile: ProfileInfo | null; url: string } | null>(null);
+  const RESULT_PERSIST_KEY = "luldown_last_result";
+
+  const [result, setResult] = useState<{ info: VideoInfo | null; profile: ProfileInfo | null; url: string } | null>(() => {
+    if (typeof window === "undefined") return null;
+    // On hard reload, clear persisted result so the box starts empty
+    const isReload = (performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined)?.type === "reload";
+    if (isReload) { sessionStorage.removeItem(RESULT_PERSIST_KEY); return null; }
+    try {
+      const raw = sessionStorage.getItem(RESULT_PERSIST_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
+
+  // Persist result to sessionStorage so back-button navigation restores the card
+  const handleResult = (res: typeof result) => {
+    setResult(res);
+    try {
+      if (res) sessionStorage.setItem(RESULT_PERSIST_KEY, JSON.stringify(res));
+      else sessionStorage.removeItem(RESULT_PERSIST_KEY);
+    } catch { /* storage unavailable — ignore */ }
+  };
+
   const resultRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (result) {
@@ -212,7 +233,7 @@ export default function HomePage() {
             Fast. Free. High Quality. No Registration.
           </p>
           <div style={{ maxWidth: 780, margin: "0 auto" }}>
-            <DownloaderBox onResult={setResult} />
+            <DownloaderBox onResult={handleResult} />
           </div>
 
           {/* ══════════ RESULT (inside hero, purple section) ══════════ */}
