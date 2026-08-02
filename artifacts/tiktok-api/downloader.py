@@ -257,12 +257,37 @@ def _resolver_url(url_list) -> str:
     """Mirror the worker's resolverUrl(): each url_list usually holds direct
     time-signed CDN links (expire in hours) plus one resolver link
     (.../play/?...&signaturev3=...) that resolves live and never expires.
-    Always prefer the signaturev3 link when present."""
+    Always prefer the signaturev3 link when present.
+    NOTE: Use only for VIDEO URLs. For music use _music_url() instead."""
     if not url_list or not isinstance(url_list, list):
         return ""
     for u in url_list:
         if isinstance(u, str) and "signaturev3" in u:
             return u
+    for u in url_list:
+        if isinstance(u, str) and u.startswith("http"):
+            return u
+    return ""
+
+
+def _music_url(url_list) -> str:
+    """Pick the best audio CDN URL from a music url_list.
+
+    Prefers direct musically-maliva-obj CDN URLs — these return HTTP 200 and
+    are streamed via /api/proxy shard probing (sf1–sf20).  Avoids signaturev3
+    resolver links, which return JSON {"success":-1, "code":4008} for music
+    tracks instead of the 302 redirect they perform for video.
+    Falls back to any other direct http URL if no maliva URL is present."""
+    if not url_list or not isinstance(url_list, list):
+        return ""
+    maliva = next((u for u in url_list if isinstance(u, str) and "musically-maliva-obj" in u), "")
+    if maliva:
+        return maliva
+    # Fall back to first non-signaturev3 http URL
+    for u in url_list:
+        if isinstance(u, str) and u.startswith("http") and "signaturev3" not in u:
+            return u
+    # Last resort: any http URL
     for u in url_list:
         if isinstance(u, str) and u.startswith("http"):
             return u
@@ -313,14 +338,15 @@ def _parse_item_struct(item: dict) -> dict:
         video.get("playAddr"), video.get("play_addr"),
     )
 
-    # MP3: music.play_url.url_list -> prefer non-expiring signaturev3 resolver
-    # link (same approach as the video URLs above), fall back to first URL,
-    # then to a bare "uri" field if the list itself is empty.
+    # MP3: music.play_url.url_list -> prefer direct musically-maliva-obj CDN URLs
+    # (these return 200 and can be streamed directly via /api/proxy shard probing).
+    # signaturev3 resolver links do NOT work for music — TikTok returns JSON
+    # {"success":-1, "code":4008} instead of a redirect, so we avoid them here.
     _music_play_url = music.get("play_url") or music.get("playUrl") or {}
     audio_url = ""
     if isinstance(_music_play_url, dict):
         _url_list = _music_play_url.get("url_list") or _music_play_url.get("urlList") or []
-        audio_url = _resolver_url(_url_list) or _music_play_url.get("uri") or ""
+        audio_url = _music_url(_url_list) or _music_play_url.get("uri") or ""
     elif isinstance(_music_play_url, str):
         audio_url = _music_play_url
     # Prefer origin_cover (highest quality) over the default low-res "cover"
