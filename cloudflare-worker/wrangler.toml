@@ -5,6 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 
 [placement]
 mode = "smart"
+hostname = "api16-normal-c-alisg.tiktokv.com"
 
 # Route luldown.com/api/* directly to this Worker
 # So frontend calls /api/info, /api/proxy etc work without WORKER_URL
