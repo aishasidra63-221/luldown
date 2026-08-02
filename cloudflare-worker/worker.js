@@ -1164,16 +1164,16 @@ function bestCoverUrl(urlList) {
   return scored[0].u;
 }
 
-// Each url_list usually holds 2 direct CDN links (tiktokcdn.com, time-signed
-// with bt=/ft=, expire in hours) followed by ONE resolver link
-// (.../aweme/v1/play/?...&signaturev3=...) that resolves live on every hit
-// and does not expire. Always prefer the resolver link when present.
-// For music, the permanent resolver is aweme/v1/play/?...&media_type=4...
-// (no signaturev3 in music URLs — different pattern but same resolver mechanism).
+// Each url_list usually holds direct CDN links (tiktokcdn.com, time-signed
+// with bt=/ft=) and sometimes a permanent resolver link
+// (.../aweme/v1/play/?...&signaturev3=...) that resolves live on every hit.
+// For video: always prefer the signaturev3 resolver (permanent, IP-independent).
+// For music: prefer v16-ies-music / ies-music CDN URLs (direct, work on any IP)
+//            over musically-maliva-obj (shard-specific, can 404).
 function resolverUrl(urlList) {
   if (!urlList || !Array.isArray(urlList)) return "";
   return urlList.find(u => u && u.includes("signaturev3"))
-    || urlList.find(u => u && u.includes("aweme/v1/play"))
+    || urlList.find(u => u && u.includes("ies-music"))
     || firstUrl(urlList);
 }
 
@@ -1964,80 +1964,19 @@ async function handleRequest(request, env, ctx) {
         return err("Only TikTok CDN URLs are supported", 403, cors);
       }
 
-      // Path A-music: For MP3 files, try fetching directly from Worker edge first.
-      // TikTok *music* CDN (v16-ies-music / v19-ies-music) is less restrictive than
-      // the video CDN — Cloudflare anycast IPs are often not blocked there.
-      // We try TikTok App UA (required for resolver links) and then browser UA.
-      // If both fail we fall through to Render below.
+      // Path A-mp3: Music CDN URLs (v16-ies-music, musically-maliva-obj) are
+      // publicly accessible — redirect browser directly, no proxying needed.
+      // resolverUrl() already picked the best URL (ies-music preferred over
+      // musically-maliva-obj). Browser downloads directly from TikTok CDN.
       if (filename.endsWith(".mp3")) {
-        const musicAppHeaders = {
-          "User-Agent":      "com.zhiliaoapp.musically/2024600030 (Linux; U; Android 14; en_US; Pixel 8; Build/AD1A.240405.004; Cronet/113.0.5672.129)",
-          "Accept":          "*/*",
-          "Accept-Encoding": "identity",
-          "Range":           "bytes=0-",
-        };
-        const musicBrowserHeaders = {
-          "User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-          "Referer":         "https://www.tiktok.com/",
-          "Origin":          "https://www.tiktok.com",
-          "Accept":          "*/*",
-          "Accept-Encoding": "identity",
-          "Range":           "bytes=0-",
-        };
-        for (const hdrs of [musicAppHeaders, musicBrowserHeaders]) {
-          try {
-            const directResp = await fetch(cdnUrl, { headers: hdrs });
-            if (directResp.ok) {
-              const rh = new Headers({
-                ...cors,
-                "Content-Disposition": `attachment; filename="${filename}"`,
-                "Content-Type":        "audio/mpeg",
-                "Cache-Control":       "no-store",
-              });
-              const cl0 = directResp.headers.get("Content-Length");
-              if (cl0) rh.set("Content-Length", cl0);
-              return new Response(directResp.body, { status: 200, headers: rh });
-            }
-          } catch { /* try next */ }
-        }
-        // Both direct attempts failed.
-        // Try other musically-maliva-obj shards (sf1–sf20, ies-music-va then tiktokcdn-us).
-        const malivaMatch = cdnUrl.match(/\/obj\/musically-maliva-obj\/(\d+\.mp3)$/);
-        if (malivaMatch) {
-          const musicFile = malivaMatch[1];
-          const shardBases = [
-            ...Array.from({ length: 20 }, (_, i) => `https://sf${i + 1}-ies-music-va.tiktokcdn.com`),
-            ...Array.from({ length: 20 }, (_, i) => `https://sf${i + 1}.tiktokcdn-us.com`),
-          ];
-          for (const base of shardBases) {
-            const shardUrl = `${base}/obj/musically-maliva-obj/${musicFile}`;
-            if (shardUrl === cdnUrl) continue; // already tried
-            try {
-              const shardResp = await fetch(shardUrl, { headers: musicAppHeaders });
-              if (shardResp.ok) {
-                const rh = new Headers({
-                  ...cors,
-                  "Content-Disposition": `attachment; filename="${filename}"`,
-                  "Content-Type":        "audio/mpeg",
-                  "Cache-Control":       "no-store",
-                });
-                const cl0 = shardResp.headers.get("Content-Length");
-                if (cl0) rh.set("Content-Length", cl0);
-                return new Response(shardResp.body, { status: 200, headers: rh });
-              }
-            } catch { /* try next shard */ }
-          }
-        }
-        // All shard attempts failed — fall through to Render proxy below.
+        return Response.redirect(cdnUrl, 302);
       }
 
-      // Path A-video/mp3: Resolve CDN/resolver URL via Render, then redirect
-      // browser straight to TikTok CDN.  Render follows the redirect chain
-      // (signaturev3 for video, aweme/v1/play?media_type=4 for music) and
-      // returns the final time-based CDN URL.  No bytes flow through Render.
+      // Path A-video: Resolve CDN URL via Render, then redirect browser straight
+      // to TikTok CDN. Render follows the signaturev3 redirect chain and returns
+      // the final time-based CDN URL. No video bytes flow through Render.
       const isVideo = filename.endsWith(".mp4") || filename.endsWith(".webm");
-      const isMp3   = filename.endsWith(".mp3");
-      if (env.RENDER_URL && (isVideo || isMp3)) {
+      if (env.RENDER_URL && isVideo) {
         const resolveUrl =
           `${env.RENDER_URL.replace(/\/$/, "")}/resolve` +
           `?url=${encodeURIComponent(cdnUrl)}`;
@@ -2050,48 +1989,13 @@ async function handleRequest(request, env, ctx) {
         } catch {
           return err("Proxy server unreachable. Please try again shortly.", 502, cors);
         }
+        if (!resolveResp.ok) return err(`Resolve server returned ${resolveResp.status}`, resolveResp.status, cors);
 
-        let finalUrl = null;
-        if (resolveResp.ok) {
-          try { ({ url: finalUrl } = await resolveResp.json()); } catch { finalUrl = null; }
-        }
+        let finalUrl;
+        try { ({ url: finalUrl } = await resolveResp.json()); } catch { finalUrl = null; }
+        if (!finalUrl) return err("Could not resolve CDN URL.", 502, cors);
 
-        if (finalUrl) {
-          // Browser downloads directly from TikTok CDN — zero Render bandwidth used.
-          return Response.redirect(finalUrl, 302);
-        }
-
-        // Resolve failed for mp3 — fall back to streaming through Render proxy.
-        if (isMp3) {
-          const proxyUrl =
-            `${env.RENDER_URL.replace(/\/$/, "")}/proxy` +
-            `?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
-
-          let upstream;
-          try {
-            upstream = await fetch(proxyUrl, {
-              headers: { "x-proxy-secret": env.PROXY_SECRET || "" },
-            });
-          } catch {
-            return err("Proxy server unreachable. Please try again shortly.", 502, cors);
-          }
-
-          if (!upstream.ok) return err(`Proxy server returned ${upstream.status}`, upstream.status, cors);
-
-          const respHeaders = new Headers({
-            ...cors,
-            "Content-Disposition": `attachment; filename="${filename}"`,
-            "Content-Type":        "audio/mpeg",
-            "Cache-Control":       "no-store",
-          });
-          const cl = upstream.headers.get("Content-Length");
-          if (cl) respHeaders.set("Content-Length", cl);
-
-          return new Response(upstream.body, { status: 200, headers: respHeaders });
-        }
-
-        // Video resolve failed — hard error (no streaming fallback for video).
-        return err(`Resolve server returned ${resolveResp.status}`, resolveResp.status, cors);
+        return Response.redirect(finalUrl, 302);
       }
 
       // Path B: Direct CDN fetch — only works if TikTok CDN hasn't blocked this Worker's IP.
