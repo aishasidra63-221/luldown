@@ -1147,6 +1147,25 @@ function firstUrl(urlList) {
   return urlList.find(u => u && u.startsWith("http")) || "";
 }
 
+// Convert a signed TikTok CDN thumbnail URL to a permanent static URL.
+// Signed URLs (hostname contains "-sign.") carry x-expires / x-signature
+// params and expire within hours. The same path on the non-sign CDN host
+// serves the image indefinitely — TikTok does not enforce signing on images
+// the way it does on video. Safe to call on any URL; returns it unchanged
+// if it doesn't match the signed pattern.
+function toStaticThumb(url) {
+  if (!url) return url;
+  try {
+    const u = new URL(url);
+    u.hostname = u.hostname.replace(/-sign\./, ".");
+    u.searchParams.delete("x-expires");
+    u.searchParams.delete("x-signature");
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
 // For cover images: pick the URL with the largest pixel dimensions when
 // TikTok CDN embeds size hints in the path (e.g. ~c5_1080x1920.jpeg).
 // Falls back to the first HTTP URL when no size hints are present.
@@ -1296,7 +1315,7 @@ function parseAweme(aweme) {
     videoUrl720:   isPhoto ? ""            : url720,
     audioUrl,
     musicId,
-    thumbUrl:      thumbnail,
+    thumbUrl:      toStaticThumb(thumbnail),
     duration:      video.duration || 0,
     view_count:    stats.play_count   || stats.playCount   || 0,
     like_count:    stats.digg_count   || stats.diggCount   || 0,
