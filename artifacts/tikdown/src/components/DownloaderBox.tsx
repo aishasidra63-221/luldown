@@ -82,8 +82,14 @@ const DEMO_INFO: VideoInfo = {
 export default function DownloaderBox({ highlightFormat, lang = "en", onResult }: Props) {
   const ui = DOWNLOADER_UI[lang] ?? DOWNLOADER_UI["en"];
   const isDemo = false;
-  const prefill = typeof window !== "undefined" ? (sessionStorage.getItem("prefill_url") || "") : "";
-  if (prefill) sessionStorage.removeItem("prefill_url");
+  const URL_PERSIST_KEY    = "luldown_last_url";
+  const RESULT_PERSIST_KEY = "luldown_last_result";
+
+  const prefill = typeof window !== "undefined"
+    ? (sessionStorage.getItem("prefill_url") || localStorage.getItem(URL_PERSIST_KEY) || "")
+    : "";
+  if (typeof window !== "undefined" && sessionStorage.getItem("prefill_url")) sessionStorage.removeItem("prefill_url");
+
   const [url, setUrl] = useState(prefill);
   const [step, setStep] = useState<Step>(isDemo ? "info-ready" : "idle");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -157,6 +163,7 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
         const videoInfo = await fetchVideoInfo(trimmed);
         setInfo(videoInfo);
         setStep("info-ready");
+        localStorage.setItem(RESULT_PERSIST_KEY, JSON.stringify({ savedUrl: trimmed, savedInfo: videoInfo }));
         onResult?.({ info: videoInfo, profile: null, url: trimmed });
       }
     } catch (e: any) {
@@ -191,8 +198,32 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
 
   const reset = () => {
     setUrl(""); setStep("idle"); setInfo(null); setProfileInfo(null); setError("");
+    localStorage.removeItem(URL_PERSIST_KEY);
+    localStorage.removeItem(RESULT_PERSIST_KEY);
     onResult?.(null);
   };
+
+  // Persist URL to localStorage on every change
+  useEffect(() => {
+    if (url) localStorage.setItem(URL_PERSIST_KEY, url);
+    else localStorage.removeItem(URL_PERSIST_KEY);
+  }, [url]);
+
+  // Restore last result on mount (so back-navigation doesn't lose the card)
+  useEffect(() => {
+    if (isDemo || onResult) return;
+    const saved = localStorage.getItem(RESULT_PERSIST_KEY);
+    if (!saved) return;
+    try {
+      const { savedUrl, savedInfo } = JSON.parse(saved) as { savedUrl: string; savedInfo: VideoInfo };
+      if (savedUrl && savedInfo) {
+        setUrl(savedUrl);
+        setInfo(savedInfo);
+        setStep("info-ready");
+      }
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (step === "info-ready" && resultRef.current) {
