@@ -85,9 +85,19 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
   const URL_PERSIST_KEY    = "luldown_last_url";
   const RESULT_PERSIST_KEY = "luldown_last_result";
 
-  const prefill = typeof window !== "undefined"
+  // Detect page refresh — on reload, clear persisted state so the box starts empty.
+  // On close+reopen (type="navigate") or back/forward, restore as usual.
+  const isReload = typeof window !== "undefined"
+    && (performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined)?.type === "reload";
+
+  if (isReload && typeof window !== "undefined") {
+    localStorage.removeItem(URL_PERSIST_KEY);
+    localStorage.removeItem(RESULT_PERSIST_KEY);
+  }
+
+  const prefill = typeof window !== "undefined" && !isReload
     ? (sessionStorage.getItem("prefill_url") || localStorage.getItem(URL_PERSIST_KEY) || "")
-    : "";
+    : (sessionStorage.getItem("prefill_url") || "");
   if (typeof window !== "undefined" && sessionStorage.getItem("prefill_url")) sessionStorage.removeItem("prefill_url");
 
   const [url, setUrl] = useState(prefill);
