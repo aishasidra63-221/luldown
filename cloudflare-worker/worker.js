@@ -1964,11 +1964,36 @@ async function handleRequest(request, env, ctx) {
         return err("Only TikTok CDN URLs are supported", 403, cors);
       }
 
-      // Path A-mp3: Music CDN URLs (v16-ies-music, musically-maliva-obj) are
-      // publicly accessible — redirect browser directly, no proxying needed.
-      // resolverUrl() already picked the best URL (ies-music preferred over
-      // musically-maliva-obj). Browser downloads directly from TikTok CDN.
+      // Path A-mp3: Two sub-cases based on URL type:
+      // 1. v16-ies-music / ies-music URLs — work on any IP, direct browser redirect.
+      // 2. musically-maliva-obj URLs — shard-specific; wrong shard returns a JSON
+      //    error body (not HTTP 404), so we must shard-resolve via Render first.
       if (filename.endsWith(".mp3")) {
+        if (cdnUrl.includes("ies-music")) {
+          // Direct redirect — browser downloads straight from TikTok music CDN.
+          return Response.redirect(cdnUrl, 302);
+        }
+        // musically-maliva-obj: let Render find the right shard, then redirect.
+        if (env.RENDER_URL) {
+          const resolveUrl =
+            `${env.RENDER_URL.replace(/\/$/, "")}/resolve` +
+            `?url=${encodeURIComponent(cdnUrl)}`;
+          let resolveResp;
+          try {
+            resolveResp = await fetch(resolveUrl, {
+              headers: { "x-proxy-secret": env.PROXY_SECRET || "" },
+            });
+          } catch {
+            return err("Proxy server unreachable. Please try again shortly.", 502, cors);
+          }
+          let finalUrl = null;
+          if (resolveResp.ok) {
+            try { ({ url: finalUrl } = await resolveResp.json()); } catch { finalUrl = null; }
+          }
+          if (finalUrl) return Response.redirect(finalUrl, 302);
+          return err("Audio not available on any CDN shard.", 404, cors);
+        }
+        // No RENDER_URL — try direct redirect as last resort.
         return Response.redirect(cdnUrl, 302);
       }
 
