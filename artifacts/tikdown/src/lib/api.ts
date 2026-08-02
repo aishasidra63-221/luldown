@@ -158,6 +158,22 @@ async function getToken(): Promise<string> {
 // Pre-fetch token as soon as this module loads (so it's ready before first use)
 getToken();
 
+// ─── Thumbnail: signed → static (non-expiring) ───────────────────────────────
+// TikTok signed URLs contain "-sign" in the hostname and x-expires/x-signature
+// query params — they expire in ~12-24h. Stripping these gives a permanent URL.
+function toStaticThumb(url: string): string {
+  if (!url) return url;
+  try {
+    const u = new URL(url);
+    u.hostname = u.hostname.replace(/-sign\./, ".");
+    u.searchParams.delete("x-expires");
+    u.searchParams.delete("x-signature");
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
 // ─── Local history (localStorage) ────────────────────────────────────────────
 
 function _loadHistory(): HistoryItem[] {
@@ -339,7 +355,7 @@ export async function downloadVideo(
       url,
       title:        videoMeta?.title  || "TikTok Video",
       author:       videoMeta?.author || "Unknown",
-      thumbnail:    thumbUrl,
+      thumbnail:    toStaticThumb(thumbUrl),
       format,
       downloaded_at: Math.floor(Date.now() / 1000),
     });
@@ -413,7 +429,7 @@ export async function downloadVideo(
     url,
     title,
     author,
-    thumbnail:     videoMeta?.thumbnail || "",
+    thumbnail:     toStaticThumb(videoMeta?.thumbnail || ""),
     format,
     downloaded_at: Math.floor(Date.now() / 1000),
   });
