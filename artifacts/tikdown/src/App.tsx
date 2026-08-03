@@ -47,12 +47,73 @@ const WhatsAppStatusPage    = lazy(() => import("@/pages/WhatsAppStatusPage"));
 const queryClient = new QueryClient();
 
 function NotFound() {
+  const TOOLS = [
+    { href: "/",          label: "Video Downloader", desc: "No watermark · HD" },
+    { href: "/mp3",       label: "MP3 Extractor",    desc: "Audio only · 192kbps" },
+    { href: "/thumbnail", label: "Thumbnail Saver",  desc: "Cover image · JPG" },
+    { href: "/tiktok-for-whatsapp-status", label: "WhatsApp Status", desc: "720p · perfect size" },
+  ];
+  const GUIDES = [
+    { href: "/blog/how-to-download-tiktok-without-watermark", label: "Remove Watermark Guide" },
+    { href: "/blog/download-tiktok-as-mp3",                   label: "TikTok to MP3 Guide" },
+    { href: "/faq",                                            label: "FAQ" },
+  ];
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "#13112b" }}>
-      <div className="text-center">
-        <h1 style={{ fontSize: 64, fontWeight: 800, color: "#4f6ef7" }}>404</h1>
-        <p style={{ marginTop: 16, color: "rgba(255,255,255,0.6)" }}>Page not found</p>
-        <a href="/" style={{ marginTop: 24, display: "inline-block", color: "#4f6ef7" }}>Go Home</a>
+    <div style={{ background: "#13112b", minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
+      {/* 404 hero */}
+      <div style={{ textAlign: "center", marginBottom: 48 }}>
+        <div style={{ fontSize: 96, fontWeight: 900, lineHeight: 1, background: "linear-gradient(135deg,#4f6ef7,#7c3aed)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>404</div>
+        <h1 style={{ marginTop: 12, fontSize: 22, fontWeight: 800, color: "#fff" }}>Page not found</h1>
+        <p style={{ marginTop: 8, color: "rgba(255,255,255,0.45)", fontSize: 14 }}>
+          The link you followed may be broken or the page may have been removed.
+        </p>
+        <a href="/" style={{
+          marginTop: 24, display: "inline-flex", alignItems: "center", gap: 8,
+          background: "linear-gradient(135deg,#4f6ef7,#7c3aed)", color: "#fff",
+          fontWeight: 700, fontSize: 14, padding: "12px 28px", borderRadius: 12,
+          textDecoration: "none",
+        }}>
+          ← Go to Homepage
+        </a>
+      </div>
+
+      {/* Popular tools */}
+      <div style={{ width: "100%", maxWidth: 560 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.35)", marginBottom: 12 }}>
+          Popular Tools
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%,240px),1fr))", gap: 10, marginBottom: 28 }}>
+          {TOOLS.map(({ href, label, desc }) => (
+            <a key={href} href={href} style={{
+              background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 12, padding: "12px 16px", textDecoration: "none",
+              display: "flex", flexDirection: "column", gap: 3,
+              transition: "background 0.15s",
+            }}
+              onMouseEnter={e => (e.currentTarget.style.background = "rgba(79,110,247,0.15)")}
+              onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+            >
+              <span style={{ fontWeight: 700, fontSize: 13, color: "#fff" }}>{label}</span>
+              <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.4)" }}>{desc}</span>
+            </a>
+          ))}
+        </div>
+
+        {/* Guides */}
+        <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.35)", marginBottom: 12 }}>
+          Helpful Guides
+        </p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {GUIDES.map(({ href, label }) => (
+            <a key={href} href={href} style={{
+              fontSize: 13, fontWeight: 600, color: "#4f6ef7",
+              background: "rgba(79,110,247,0.08)", border: "1px solid rgba(79,110,247,0.2)",
+              borderRadius: 20, padding: "6px 14px", textDecoration: "none",
+            }}>
+              {label}
+            </a>
+          ))}
+        </div>
       </div>
     </div>
   );
