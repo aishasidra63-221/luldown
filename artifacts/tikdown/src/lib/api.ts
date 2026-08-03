@@ -452,7 +452,7 @@ export async function downloadPhoto(
     title:         meta?.title  || "TikTok Photo",
     author:        meta?.author || "Unknown",
     thumbnail:     toStaticThumb(meta?.thumbnail || ""),
-    format:        "image",
+    format:        "photo",
     downloaded_at: Math.floor(Date.now() / 1000),
   });
   await _cdnDownload(cdnUrl, filename);
