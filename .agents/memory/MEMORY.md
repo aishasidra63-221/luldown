@@ -1,1 +1,2 @@
 - [Multilingual SEO structure](multilingual-seo.md) — 10 langs × 5 pages = 50 lang pages + /ssstik-alternative; all routes, translations, hreflang, sitemap in place.
+- [Static prerendering setup](prerender-setup.md) — 174 routes prerendered via entry-server.tsx + prerender.mts; wouter SSR fix required.

@@ -8,7 +8,7 @@ A full-stack TikTok video downloader with a React/Vite frontend and a Python Fas
 - **Backend**: Python FastAPI (`artifacts/tiktok-api`)
 - **Package manager**: pnpm (workspace monorepo)
 
-## How to run
+## How to run (development)
 
 Two workflows run in parallel:
 
@@ -18,6 +18,18 @@ Two workflows run in parallel:
 | `TikTok API` | `cd artifacts/tiktok-api && python3 main.py` | 8000 |
 
 The Vite dev server proxies `/tikapi/*` → `http://localhost:8000` so the frontend and API run as one origin.
+
+## Production build (with static prerendering)
+
+```bash
+pnpm --filter @workspace/tikdown run prerender
+```
+
+This runs `vite build` then `tsx prerender.mts` to generate static HTML for all **174 routes** (20 lang × tool pages + blog posts + competitor pages). Each route gets its own `dist/public/<route>/index.html` with full HTML content injected — Google indexes instantly without waiting for JS.
+
+Key files:
+- `artifacts/tikdown/src/entry-server.tsx` — SSR render entry (not bundled into client)
+- `artifacts/tikdown/prerender.mts` — prerender script, run after build
 
 ## Environment / secrets
 

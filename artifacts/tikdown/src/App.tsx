@@ -115,7 +115,7 @@ function Router() {
   );
 }
 
-function App() {
+function App({ ssrHook }: { ssrHook?: () => [string, (to: string) => void] } = {}) {
   useEffect(() => {
     document.documentElement.classList.add("dark");
     localStorage.setItem("luldown-theme", "dark");
@@ -123,7 +123,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+      <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")} hook={ssrHook}>
         <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
           <ScrollToTop />
           <Navbar />
