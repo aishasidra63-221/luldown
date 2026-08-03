@@ -355,7 +355,7 @@ export async function downloadVideo(
       url,
       title:        videoMeta?.title  || "TikTok Video",
       author:       videoMeta?.author || "Unknown",
-      thumbnail:    toStaticThumb(thumbUrl),
+      thumbnail:    thumbUrl,
       format,
       downloaded_at: Math.floor(Date.now() / 1000),
     });
@@ -429,7 +429,7 @@ export async function downloadVideo(
     url,
     title,
     author,
-    thumbnail:     toStaticThumb(videoMeta?.thumbnail || ""),
+    thumbnail:     videoMeta?.thumbnail || "",
     format,
     downloaded_at: Math.floor(Date.now() / 1000),
   });
@@ -451,7 +451,7 @@ export async function downloadPhoto(
     url:           meta?.url || cdnUrl,
     title:         meta?.title  || "TikTok Photo",
     author:        meta?.author || "Unknown",
-    thumbnail:     toStaticThumb(meta?.thumbnail || ""),
+    thumbnail:     meta?.thumbnail || "",
     format:        "photo",
     downloaded_at: Math.floor(Date.now() / 1000),
   });
