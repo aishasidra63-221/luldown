@@ -1,6 +1,26 @@
 import { Link } from "wouter";
-import { Clock, Calendar, ChevronRight, ArrowLeft, Download, FileText } from "lucide-react";
+import { Clock, Calendar, ChevronRight, ArrowLeft, Download, FileText, Music, Image, Video, Smartphone } from "lucide-react";
 import type { BlogPost } from "@/data/blogs";
+
+const ALL_TOOLS = [
+  { href: "/",           label: "Video Downloader",  desc: "No watermark · HD quality",  icon: <Download size={16} color="#4f6ef7" /> },
+  { href: "/mp3",        label: "MP3 Extractor",      desc: "Extract audio only · 192kbps", icon: <Music    size={16} color="#7c3aed" /> },
+  { href: "/thumbnail",  label: "Thumbnail Saver",    desc: "Download cover image · JPG",   icon: <Image    size={16} color="#06b6d4" /> },
+  { href: "/tiktok-for-whatsapp-status", label: "WhatsApp Status", desc: "Perfect 720p size",  icon: <Smartphone size={16} color="#10b981" /> },
+  { href: "/viewer",     label: "Video Viewer",       desc: "Watch without the app",         icon: <Video    size={16} color="#f59e0b" /> },
+];
+
+function getRelatedTools(slug: string) {
+  if (slug.includes("mp3") || slug.includes("audio") || slug.includes("sound"))
+    return [ALL_TOOLS[1], ALL_TOOLS[0], ALL_TOOLS[2]];
+  if (slug.includes("thumbnail") || slug.includes("photo") || slug.includes("slideshow") || slug.includes("image"))
+    return [ALL_TOOLS[2], ALL_TOOLS[0], ALL_TOOLS[1]];
+  if (slug.includes("whatsapp") || slug.includes("status"))
+    return [ALL_TOOLS[3], ALL_TOOLS[0], ALL_TOOLS[1]];
+  if (slug.includes("iphone") || slug.includes("android") || slug.includes("mobile"))
+    return [ALL_TOOLS[0], ALL_TOOLS[1], ALL_TOOLS[4]];
+  return [ALL_TOOLS[0], ALL_TOOLS[1], ALL_TOOLS[2]];
+}
 
 interface Props {
   post: BlogPost;
@@ -150,6 +170,35 @@ export default function BlogLayout({ post }: Props) {
             </div>
           </div>
         )}
+
+        {/* Related Tools */}
+        <div style={{ marginTop: 32, marginBottom: 28 }}>
+          <h3 style={{ fontWeight: 800, fontSize: 15, color: "#111827", marginBottom: 14 }}>
+            Free Tools You Can Use Right Now
+          </h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 200px), 1fr))", gap: 10 }}>
+            {getRelatedTools(post.slug).map(({ href, label, desc, icon }) => (
+              <Link key={href} href={href}>
+                <div style={{
+                  background: "#fff", border: "1px solid rgba(0,0,0,0.09)", borderRadius: 14,
+                  padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "flex-start",
+                  gap: 12, transition: "box-shadow 0.15s, transform 0.15s",
+                }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(79,110,247,0.12)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
+                >
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(79,110,247,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {icon}
+                  </div>
+                  <div>
+                    <p style={{ fontWeight: 700, fontSize: 13, color: "#111827", marginBottom: 2 }}>{label}</p>
+                    <p style={{ fontSize: 11.5, color: "#9ca3af" }}>{desc}</p>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
 
         {/* Bottom CTA */}
         <div style={{

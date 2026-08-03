@@ -51,6 +51,34 @@ export default function BlogIndexPage() {
         </p>
       </div>
 
+      {/* Tools Strip */}
+      <div style={{ background: "#fff", borderBottom: "1px solid rgba(0,0,0,0.07)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "18px 16px", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginRight: 6 }}>Free Tools:</span>
+          {[
+            { href: "/",          label: "Video Downloader" },
+            { href: "/mp3",       label: "MP3 Extractor" },
+            { href: "/thumbnail", label: "Thumbnail Saver" },
+            { href: "/tiktok-for-whatsapp-status", label: "WhatsApp Status" },
+            { href: "/viewer",    label: "Video Viewer" },
+          ].map(({ href, label }) => (
+            <Link key={href} href={href}>
+              <span style={{
+                fontSize: 12, fontWeight: 600, color: "#4f6ef7",
+                background: "rgba(79,110,247,0.07)", borderRadius: 20,
+                padding: "5px 13px", cursor: "pointer", border: "1px solid rgba(79,110,247,0.15)",
+                transition: "background 0.15s",
+              }}
+                onMouseEnter={e => (e.currentTarget.style.background = "rgba(79,110,247,0.14)")}
+                onMouseLeave={e => (e.currentTarget.style.background = "rgba(79,110,247,0.07)")}
+              >
+                {label}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
       {/* Blog Grid */}
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 16px 72px" }}>
         <div style={{

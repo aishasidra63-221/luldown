@@ -4,16 +4,21 @@ const COLS = [
   {
     heading: "Tools",
     links: [
-      { href: "/thumbnail", label: "Thumbnail Downloader" },
-      { href: "/mp3",       label: "MP3 Downloader"      },
-      { href: "/history", label: "Download History" },
+      { href: "/",           label: "Video Downloader"   },
+      { href: "/mp3",        label: "MP3 Extractor"      },
+      { href: "/thumbnail",  label: "Thumbnail Saver"    },
+      { href: "/tiktok-for-whatsapp-status", label: "WhatsApp Status" },
+      { href: "/history",    label: "Download History"   },
     ],
   },
   {
     heading: "Help",
     links: [
       { href: "/faq",  label: "FAQ"  },
-      { href: "/blog", label: "Blog" },
+      { href: "/blog", label: "Blog & Guides" },
+      { href: "/blog/how-to-download-tiktok-without-watermark", label: "Remove Watermark Guide" },
+      { href: "/blog/download-tiktok-as-mp3",                   label: "TikTok to MP3 Guide"   },
+      { href: "/how-to-download-tiktok-video",                  label: "How-To Page"            },
     ],
   },
   {
