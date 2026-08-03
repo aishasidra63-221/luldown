@@ -440,9 +440,21 @@ export async function downloadVideo(
 }
 
 // Photo CDN-direct download — no server call at all, pure CDN
-export async function downloadPhoto(cdnUrl: string, index: number): Promise<void> {
-  const videoId  = _extractVideoId(cdnUrl) || Date.now().toString();
+export async function downloadPhoto(
+  cdnUrl: string,
+  index: number,
+  meta?: { url?: string; title?: string; author?: string; thumbnail?: string },
+): Promise<void> {
+  const videoId  = _extractVideoId(meta?.url || cdnUrl) || Date.now().toString();
   const filename = `luldown_${videoId}_${index + 1}.jpg`;
+  addHistoryEntry({
+    url:           meta?.url || cdnUrl,
+    title:         meta?.title  || "TikTok Photo",
+    author:        meta?.author || "Unknown",
+    thumbnail:     toStaticThumb(meta?.thumbnail || ""),
+    format:        "image",
+    downloaded_at: Math.floor(Date.now() / 1000),
+  });
   await _cdnDownload(cdnUrl, filename);
 }
 

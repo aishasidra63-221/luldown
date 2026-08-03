@@ -75,7 +75,14 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
 
   const handlePhotoDownload = async (imgUrl: string, index: number) => {
     setPhotoDownloading(index);
-    try { await downloadPhoto(imgUrl, index); }
+    try {
+      await downloadPhoto(imgUrl, index, {
+        url:       url,
+        title:     info.title,
+        author:    info.author,
+        thumbnail: info.thumbnail,
+      });
+    }
     finally { setPhotoDownloading(null); }
   };
 
