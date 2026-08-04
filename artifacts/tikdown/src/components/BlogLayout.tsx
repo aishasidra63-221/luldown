@@ -109,7 +109,7 @@ export default function BlogLayout({ post }: Props) {
               display: "flex", alignItems: "center", gap: 8,
             }}>
               <Download size={15} />
-              Download TikTok
+              Download Video
             </button>
           </Link>
         </div>
@@ -198,31 +198,6 @@ export default function BlogLayout({ post }: Props) {
               </Link>
             ))}
           </div>
-        </div>
-
-        {/* Bottom CTA */}
-        <div style={{
-          marginTop: 32,
-          background: "linear-gradient(160deg, #0d0b1f 0%, #13103a 100%)",
-          border: "1px solid rgba(79,110,247,0.25)",
-          borderRadius: 16, padding: "28px 22px",
-          textAlign: "center",
-        }}>
-          <p style={{ fontWeight: 800, fontSize: 16, color: "#ffffff", marginBottom: 6 }}>Ready to download?</p>
-          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginBottom: 20 }}>
-            Paste your TikTok link and get a watermark-free video in seconds.
-          </p>
-          <Link href="/">
-            <button style={{
-              background: "linear-gradient(135deg, #4f6ef7 0%, #7c3aed 100%)",
-              border: "none", borderRadius: 14, padding: "13px 32px",
-              color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer",
-              display: "inline-flex", alignItems: "center", gap: 10,
-            }}>
-              <Download size={17} />
-              Go to Luldown — Free Download
-            </button>
-          </Link>
         </div>
 
         {/* Back link */}
