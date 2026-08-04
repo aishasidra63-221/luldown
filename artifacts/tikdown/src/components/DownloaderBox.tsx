@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { fetchVideoInfo, downloadVideo, downloadPhoto, VideoInfo, DownloadFormat, isProfileUrl, fetchProfileInfo, ProfileInfo } from "@/lib/api";
+import { fetchVideoInfo, downloadVideo, downloadPhoto, VideoInfo, DownloadFormat, isProfileUrl, fetchProfileInfo, ProfileInfo, API_BASE } from "@/lib/api";
 import ProfileResults from "@/components/ProfileResults";
 import VideoResultCard from "@/components/VideoResultCard";
 import {
@@ -306,7 +306,7 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
             {info.thumbnail && !isPhoto && (
               <div style={{ position:"relative" }}>
                 <img
-                  src={info.thumbnail} alt=""
+                  src={`${API_BASE}/api/proxy?url=${encodeURIComponent(info.thumbnail)}&filename=thumb.jpg`} alt=""
                   style={{ width:"100%", height:140, objectFit:"cover", display:"block" }}
                 />
               </div>
