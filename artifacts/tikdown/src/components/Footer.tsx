@@ -4,11 +4,9 @@ const COLS = [
   {
     heading: "Tools",
     links: [
-      { href: "/",           label: "Video Downloader"   },
-      { href: "/mp3",        label: "MP3 Extractor"      },
-      { href: "/thumbnail",  label: "Thumbnail Saver"    },
-      { href: "/tiktok-for-whatsapp-status", label: "WhatsApp Status" },
-      { href: "/history",    label: "Download History"   },
+      { href: "/",          label: "Video Downloader"    },
+      { href: "/mp3",       label: "MP3 Downloader"      },
+      { href: "/thumbnail", label: "Thumbnail Downloader" },
     ],
   },
   {
