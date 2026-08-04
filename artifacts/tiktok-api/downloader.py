@@ -273,21 +273,29 @@ def _resolver_url(url_list) -> str:
 def _music_url(url_list) -> str:
     """Pick the best audio CDN URL from a music url_list.
 
-    Prefers direct musically-maliva-obj CDN URLs — these return HTTP 200 and
-    are streamed via /api/proxy shard probing (sf1–sf20).  Avoids signaturev3
-    resolver links, which return JSON {"success":-1, "code":4008} for music
-    tracks instead of the 302 redirect they perform for video.
-    Falls back to any other direct http URL if no maliva URL is present."""
+    Priority (mirrors Worker's musicPickUrl):
+      1. ies-music canonical CDN  — globally accessible, no shard routing needed
+      2. musically-maliva-obj     — shard-specific, needs /api/resolve probing
+      3. any non-signaturev3 URL  — direct fallback
+      4. any http URL             — last resort
+
+    Always avoids signaturev3 resolver links — TikTok returns
+    {"success":-1, "code":4008} for music (unlike video where it gives 302)."""
     if not url_list or not isinstance(url_list, list):
         return ""
+    # 1. ies-music canonical (v16-ies-music.tiktokcdn.com or similar)
+    ies = next((u for u in url_list if isinstance(u, str) and "ies-music" in u), "")
+    if ies:
+        return ies
+    # 2. musically-maliva-obj shard URL
     maliva = next((u for u in url_list if isinstance(u, str) and "musically-maliva-obj" in u), "")
     if maliva:
         return maliva
-    # Fall back to first non-signaturev3 http URL
+    # 3. Any non-signaturev3 direct URL
     for u in url_list:
         if isinstance(u, str) and u.startswith("http") and "signaturev3" not in u:
             return u
-    # Last resort: any http URL
+    # 4. Last resort
     for u in url_list:
         if isinstance(u, str) and u.startswith("http"):
             return u
