@@ -66,7 +66,8 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
     try {
       await downloadVideo(url.trim(), format, {
         title: info?.title, author: info?.author,
-        thumbnail: info?.thumbnail, download_urls: info?.download_urls,
+        thumbnail: info?.thumbnail || info?.images?.[0] || "",
+        download_urls: info?.download_urls,
       });
     } catch (e: any) {
       onError?.(e.message || "Download failed");
@@ -80,7 +81,7 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
         url:       url,
         title:     info.title,
         author:    info.author,
-        thumbnail: info.thumbnail,
+        thumbnail: info.thumbnail || info?.images?.[0] || "",
       });
     }
     finally { setPhotoDownloading(null); }
