@@ -132,7 +132,7 @@ _MUSIC_CDN_RE = re.compile(
     r"(?:/obj/musically-maliva-obj|.*ies-music.*)"
 )
 _MUSIC_SHARD_PATH_RE = re.compile(
-    r"https?://(?:sf\d+\.tiktokcdn-us\.com|sf\d+-ies-music-va\.tiktokcdn\.com)"
+    r"https?://(?:sf\d+\.tiktokcdn-us\.com|sf\d+-ies-music-va\.tiktokcdn\.com|v\d+-ies-music\.tiktokcdn\.com)"
     r"(/obj/musically-maliva-obj/.+\.mp3)"
 )
 

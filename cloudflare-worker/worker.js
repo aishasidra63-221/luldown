@@ -2002,11 +2002,11 @@ async function handleRequest(request, env, ctx) {
       // 2. musically-maliva-obj URLs — shard-specific; wrong shard returns a JSON
       //    error body (not HTTP 404), so we must shard-resolve via Render first.
       if (filename.endsWith(".mp3")) {
-        if (cdnUrl.includes("ies-music")) {
-          // Direct redirect — browser downloads straight from TikTok music CDN.
-          return Response.redirect(cdnUrl, 302);
-        }
-        // musically-maliva-obj: let Render find the right shard, then redirect.
+        // All MP3 URLs go through Render shard probing.
+        // ies-music direct redirect was causing Akamai "Access Denied" blocks.
+        // Render resolves the correct CDN shard with proper TikTok App UA headers,
+        // then Worker redirects the browser to that final URL.
+        // This unified path handles both ies-music and musically-maliva-obj URLs.
         if (env.RENDER_URL) {
           const resolveUrl =
             `${env.RENDER_URL.replace(/\/$/, "")}/resolve` +
@@ -2026,7 +2026,7 @@ async function handleRequest(request, env, ctx) {
           if (finalUrl) return Response.redirect(finalUrl, 302);
           return err("Audio not available on any CDN shard.", 404, cors);
         }
-        // No RENDER_URL — try direct redirect as last resort.
+        // No RENDER_URL — fall back to direct redirect.
         return Response.redirect(cdnUrl, 302);
       }
 
