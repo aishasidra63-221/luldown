@@ -16,9 +16,6 @@ const COLS = [
     links: [
       { href: "/faq",  label: "FAQ"  },
       { href: "/blog", label: "Blog & Guides" },
-      { href: "/blog/how-to-download-tiktok-without-watermark", label: "Remove Watermark Guide" },
-      { href: "/blog/download-tiktok-as-mp3",                   label: "TikTok to MP3 Guide"   },
-      { href: "/how-to-download-tiktok-video",                  label: "How-To Page"            },
     ],
   },
   {
