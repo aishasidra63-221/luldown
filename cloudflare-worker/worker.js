@@ -1274,9 +1274,23 @@ function parseAweme(aweme) {
   // provide — passing it through would result in TikTok returning 400.
   //
   // For photo posts: url1080 = video.play_addr which has a signaturev3 link.
+  //
+  // musically-maliva-obj URLs are shard-specific (sf16-ies-music-va, sf19, etc.).
+  // Anonymous (non-logged-in) phones only get shard-specific hosts in url_list.
+  // Replace the host with v16-ies-music.tiktokcdn.com — the canonical, globally
+  // accessible music CDN that is not shard-restricted.
+  const normalizeMusicCdn = (url) => {
+    if (!url || !url.includes("musically-maliva-obj")) return url;
+    try {
+      const u = new URL(url);
+      u.hostname = "v16-ies-music.tiktokcdn.com";
+      return u.toString();
+    } catch { return url; }
+  };
+
   const audioUrl = isPhoto
-    ? (url1080 || musicUrl)   // url1080 = video.play_addr = audio track for photo posts
-    : musicUrl;
+    ? (url1080 || normalizeMusicCdn(musicUrl))
+    : normalizeMusicCdn(musicUrl);
 
   // Thumbnail — pick highest resolution available.
   // Use .length check before || so an empty url_list [] (truthy but useless)
@@ -1794,7 +1808,7 @@ async function handleRequest(request, env, ctx) {
         download_urls: {
           mp4_1080: p.videoUrl,
           mp4_720:  p.videoUrl720,
-          mp3:      p.audioUrl || (p.musicId ? `https://sf16-ies-music-va.tiktokcdn.com/obj/musically-maliva-obj/${p.musicId}.mp3` : ""),
+          mp3:      p.audioUrl || (p.musicId ? `https://v16-ies-music.tiktokcdn.com/obj/musically-maliva-obj/${p.musicId}.mp3` : ""),
         },
       }, 200, cors);
     }
@@ -1855,7 +1869,7 @@ async function handleRequest(request, env, ctx) {
           download_urls: {
             mp4_1080: p.videoUrl,
             mp4_720:  p.videoUrl720,
-            mp3:      p.audioUrl || (p.musicId ? `https://sf16-ies-music-va.tiktokcdn.com/obj/musically-maliva-obj/${p.musicId}.mp3` : ""),
+            mp3:      p.audioUrl || (p.musicId ? `https://v16-ies-music.tiktokcdn.com/obj/musically-maliva-obj/${p.musicId}.mp3` : ""),
           },
         };
       });
@@ -1938,7 +1952,7 @@ async function handleRequest(request, env, ctx) {
           download_urls: {
             mp4_1080: p.videoUrl,
             mp4_720:  p.videoUrl720,
-            mp3:      p.audioUrl || (p.musicId ? `https://sf16-ies-music-va.tiktokcdn.com/obj/musically-maliva-obj/${p.musicId}.mp3` : ""),
+            mp3:      p.audioUrl || (p.musicId ? `https://v16-ies-music.tiktokcdn.com/obj/musically-maliva-obj/${p.musicId}.mp3` : ""),
           },
         };
       });

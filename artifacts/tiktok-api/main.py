@@ -407,12 +407,21 @@ async def resolve_cdn_url(request: Request, url: str):
         clean_url = unquote(url.strip())
         parsed = urlparse(clean_url)
         host = parsed.netloc.lower().split(":")[0]
-        if parsed.scheme not in ("http", "https") or not (
-            host == "tiktok.com" or host.endswith(".tiktok.com")
+        _allowed_hosts = ("tiktok.com", ".tiktok.com", ".tiktokcdn.com", ".tiktokcdn-us.com")
+        if parsed.scheme not in ("http", "https") or not any(
+            host == h.lstrip(".") or host.endswith(h) for h in _allowed_hosts
         ):
             raise ValueError("invalid")
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="Invalid TikTok URL") from exc
+
+    # Music CDN URLs (musically-maliva-obj) are direct object URLs — no redirect
+    # to follow. Probe known shard hosts to find the one that serves the file.
+    if "musically-maliva-obj" in clean_url:
+        resolved = _resolve_music_shard(clean_url)
+        if resolved:
+            return {"url": resolved}
+        raise HTTPException(status_code=404, detail="Audio not available on any CDN shard.")
 
     try:
         async with httpx.AsyncClient(
@@ -426,7 +435,7 @@ async def resolve_cdn_url(request: Request, url: str):
             # Accept any CDN domain — tiktokcdn, tiktokv, bytecdn, etc.
             cdn_domains = ["tiktokcdn.com", "tiktokv.com", "bytecdn.cn", "snssdk.com", "tiktok.com/obj"]
             if location and location.startswith("http") and any(d in location for d in cdn_domains):
-                return {"cdn_url": location}
+                return {"url": location}
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Failed to resolve: {exc}")
 
