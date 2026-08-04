@@ -1196,6 +1196,16 @@ function resolverUrl(urlList) {
     || firstUrl(urlList);
 }
 
+// Music-specific picker: signaturev3 avoid karo — TikTok music ke liye 4008 deta hai.
+// Python backend ke _music_url() jaisa: ies-music → musically-maliva-obj → non-signaturev3 → fallback.
+function musicPickUrl(urlList) {
+  if (!urlList || !Array.isArray(urlList)) return "";
+  return urlList.find(u => u && u.includes("ies-music"))
+    || urlList.find(u => u && u.includes("musically-maliva-obj"))
+    || urlList.find(u => u && !u.includes("signaturev3"))
+    || firstUrl(urlList);
+}
+
 function parseAweme(aweme) {
   const author = aweme.author  || {};
   const video  = aweme.video   || {};
@@ -1263,7 +1273,7 @@ function parseAweme(aweme) {
   // music.play_url (snake) or music.playUrl (camel) → url_list / urlList array
   const musicPlayUrl = music.play_url || music.playUrl || {};
   const audioUrlList = musicPlayUrl.url_list || musicPlayUrl.urlList || [];
-  const musicUrl = resolverUrl(Array.isArray(audioUrlList) ? audioUrlList : [])
+  const musicUrl = musicPickUrl(Array.isArray(audioUrlList) ? audioUrlList : [])
     || (typeof musicPlayUrl === "string" ? musicPlayUrl : "")
     || musicPlayUrl.uri || "";
 
