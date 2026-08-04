@@ -14,8 +14,8 @@ Two workflows run in parallel:
 
 | Workflow | Command | Port |
 |---|---|---|
-| `artifacts/tikdown: web` | `pnpm --filter @workspace/tikdown run dev` | 25828 |
-| `TikTok API` | `cd artifacts/tiktok-api && python3 main.py` | 8000 |
+| `TikDown Frontend` | `cd artifacts/tikdown && pnpm dev` | 5000 |
+| `TikTok API` | `cd artifacts/tiktok-api && pip install -r requirements.txt -q && python3 main.py` | 8000 |
 
 The Vite dev server proxies `/tikapi/*` → `http://localhost:8000` so the frontend and API run as one origin.
 
