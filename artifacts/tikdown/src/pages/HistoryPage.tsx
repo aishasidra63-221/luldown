@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchHistory, clearHistory, HistoryItem } from "@/lib/api";
+import { fetchHistory, clearHistory, HistoryItem, API_BASE } from "@/lib/api";
 import { Trash2, Download, Clock, Video, Music, Image, Film, Inbox, Loader2, User } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import BackHomeButtonLight from "@/components/BackHomeButtonLight";
@@ -215,7 +215,12 @@ export default function HistoryPage() {
                       alt={item.title}
                       className="history-thumb"
                       style={{ objectFit: "cover", borderRadius: 10, flexShrink: 0, border: "1px solid rgba(0,0,0,0.08)" }}
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      onError={(e) => {
+                        const img = e.target as HTMLImageElement;
+                        const proxy = `${API_BASE}/api/proxy?url=${encodeURIComponent(item.thumbnail)}&filename=thumb.jpg`;
+                        if (img.src !== proxy) { img.src = proxy; }
+                        else { img.style.display = "none"; }
+                      }}
                     />
                   ) : (
                     <div className="history-thumb" style={{ borderRadius: 10, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
