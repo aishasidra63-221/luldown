@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { downloadVideo, downloadPhoto, addHistoryEntry, VideoInfo, DownloadFormat } from "@/lib/api";
+import { downloadVideo, downloadPhoto, addHistoryEntry, VideoInfo, DownloadFormat, API_BASE } from "@/lib/api";
 import { Music, Download, Image, Video } from "lucide-react";
 
 interface FmtCfg {
@@ -109,8 +109,10 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
       {info.thumbnail && !isPhoto && (
         <div style={{ position: "relative" }}>
           <img
-            src={info.thumbnail} alt={info.title ? `${info.author} — ${info.title.slice(0, 60)}` : "TikTok video thumbnail"}
+            src={`${API_BASE}/api/proxy?url=${encodeURIComponent(info.thumbnail)}&filename=thumb.jpg`}
+            alt={info.title ? `${info.author} — ${info.title.slice(0, 60)}` : "TikTok video thumbnail"}
             style={{ width: "100%", height: 140, objectFit: "cover", display: "block" }}
+            onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
         </div>
       )}
