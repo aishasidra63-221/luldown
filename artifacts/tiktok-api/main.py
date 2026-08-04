@@ -423,21 +423,82 @@ async def resolve_cdn_url(request: Request, url: str):
             return {"url": resolved}
         raise HTTPException(status_code=404, detail="Audio not available on any CDN shard.")
 
+    # Accept any TikTok CDN domain in redirect Location headers.
+    # tiktokcdn-us.com is distinct from tiktokcdn.com and is used for music shards.
+    _resolve_cdn_domains = [
+        "tiktokcdn.com", "tiktokcdn-us.com", "tiktokv.com",
+        "bytecdn.cn", "snssdk.com", "tiktok.com/obj", "musical.ly",
+    ]
+
+    # Music-specific headers — same Android UA but with audio Accept and
+    # TikTok request tag that signals audio content negotiation.
+    _music_resolve_headers = {
+        **_TT_APP_FETCH_HEADERS,
+        "Accept": "audio/mpeg, audio/mp4, audio/*, */*",
+        "X-TT-Request-Tag": "n=1;t=3",
+    }
+
+    def _check_redirect(location: str) -> bool:
+        return bool(
+            location
+            and location.startswith("http")
+            and any(d in location for d in _resolve_cdn_domains)
+        )
+
+    # Try the standard Android UA first (works for video signaturev3).
+    # For music signaturev3 TikTok returns JSON {"success":-1,"code":4008}
+    # instead of a redirect — we detect that and retry with music headers.
+    first_resp_status = None
+    first_resp_body = None
     try:
         async with httpx.AsyncClient(
             follow_redirects=False,
             timeout=httpx.Timeout(15.0, connect=8.0),
         ) as client:
             resp = await client.get(clean_url, headers=_TT_APP_FETCH_HEADERS)
-
-        if resp.status_code in (301, 302, 303, 307, 308):
-            location = resp.headers.get("location", "")
-            # Accept any CDN domain — tiktokcdn, tiktokv, bytecdn, etc.
-            cdn_domains = ["tiktokcdn.com", "tiktokv.com", "bytecdn.cn", "snssdk.com", "tiktok.com/obj"]
-            if location and location.startswith("http") and any(d in location for d in cdn_domains):
-                return {"url": location}
+            first_resp_status = resp.status_code
+            if resp.status_code in (301, 302, 303, 307, 308):
+                location = resp.headers.get("location", "")
+                if _check_redirect(location):
+                    return {"url": location}
+            elif resp.status_code == 200:
+                # Check if response body contains a CDN URL (some API responses do).
+                ct = resp.headers.get("content-type", "")
+                if "json" in ct or "text" in ct:
+                    try:
+                        first_resp_body = resp.json()
+                    except Exception:
+                        pass
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Failed to resolve: {exc}")
+
+    # If we got a 4008 / failed JSON response and the URL is a signaturev3 link,
+    # it's likely a music resolver URL that needs music-specific headers.
+    if "signaturev3" in clean_url:
+        try:
+            async with httpx.AsyncClient(
+                follow_redirects=False,
+                timeout=httpx.Timeout(15.0, connect=8.0),
+            ) as mc:
+                mr = await mc.get(clean_url, headers=_music_resolve_headers)
+                if mr.status_code in (301, 302, 303, 307, 308):
+                    location = mr.headers.get("location", "")
+                    if _check_redirect(location):
+                        return {"url": location}
+                elif mr.status_code == 200:
+                    # Some music endpoints return the CDN URL inside the JSON body.
+                    try:
+                        body = mr.json()
+                        data = body.get("data") or {}
+                        for key in ("play_url", "url", "download_url", "cdn_url", "uri"):
+                            val = data.get(key) or body.get(key)
+                            if isinstance(val, str) and val.startswith("http"):
+                                if any(d in val for d in _resolve_cdn_domains):
+                                    return {"url": val}
+                    except Exception:
+                        pass
+        except Exception:
+            pass  # Fall through to 422
 
     raise HTTPException(status_code=422, detail="Could not resolve CDN URL")
 
