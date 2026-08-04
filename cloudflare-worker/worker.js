@@ -1288,7 +1288,9 @@ function parseAweme(aweme) {
     } catch { return url; }
   };
 
-  const audioUrl = normalizeMusicCdn(musicUrl);
+  const audioUrl = isPhoto
+    ? (url1080 || normalizeMusicCdn(musicUrl))
+    : normalizeMusicCdn(musicUrl);
 
   // Thumbnail — pick highest resolution available.
   // Use .length check before || so an empty url_list [] (truthy but useless)
