@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
+import "nprogress/nprogress.css";
 
 // Unregister any previously installed Service Workers so stale caches
 // don't block users from seeing the latest deployed version.
