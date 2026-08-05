@@ -170,9 +170,6 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
         onResult?.({ info: null, profile, url: trimmed });
       } else {
         const videoInfo = await fetchVideoInfo(trimmed);
-        // Preload thumbnail so it's ready before the card renders
-        const preloadSrc = videoInfo.thumbnail || videoInfo.images?.[0];
-        if (preloadSrc) { const p = new Image(); p.src = preloadSrc; }
         setInfo(videoInfo);
         setStep("info-ready");
         onResult?.({ info: videoInfo, profile: null, url: trimmed });
