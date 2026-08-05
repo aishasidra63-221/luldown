@@ -274,11 +274,11 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
               display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
               borderRadius: 13, padding: "13px 0",
               background: zipDownloading
-                ? "rgba(20,184,166,0.4)"
-                : "linear-gradient(135deg,#0d9488,#0f766e)",
+                ? "rgba(217,119,6,0.4)"
+                : "linear-gradient(135deg,#d97706,#b45309)",
               border: "none", width: "100%",
               cursor: zipDownloading || photoDownloading !== null ? "wait" : "pointer",
-              boxShadow: zipDownloading ? "none" : "0 4px 16px rgba(13,148,136,0.4)",
+              boxShadow: zipDownloading ? "none" : "0 4px 16px rgba(217,119,6,0.35)",
               transition: "all 0.2s",
             }}
           >
