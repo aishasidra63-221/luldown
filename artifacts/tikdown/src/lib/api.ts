@@ -1,3 +1,8 @@
+import NProgress from "nprogress";
+import JSZip from "jszip";
+
+NProgress.configure({ showSpinner: false });
+
 // If WORKER_URL is set at build time, use the Cloudflare Worker directly.
 // Otherwise fall back to the local Python API proxy (for dev).
 declare const __WORKER_URL__: string;
@@ -466,13 +471,10 @@ export async function downloadAllAsZip(
   images: string[],
   meta?: { url?: string; title?: string; author?: string },
 ): Promise<void> {
-  const NProgress = (await import("nprogress")).default;
-  NProgress.configure({ showSpinner: false });
   NProgress.start();
 
   try {
-    const JSZip = (await import("jszip")).default;
-    const zip   = new JSZip();
+    const zip = new JSZip();
     const videoId = _extractVideoId(meta?.url || "") || Date.now().toString();
 
     await Promise.all(
