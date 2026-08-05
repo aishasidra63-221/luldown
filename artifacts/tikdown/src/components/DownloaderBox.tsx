@@ -307,7 +307,8 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
             {info.thumbnail && !isPhoto && (
               <div style={{ position:"relative" }}>
                 <img
-                  src={`${API_BASE}/api/proxy?url=${encodeURIComponent(info.thumbnail)}&filename=thumb.jpg`} alt=""
+                  src={info.thumbnail}
+                  alt=""
                   style={{ width:"100%", height:140, objectFit:"cover", display:"block" }}
                 />
               </div>
