@@ -471,34 +471,28 @@ export async function downloadAllAsZip(
   images: string[],
   meta?: { url?: string; title?: string; author?: string },
 ): Promise<void> {
-  NProgress.start();
+  const zip = new JSZip();
+  const videoId = _extractVideoId(meta?.url || "") || Date.now().toString();
 
-  try {
-    const zip = new JSZip();
-    const videoId = _extractVideoId(meta?.url || "") || Date.now().toString();
+  await Promise.all(
+    images.map(async (imgUrl, i) => {
+      const filename  = `slide_${i + 1}.jpg`;
+      const proxyUrl  = `${API_BASE}/api/proxy?url=${encodeURIComponent(imgUrl)}&filename=${encodeURIComponent(filename)}`;
+      const res = await fetch(proxyUrl);
+      if (!res.ok) throw new Error(`Failed to fetch image ${i + 1}`);
+      const blob = await res.blob();
+      zip.file(filename, blob);
+    }),
+  );
 
-    await Promise.all(
-      images.map(async (imgUrl, i) => {
-        const filename  = `slide_${i + 1}.jpg`;
-        const proxyUrl  = `${API_BASE}/api/proxy?url=${encodeURIComponent(imgUrl)}&filename=${encodeURIComponent(filename)}`;
-        const res = await fetch(proxyUrl);
-        if (!res.ok) throw new Error(`Failed to fetch image ${i + 1}`);
-        const blob = await res.blob();
-        zip.file(filename, blob);
-      }),
-    );
-
-    const zipBlob = await zip.generateAsync({ type: "blob" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(zipBlob);
-    a.download = `luldown_${videoId}_photos.zip`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
-  } finally {
-    NProgress.done();
-  }
+  const zipBlob = await zip.generateAsync({ type: "blob" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(zipBlob);
+  a.download = `luldown_${videoId}_photos.zip`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
 }
 
 // ─── History (localStorage) ───────────────────────────────────────────────────
