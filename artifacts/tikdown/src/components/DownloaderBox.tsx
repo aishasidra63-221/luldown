@@ -485,7 +485,7 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
                     borderRadius:13, padding:"13px 0",
                     background: zipDownloading
                       ? "rgba(217,119,6,0.4)"
-                      : "linear-gradient(135deg,#d97706,#b45309)",
+                      : "#d97706",
                     border:"none", width:"100%",
                     cursor: zipDownloading || photoDownloading !== null ? "wait" : "pointer",
                     boxShadow: zipDownloading ? "none" : "0 4px 16px rgba(217,119,6,0.35)",
