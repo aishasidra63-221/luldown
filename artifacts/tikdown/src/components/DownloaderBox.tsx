@@ -110,7 +110,7 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
 
   // ── Rate limiting: 3 requests within 5 seconds → block ──────────────────
   const RATE_WINDOW_MS  = 5000; // 5 second window
-  const RATE_MAX        = 3;    // max requests in that window
+  const RATE_MAX        = 2;    // max requests in that window
   const RATE_WAIT_SEC   = 5;    // how long to wait
   const reqTimestamps   = useRef<number[]>([]);
   const [rateLimited, setRateLimited]     = useState(false);
