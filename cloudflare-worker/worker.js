@@ -2012,29 +2012,33 @@ async function handleRequest(request, env, ctx) {
       // 2. musically-maliva-obj URLs — shard-specific; wrong shard returns a JSON
       //    error body (not HTTP 404), so we must shard-resolve via Render first.
       if (filename.endsWith(".mp3")) {
-        // All MP3 URLs go through Render shard probing.
-        // ies-music direct redirect was causing Akamai "Access Denied" blocks.
-        // Render resolves the correct CDN shard with proper TikTok App UA headers,
-        // then Worker redirects the browser to that final URL.
-        // This unified path handles both ies-music and musically-maliva-obj URLs.
+        // All MP3 URLs stream through Render's /api/proxy so the response
+        // carries Content-Disposition: attachment and the browser downloads
+        // the file instead of playing it inline.
+        // Render handles shard resolution (musically-maliva-obj / ies-music)
+        // internally with the correct TikTok App UA headers.
         if (env.RENDER_URL) {
-          const resolveUrl =
-            `${env.RENDER_URL.replace(/\/$/, "")}/resolve` +
-            `?url=${encodeURIComponent(cdnUrl)}`;
-          let resolveResp;
+          const renderProxyUrl =
+            `${env.RENDER_URL.replace(/\/$/, "")}/api/proxy` +
+            `?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
+          let renderResp;
           try {
-            resolveResp = await fetch(resolveUrl, {
+            renderResp = await fetch(renderProxyUrl, {
               headers: { "x-proxy-secret": env.PROXY_SECRET || "" },
             });
           } catch {
             return err("Proxy server unreachable. Please try again shortly.", 502, cors);
           }
-          let finalUrl = null;
-          if (resolveResp.ok) {
-            try { ({ url: finalUrl } = await resolveResp.json()); } catch { finalUrl = null; }
-          }
-          if (finalUrl) return Response.redirect(finalUrl, 302);
-          return err("Audio not available on any CDN shard.", 404, cors);
+          if (!renderResp.ok) return err("Audio unavailable.", renderResp.status, cors);
+          const respHeaders = new Headers({
+            ...cors,
+            "Content-Disposition": renderResp.headers.get("Content-Disposition") || `attachment; filename="${filename}"`,
+            "Content-Type":        renderResp.headers.get("Content-Type") || "audio/mpeg",
+            "Cache-Control":       "no-store",
+          });
+          const cl = renderResp.headers.get("Content-Length");
+          if (cl) respHeaders.set("Content-Length", cl);
+          return new Response(renderResp.body, { status: 200, headers: respHeaders });
         }
         // No RENDER_URL — fall back to direct redirect.
         return Response.redirect(cdnUrl, 302);
