@@ -113,6 +113,7 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
           <img
             src={info.thumbnail}
             referrerPolicy="no-referrer"
+            fetchPriority="high"
             alt={info.title ? `${info.author} — ${info.title.slice(0, 60)}` : "TikTok video thumbnail"}
             style={{ width: "100%", height: 140, objectFit: "cover", display: "block" }}
             onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
