@@ -110,7 +110,8 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
       {info.thumbnail && !isPhoto && (
         <div style={{ position: "relative" }}>
           <img
-            src={`${API_BASE}/api/proxy?url=${encodeURIComponent(info.thumbnail)}&filename=thumb.jpg`}
+            src={info.thumbnail}
+            referrerPolicy="no-referrer"
             alt={info.title ? `${info.author} — ${info.title.slice(0, 60)}` : "TikTok video thumbnail"}
             style={{ width: "100%", height: 140, objectFit: "cover", display: "block" }}
             onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
