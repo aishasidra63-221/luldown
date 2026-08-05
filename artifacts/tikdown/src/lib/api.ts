@@ -458,6 +458,39 @@ export async function downloadPhoto(
   await _cdnDownload(cdnUrl, filename);
 }
 
+// ─── Download All as ZIP (browser-side, JSZip) ───────────────────────────────
+// Fetches every image through the proxy (to bypass TikTok CDN referer blocks),
+// zips them in-browser with JSZip, then triggers a single ZIP download.
+// Render load: zero.  Worker calls: N (one per image, same as individual saves).
+export async function downloadAllAsZip(
+  images: string[],
+  meta?: { url?: string; title?: string; author?: string },
+): Promise<void> {
+  const JSZip = (await import("jszip")).default;
+  const zip   = new JSZip();
+  const videoId = _extractVideoId(meta?.url || "") || Date.now().toString();
+
+  await Promise.all(
+    images.map(async (imgUrl, i) => {
+      const filename  = `slide_${i + 1}.jpg`;
+      const proxyUrl  = `${API_BASE}/api/proxy?url=${encodeURIComponent(imgUrl)}&filename=${encodeURIComponent(filename)}`;
+      const res = await fetch(proxyUrl);
+      if (!res.ok) throw new Error(`Failed to fetch image ${i + 1}`);
+      const blob = await res.blob();
+      zip.file(filename, blob);
+    }),
+  );
+
+  const zipBlob = await zip.generateAsync({ type: "blob" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(zipBlob);
+  a.download = `luldown_${videoId}_photos.zip`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+}
+
 // ─── History (localStorage) ───────────────────────────────────────────────────
 
 export async function fetchHistory(): Promise<HistoryItem[]> {

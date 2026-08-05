@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { fetchVideoInfo, downloadVideo, downloadPhoto, VideoInfo, DownloadFormat, isProfileUrl, fetchProfileInfo, ProfileInfo, API_BASE } from "@/lib/api";
+import { fetchVideoInfo, downloadVideo, downloadPhoto, downloadAllAsZip, VideoInfo, DownloadFormat, isProfileUrl, fetchProfileInfo, ProfileInfo, API_BASE } from "@/lib/api";
 import ProfileResults from "@/components/ProfileResults";
 import VideoResultCard from "@/components/VideoResultCard";
 import {
@@ -106,6 +106,7 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
   const [profileInfo, setProfileInfo] = useState<ProfileInfo | null>(null);
   const [error, setError] = useState("");
   const [photoDownloading, setPhotoDownloading] = useState<number | null>(null);
+  const [zipDownloading, setZipDownloading] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
   // ── Rate limiting: 3 requests within 5 seconds → block ──────────────────
@@ -464,6 +465,39 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
                     </div>
                   ))}
                 </div>
+
+                {/* ── Download All as ZIP ── */}
+                <button
+                  disabled={zipDownloading || photoDownloading !== null}
+                  onClick={async () => {
+                    setZipDownloading(true);
+                    try {
+                      await downloadAllAsZip(info.images!, { url: url.trim(), title: info.title, author: info.author });
+                    } catch (e: any) {
+                      setError(e.message || "ZIP download failed"); setStep("error");
+                    } finally {
+                      setZipDownloading(false);
+                    }
+                  }}
+                  style={{
+                    display:"flex", alignItems:"center", justifyContent:"center", gap:7,
+                    borderRadius:13, padding:"13px 0",
+                    background: zipDownloading
+                      ? "rgba(20,184,166,0.4)"
+                      : "linear-gradient(135deg,#0d9488,#0f766e)",
+                    border:"none", width:"100%",
+                    cursor: zipDownloading || photoDownloading !== null ? "wait" : "pointer",
+                    boxShadow: zipDownloading ? "none" : "0 4px 16px rgba(13,148,136,0.4)",
+                    transition:"all 0.2s",
+                  }}
+                >
+                  <Download size={15} color="#fff" strokeWidth={2.4} />
+                  <span style={{ fontSize:13.5, fontWeight:700, color:"#fff" }}>
+                    {zipDownloading
+                      ? `Preparing ZIP… (${info.images!.length} photos)`
+                      : `Download All as ZIP  ·  ${info.images!.length} Photos`}
+                  </span>
+                </button>
 
                 {/* ── Download as Video ── */}
                 {info.download_urls?.mp4_1080 || info.download_urls?.mp4_720 ? (
