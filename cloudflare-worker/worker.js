@@ -1277,30 +1277,12 @@ function parseAweme(aweme) {
     || (typeof musicPlayUrl === "string" ? musicPlayUrl : "")
     || musicPlayUrl.uri || "";
 
-  // Audio URL — use the best available CDN URL from TikTok's music.play_url list.
-  // resolverUrl() prefers signaturev3 links when present (stable); otherwise
-  // falls back to the first CDN URL. aweme/v1/play/?data_type=4 is NOT used here
-  // because it requires signed Android auth headers that the Render proxy cannot
-  // provide — passing it through would result in TikTok returning 400.
-  //
-  // For photo posts: url1080 = video.play_addr which has a signaturev3 link.
-  //
-  // musically-maliva-obj URLs are shard-specific (sf16-ies-music-va, sf19, etc.).
-  // Anonymous (non-logged-in) phones only get shard-specific hosts in url_list.
-  // Replace the host with v16-ies-music.tiktokcdn.com — the canonical, globally
-  // accessible music CDN that is not shard-restricted.
-  const normalizeMusicCdn = (url) => {
-    if (!url || !url.includes("musically-maliva-obj")) return url;
-    try {
-      const u = new URL(url);
-      u.hostname = "v16-ies-music.tiktokcdn.com";
-      return u.toString();
-    } catch { return url; }
-  };
-
+  // Audio URL — pass TikTok's URL exactly as received; Render /proxy handles
+  // shard resolution (sf1–sf20) and streaming with the correct headers.
+  // For photo posts: prefer url1080 (compiled slideshow audio track).
   const audioUrl = isPhoto
-    ? (url1080 || normalizeMusicCdn(musicUrl))
-    : normalizeMusicCdn(musicUrl);
+    ? (url1080 || musicUrl)
+    : musicUrl;
 
   // Thumbnail — pick highest resolution available.
   // Use .length check before || so an empty url_list [] (truthy but useless)
