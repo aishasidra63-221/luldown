@@ -216,22 +216,18 @@ function _extractVideoId(url: string): string {
   return Date.now().toString();
 }
 
-let _downloadQueue: Promise<void> = Promise.resolve();
-
 async function _cdnDownload(cdnUrl: string, filename: string): Promise<void> {
   const proxyUrl =
     `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
-
-  // window.location.href triggers the browser's native loading bar.
-  // Downloads are queued 1.5s apart so the browser doesn't block the second
-  // navigation while the first is still "in-flight".
-  _downloadQueue = _downloadQueue.then(
-    () =>
-      new Promise<void>(resolve => {
-        window.location.href = proxyUrl;
-        setTimeout(resolve, 1500);
-      }),
-  );
+  // <a> click triggers the browser's native download bar without navigating
+  // the page, so multiple downloads (mp3, mp4, images) can fire independently
+  // and simultaneously without a shared queue.
+  const a = document.createElement("a");
+  a.href = proxyUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
 // ─── Profile URL detection ────────────────────────────────────────────────────
