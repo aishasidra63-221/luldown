@@ -90,12 +90,21 @@ def proxy():
         else:
             return "Music not found on any CDN shard", 404
 
+    # Set Sec-Fetch-Dest correctly per file type so strict CDN nodes don't 403.
+    if lower_name.endswith((".jpg", ".jpeg", ".webp", ".png")):
+        fetch_dest = "image"
+    elif lower_name.endswith(".mp3"):
+        fetch_dest = "audio"
+    else:
+        fetch_dest = "video"
+    request_headers = {**CDN_HEADERS, "Sec-Fetch-Dest": fetch_dest}
+
     # Open the upstream connection before building the Flask Response so we
     # know the real Content-Type (from the CDN) up front, instead of always
     # forwarding a hardcoded/guessed type.
     client = httpx.Client(follow_redirects=True, timeout=httpx.Timeout(120.0, connect=15.0))
     try:
-        req = client.build_request("GET", url, headers=CDN_HEADERS)
+        req = client.build_request("GET", url, headers=request_headers)
         resp = client.send(req, stream=True)
     except Exception:
         client.close()
