@@ -285,7 +285,7 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
             <span style={{ fontSize: 13.5, fontWeight: 700, color: "#fff" }}>
               {zipDownloading
                 ? `Preparing ZIP… (${info.images!.length} photos)`
-                : `Download All as ZIP  ·  ${info.images!.length} Photos`}
+                : `Download All ZIP  ·  ${info.images!.length} Photos`}
             </span>
           </button>
 
