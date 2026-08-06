@@ -219,15 +219,10 @@ function _extractVideoId(url: string): string {
 async function _cdnDownload(cdnUrl: string, filename: string): Promise<void> {
   const proxyUrl =
     `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
-  // <a> click triggers the browser's native download bar without navigating
-  // the page, so multiple downloads (mp3, mp4, images) can fire independently
-  // and simultaneously without a shared queue.
-  const a = document.createElement("a");
-  a.href = proxyUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  // window.location.href triggers the browser's native top loading bar.
+  // No queue — Content-Disposition downloads don't navigate the page so
+  // multiple rapid calls are safe and fully independent.
+  window.location.href = proxyUrl;
 }
 
 // ─── Profile URL detection ────────────────────────────────────────────────────
@@ -467,12 +462,7 @@ export async function downloadPhoto(
     downloaded_at: Math.floor(Date.now() / 1000),
   });
   const proxyUrl = `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
-  const a = document.createElement("a");
-  a.href = proxyUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  window.location.href = proxyUrl;
 }
 
 // ─── Download All as ZIP (browser-side, JSZip) ───────────────────────────────
