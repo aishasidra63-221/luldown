@@ -307,14 +307,15 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
             {!isPhoto && (
               <div style={{
                 position:"relative", height:140, overflow:"hidden",
-                background:"linear-gradient(135deg, #1e1050 0%, #0f0a2e 100%)",
+                background:"#0a0a0a",
                 display:"flex", alignItems:"center", justifyContent:"center",
               }}>
+                <Image size={36} color="rgba(255,255,255,0.15)" strokeWidth={1.5} />
                 {info.thumbnail && (
                   <img
                     src={info.thumbnail}
                     alt=""
-                    style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}
+                    style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", display:"block" }}
                     onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
                   />
                 )}
