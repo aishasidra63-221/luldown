@@ -220,15 +220,16 @@ async function _cdnDownload(cdnUrl: string, filename: string): Promise<void> {
   const proxyUrl =
     `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
 
-  // Use a hidden <a> click instead of window.location.href so multiple
-  // downloads can be triggered sequentially without the browser blocking
-  // the second navigation while the first is still "in-flight".
+  // Show the browser's blue progress bar, then trigger download via hidden <a>
+  // click (not window.location.href) so multiple downloads work sequentially.
+  NProgress.start();
   const a = document.createElement("a");
   a.href = proxyUrl;
   a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+  setTimeout(() => NProgress.done(), 800);
 }
 
 // ─── Profile URL detection ────────────────────────────────────────────────────
