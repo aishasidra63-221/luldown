@@ -220,10 +220,15 @@ async function _cdnDownload(cdnUrl: string, filename: string): Promise<void> {
   const proxyUrl =
     `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
 
-  // Navigate to the proxy URL — browser shows its native loading bar,
-  // detects Content-Disposition: attachment, saves the file, and keeps
-  // the current page exactly as-is.
-  window.location.href = proxyUrl;
+  // Use a hidden <a> click instead of window.location.href so multiple
+  // downloads can be triggered sequentially without the browser blocking
+  // the second navigation while the first is still "in-flight".
+  const a = document.createElement("a");
+  a.href = proxyUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
 // ─── Profile URL detection ────────────────────────────────────────────────────
