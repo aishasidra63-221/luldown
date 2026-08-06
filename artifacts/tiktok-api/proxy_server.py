@@ -82,7 +82,8 @@ def proxy():
 
     # For music CDN URLs — shard prefix (sf1–sf20) is not fixed.
     # Resolve the correct shard before streaming.
-    if "musically-maliva-obj" in url:
+    # Skip resolution for canonical v16-ies-music URLs — stream them directly.
+    if "musically-maliva-obj" in url and MUSIC_PATH_RE.match(url):
         resolved = resolve_music_url(url)
         if resolved:
             url = resolved
