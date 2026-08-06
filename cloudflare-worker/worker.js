@@ -2052,6 +2052,34 @@ async function handleRequest(request, env, ctx) {
         return Response.redirect(finalUrl, 302);
       }
 
+      // Path A-image: Route image downloads through Render /proxy (same as MP3)
+      // so Render's IP hits TikTok CDN instead of Cloudflare's IP, which gets
+      // intermittent 403s on image CDN nodes.
+      const isImage = /\.(jpg|jpeg|webp|png)$/i.test(filename);
+      if (env.RENDER_URL && isImage) {
+        const renderProxyUrl =
+          `${env.RENDER_URL.replace(/\/$/, "")}/proxy` +
+          `?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
+        let renderResp;
+        try {
+          renderResp = await fetch(renderProxyUrl, {
+            headers: { "x-proxy-secret": env.PROXY_SECRET || "" },
+          });
+        } catch {
+          return err("Proxy server unreachable. Please try again shortly.", 502, cors);
+        }
+        if (!renderResp.ok) return err(`Image unavailable (${renderResp.status}).`, renderResp.status, cors);
+        const imgHeaders = new Headers({
+          ...cors,
+          "Content-Disposition": renderResp.headers.get("Content-Disposition") || `attachment; filename="${filename}"`,
+          "Content-Type":        renderResp.headers.get("Content-Type") || "image/jpeg",
+          "Cache-Control":       "no-store",
+        });
+        const imgCl = renderResp.headers.get("Content-Length");
+        if (imgCl) imgHeaders.set("Content-Length", imgCl);
+        return new Response(renderResp.body, { status: 200, headers: imgHeaders });
+      }
+
       // Path B: Direct CDN fetch — only works if TikTok CDN hasn't blocked this Worker's IP.
       // Kept as fallback for dev/testing. In production RENDER_URL must be set.
       let upstream;
