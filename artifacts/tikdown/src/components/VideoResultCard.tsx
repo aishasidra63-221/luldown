@@ -59,7 +59,7 @@ interface Props {
 }
 
 export default function VideoResultCard({ info, url, highlightFormat, onError }: Props) {
-  const [photoDownloading, setPhotoDownloading] = useState<Set<number>>(new Set());
+  const [photoDownloading, setPhotoDownloading] = useState<number | null>(null);
   const [zipDownloading, setZipDownloading] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -75,18 +75,13 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
     }
   };
 
-  const handlePhotoDownload = async (imgUrl: string, index: number) => {
-    setPhotoDownloading(prev => new Set(prev).add(index));
-    try {
-      await downloadPhoto(imgUrl, index, {
-        url:       url,
-        title:     info.title,
-        author:    info.author,
-        thumbnail: info.thumbnail || info?.images?.[0] || "",
-      });
-    } finally {
-      setPhotoDownloading(prev => { const s = new Set(prev); s.delete(index); return s; });
-    }
+  const handlePhotoDownload = (imgUrl: string, index: number) => {
+    downloadPhoto(imgUrl, index, {
+      url:       url,
+      title:     info.title,
+      author:    info.author,
+      thumbnail: info.thumbnail || info?.images?.[0] || "",
+    }).catch((e: any) => onError?.(e.message || "Download failed"));
   };
 
   const isPhoto = info.is_photo && (info.images?.length ?? 0) > 0;
@@ -245,15 +240,12 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
                 {/* Individual Save button */}
                 <button
                   onClick={() => handlePhotoDownload(imgUrl, i)}
-                  disabled={photoDownloading.has(i)}
                   style={{
                     width: 100, padding: "6px 0",
                     borderRadius: 8, border: "none",
-                    background: photoDownloading.has(i)
-                      ? "rgba(124,58,237,0.5)"
-                      : "linear-gradient(135deg,#7c3aed,#6d28d9)",
+                    background: "linear-gradient(135deg,#7c3aed,#6d28d9)",
                     color: "#fff", fontSize: 11, fontWeight: 700,
-                    cursor: photoDownloading.has(i) ? "wait" : "pointer",
+                    cursor: "pointer",
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
                   }}
                 >
@@ -266,7 +258,7 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
 
           {/* ── Download All as ZIP ── */}
           <button
-            disabled={zipDownloading || photoDownloading.size > 0}
+            disabled={zipDownloading}
             onClick={async () => {
               setZipDownloading(true);
               try {

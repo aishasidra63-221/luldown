@@ -452,8 +452,9 @@ export async function downloadVideo(
   await _cdnDownload(cdnUrl, filename);
 }
 
-// Photo download — fetches through proxy as a blob so multiple images can be
-// saved independently and simultaneously (no shared queue, no location.href).
+// Photo download — triggers browser-native download via <a> click so the
+// browser shows its own download bar immediately. No queue, no fetch+blob,
+// so multiple images can be saved in rapid succession independently.
 export async function downloadPhoto(
   cdnUrl: string,
   index: number,
@@ -470,16 +471,12 @@ export async function downloadPhoto(
     downloaded_at: Math.floor(Date.now() / 1000),
   });
   const proxyUrl = `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
-  const res = await fetch(proxyUrl);
-  if (!res.ok) throw new Error(`Image unavailable (${res.status})`);
-  const blob = await res.blob();
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
+  a.href = proxyUrl;
   a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
 }
 
 // ─── Download All as ZIP (browser-side, JSZip) ───────────────────────────────
