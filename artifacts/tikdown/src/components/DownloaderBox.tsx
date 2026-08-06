@@ -304,13 +304,20 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
           }}>
 
             {/* ── Thumbnail (hidden for photo slideshows) ── */}
-            {info.thumbnail && !isPhoto && (
-              <div style={{ position:"relative" }}>
-                <img
-                  src={info.thumbnail}
-                  alt=""
-                  style={{ width:"100%", height:140, objectFit:"cover", display:"block" }}
-                />
+            {!isPhoto && (
+              <div style={{
+                position:"relative", height:140, overflow:"hidden",
+                background:"linear-gradient(135deg, #1e1050 0%, #0f0a2e 100%)",
+                display:"flex", alignItems:"center", justifyContent:"center",
+              }}>
+                {info.thumbnail && (
+                  <img
+                    src={info.thumbnail}
+                    alt=""
+                    style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}
+                    onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  />
+                )}
               </div>
             )}
 
