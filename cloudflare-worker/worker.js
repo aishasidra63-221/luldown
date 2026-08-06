@@ -2019,7 +2019,7 @@ async function handleRequest(request, env, ctx) {
         // internally with the correct TikTok App UA headers.
         if (env.RENDER_URL) {
           const renderProxyUrl =
-            `${env.RENDER_URL.replace(/\/$/, "")}/api/proxy` +
+            `${env.RENDER_URL.replace(/\/$/, "")}/proxy` +
             `?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
           let renderResp;
           try {
