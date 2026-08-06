@@ -216,20 +216,22 @@ function _extractVideoId(url: string): string {
   return Date.now().toString();
 }
 
+let _downloadQueue: Promise<void> = Promise.resolve();
+
 async function _cdnDownload(cdnUrl: string, filename: string): Promise<void> {
   const proxyUrl =
     `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
 
-  // Show the browser's blue progress bar, then trigger download via hidden <a>
-  // click (not window.location.href) so multiple downloads work sequentially.
-  NProgress.start();
-  const a = document.createElement("a");
-  a.href = proxyUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => NProgress.done(), 800);
+  // window.location.href triggers the browser's native loading bar.
+  // Downloads are queued 1.5s apart so the browser doesn't block the second
+  // navigation while the first is still "in-flight".
+  _downloadQueue = _downloadQueue.then(
+    () =>
+      new Promise<void>(resolve => {
+        window.location.href = proxyUrl;
+        setTimeout(resolve, 1500);
+      }),
+  );
 }
 
 // ─── Profile URL detection ────────────────────────────────────────────────────
