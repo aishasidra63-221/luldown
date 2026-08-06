@@ -452,7 +452,8 @@ export async function downloadVideo(
   await _cdnDownload(cdnUrl, filename);
 }
 
-// Photo CDN-direct download — no server call at all, pure CDN
+// Photo download — fetches through proxy as a blob so multiple images can be
+// saved independently and simultaneously (no shared queue, no location.href).
 export async function downloadPhoto(
   cdnUrl: string,
   index: number,
@@ -468,7 +469,17 @@ export async function downloadPhoto(
     format:        "photo",
     downloaded_at: Math.floor(Date.now() / 1000),
   });
-  await _cdnDownload(cdnUrl, filename);
+  const proxyUrl = `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
+  const res = await fetch(proxyUrl);
+  if (!res.ok) throw new Error(`Image unavailable (${res.status})`);
+  const blob = await res.blob();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
 }
 
 // ─── Download All as ZIP (browser-side, JSZip) ───────────────────────────────

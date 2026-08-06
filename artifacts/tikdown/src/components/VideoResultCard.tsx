@@ -59,7 +59,7 @@ interface Props {
 }
 
 export default function VideoResultCard({ info, url, highlightFormat, onError }: Props) {
-  const [photoDownloading, setPhotoDownloading] = useState<number | null>(null);
+  const [photoDownloading, setPhotoDownloading] = useState<Set<number>>(new Set());
   const [zipDownloading, setZipDownloading] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -76,7 +76,7 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
   };
 
   const handlePhotoDownload = async (imgUrl: string, index: number) => {
-    setPhotoDownloading(index);
+    setPhotoDownloading(prev => new Set(prev).add(index));
     try {
       await downloadPhoto(imgUrl, index, {
         url:       url,
@@ -84,8 +84,9 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
         author:    info.author,
         thumbnail: info.thumbnail || info?.images?.[0] || "",
       });
+    } finally {
+      setPhotoDownloading(prev => { const s = new Set(prev); s.delete(index); return s; });
     }
-    finally { setPhotoDownloading(null); }
   };
 
   const isPhoto = info.is_photo && (info.images?.length ?? 0) > 0;
@@ -244,15 +245,15 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
                 {/* Individual Save button */}
                 <button
                   onClick={() => handlePhotoDownload(imgUrl, i)}
-                  disabled={photoDownloading !== null}
+                  disabled={photoDownloading.has(i)}
                   style={{
                     width: 100, padding: "6px 0",
                     borderRadius: 8, border: "none",
-                    background: photoDownloading === i
+                    background: photoDownloading.has(i)
                       ? "rgba(124,58,237,0.5)"
                       : "linear-gradient(135deg,#7c3aed,#6d28d9)",
                     color: "#fff", fontSize: 11, fontWeight: 700,
-                    cursor: photoDownloading !== null ? "wait" : "pointer",
+                    cursor: photoDownloading.has(i) ? "wait" : "pointer",
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
                   }}
                 >
@@ -265,7 +266,7 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
 
           {/* ── Download All as ZIP ── */}
           <button
-            disabled={zipDownloading || photoDownloading !== null}
+            disabled={zipDownloading || photoDownloading.size > 0}
             onClick={async () => {
               setZipDownloading(true);
               try {
