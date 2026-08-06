@@ -1339,7 +1339,7 @@ function parseAweme(aweme) {
     videoUrl720:   isPhoto ? ""            : url720,
     audioUrl,
     musicId,
-    thumbUrl:      toStaticThumb(thumbnail),
+    thumbUrl:      thumbnail,
     duration:      video.duration || 0,
     view_count:    stats.play_count   || stats.playCount   || 0,
     like_count:    stats.digg_count   || stats.diggCount   || 0,
