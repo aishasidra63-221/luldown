@@ -216,13 +216,22 @@ function _extractVideoId(url: string): string {
   return Date.now().toString();
 }
 
+let _downloadQueue: Promise<void> = Promise.resolve();
+
 async function _cdnDownload(cdnUrl: string, filename: string): Promise<void> {
   const proxyUrl =
     `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
-  // window.location.href triggers the browser's native top loading bar.
-  // No queue — Content-Disposition downloads don't navigate the page so
-  // multiple rapid calls are safe and fully independent.
-  window.location.href = proxyUrl;
+
+  // window.location.href triggers the browser's native loading bar.
+  // Downloads are queued 1.5s apart so the browser doesn't block the second
+  // navigation while the first is still "in-flight".
+  _downloadQueue = _downloadQueue.then(
+    () =>
+      new Promise<void>(resolve => {
+        window.location.href = proxyUrl;
+        setTimeout(resolve, 1500);
+      }),
+  );
 }
 
 // ─── Profile URL detection ────────────────────────────────────────────────────
@@ -443,9 +452,7 @@ export async function downloadVideo(
   await _cdnDownload(cdnUrl, filename);
 }
 
-// Photo download — triggers browser-native download via <a> click so the
-// browser shows its own download bar immediately. No queue, no fetch+blob,
-// so multiple images can be saved in rapid succession independently.
+// Photo CDN-direct download — no server call at all, pure CDN
 export async function downloadPhoto(
   cdnUrl: string,
   index: number,
@@ -461,8 +468,7 @@ export async function downloadPhoto(
     format:        "photo",
     downloaded_at: Math.floor(Date.now() / 1000),
   });
-  const proxyUrl = `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
-  window.location.href = proxyUrl;
+  await _cdnDownload(cdnUrl, filename);
 }
 
 // ─── Download All as ZIP (browser-side, JSZip) ───────────────────────────────

@@ -75,13 +75,17 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
     }
   };
 
-  const handlePhotoDownload = (imgUrl: string, index: number) => {
-    downloadPhoto(imgUrl, index, {
-      url:       url,
-      title:     info.title,
-      author:    info.author,
-      thumbnail: info.thumbnail || info?.images?.[0] || "",
-    }).catch((e: any) => onError?.(e.message || "Download failed"));
+  const handlePhotoDownload = async (imgUrl: string, index: number) => {
+    setPhotoDownloading(index);
+    try {
+      await downloadPhoto(imgUrl, index, {
+        url:       url,
+        title:     info.title,
+        author:    info.author,
+        thumbnail: info.thumbnail || info?.images?.[0] || "",
+      });
+    }
+    finally { setPhotoDownloading(null); }
   };
 
   const isPhoto = info.is_photo && (info.images?.length ?? 0) > 0;
@@ -240,12 +244,15 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
                 {/* Individual Save button */}
                 <button
                   onClick={() => handlePhotoDownload(imgUrl, i)}
+                  disabled={photoDownloading !== null}
                   style={{
                     width: 100, padding: "6px 0",
                     borderRadius: 8, border: "none",
-                    background: "linear-gradient(135deg,#7c3aed,#6d28d9)",
+                    background: photoDownloading === i
+                      ? "rgba(124,58,237,0.5)"
+                      : "linear-gradient(135deg,#7c3aed,#6d28d9)",
                     color: "#fff", fontSize: 11, fontWeight: 700,
-                    cursor: "pointer",
+                    cursor: photoDownloading !== null ? "wait" : "pointer",
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
                   }}
                 >
@@ -258,7 +265,7 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
 
           {/* ── Download All as ZIP ── */}
           <button
-            disabled={zipDownloading}
+            disabled={zipDownloading || photoDownloading !== null}
             onClick={async () => {
               setZipDownloading(true);
               try {
