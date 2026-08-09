@@ -517,11 +517,18 @@ export async function downloadAllAsZip(
   const zip = new JSZip();
   const videoId = _extractVideoId(meta?.url || "") || Date.now().toString();
 
+  // Use SW (browser IP) if active — same as individual Save buttons so TikTok
+  // CDN never sees a datacenter address.  Fall back to Render proxy if SW is
+  // not controlling this page yet (e.g. first load before SW activates).
+  const useSW = "serviceWorker" in navigator && !!navigator.serviceWorker.controller;
+
   await Promise.all(
     images.map(async (imgUrl, i) => {
-      const filename  = `slide_${i + 1}.jpg`;
-      const proxyUrl  = `${API_BASE}/api/proxy?url=${encodeURIComponent(imgUrl)}&filename=${encodeURIComponent(filename)}`;
-      const res = await fetch(proxyUrl);
+      const filename = `slide_${i + 1}.jpg`;
+      const fetchUrl = useSW
+        ? `/sw-download?url=${encodeURIComponent(imgUrl)}&filename=${encodeURIComponent(filename)}`
+        : `${API_BASE}/api/proxy?url=${encodeURIComponent(imgUrl)}&filename=${encodeURIComponent(filename)}`;
+      const res = await fetch(fetchUrl);
       if (!res.ok) throw new Error(`Failed to fetch image ${i + 1}`);
       const blob = await res.blob();
       zip.file(filename, blob);
