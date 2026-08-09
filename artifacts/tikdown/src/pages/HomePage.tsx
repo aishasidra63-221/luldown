@@ -201,7 +201,12 @@ export default function HomePage() {
   };
 
   const resultRef = useRef<HTMLDivElement>(null);
+  const isFirstMount = useRef(true);
   useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
     if (result) {
       setTimeout(() => {
         resultRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
