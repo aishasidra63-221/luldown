@@ -105,7 +105,7 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
   const [info, setInfo] = useState<VideoInfo | null>(isDemo ? DEMO_INFO : null);
   const [profileInfo, setProfileInfo] = useState<ProfileInfo | null>(null);
   const [error, setError] = useState("");
-  const [photoDownloading, setPhotoDownloading] = useState<number | null>(null);
+  const [photoDownloading, setPhotoDownloading] = useState<Set<number>>(new Set());
   const [zipDownloading, setZipDownloading] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -194,9 +194,9 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
   };
 
   const handlePhotoDownload = async (imgUrl: string, index: number) => {
-    setPhotoDownloading(index);
+    setPhotoDownloading(prev => new Set(prev).add(index));
     try { await downloadPhoto(imgUrl, index); }
-    finally { setPhotoDownloading(null); }
+    finally { setPhotoDownloading(prev => { const s = new Set(prev); s.delete(index); return s; }); }
   };
 
   const handlePaste = async () => {
@@ -456,15 +456,14 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
                       {/* Individual Save button */}
                       <button
                         onClick={() => handlePhotoDownload(imgUrl, i)}
-                        disabled={photoDownloading !== null}
                         style={{
                           width:100, padding:"6px 0",
                           borderRadius:8, border:"none",
-                          background: photoDownloading === i
+                          background: photoDownloading.has(i)
                             ? "rgba(124,58,237,0.5)"
                             : "linear-gradient(135deg,#7c3aed,#6d28d9)",
                           color:"#fff", fontSize:11, fontWeight:700,
-                          cursor: photoDownloading !== null ? "wait" : "pointer",
+                          cursor: "pointer",
                           display:"flex", alignItems:"center", justifyContent:"center", gap:4,
                         }}
                       >
@@ -477,7 +476,7 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
 
                 {/* ── Download All as ZIP ── */}
                 <button
-                  disabled={zipDownloading || photoDownloading !== null}
+                  disabled={zipDownloading}
                   onClick={async () => {
                     setZipDownloading(true);
                     try {
@@ -495,7 +494,7 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
                       ? "rgba(217,119,6,0.4)"
                       : "#d97706",
                     border:"none", width:"100%",
-                    cursor: zipDownloading || photoDownloading !== null ? "wait" : "pointer",
+                    cursor: zipDownloading ? "wait" : "pointer",
                     boxShadow: zipDownloading ? "none" : "0 4px 16px rgba(217,119,6,0.35)",
                     transition:"all 0.2s",
                   }}
