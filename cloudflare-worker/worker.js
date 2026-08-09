@@ -1219,9 +1219,23 @@ function resolverUrl(urlList) {
 
 // Music-specific picker: signaturev3 avoid karo — TikTok music ke liye 4008 deta hai.
 // Python backend ke _music_url() jaisa: ies-music → musically-maliva-obj → non-signaturev3 → fallback.
+// Used for slideshow/photo MP3 (goes through Render proxy — unchanged).
 function musicPickUrl(urlList) {
   if (!urlList || !Array.isArray(urlList)) return "";
   return urlList.find(u => u && u.includes("ies-music"))
+    || urlList.find(u => u && u.includes("musically-maliva-obj"))
+    || urlList.find(u => u && !u.includes("signaturev3"))
+    || firstUrl(urlList);
+}
+
+// Video-specific picker: same as musicPickUrl but skips ies-music-ttp-dup-us
+// shard paths (sf16-ies-music-va.tiktokcdn.com/obj/ies-music-ttp-dup-us/...)
+// which are unreliable and return 403/broken responses.
+// Prefers time-signed ies-music CDN URLs (v16-ies-music.tiktokcdn-us.com with bt=/ft=)
+// which work directly from the browser. Used ONLY for video result card MP3.
+function videoMusicPickUrl(urlList) {
+  if (!urlList || !Array.isArray(urlList)) return "";
+  return urlList.find(u => u && u.includes("ies-music") && !u.includes("ies-music-ttp-dup-us"))
     || urlList.find(u => u && u.includes("musically-maliva-obj"))
     || urlList.find(u => u && !u.includes("signaturev3"))
     || firstUrl(urlList);
@@ -1294,9 +1308,14 @@ function parseAweme(aweme) {
   // music.play_url (snake) or music.playUrl (camel) → url_list / urlList array
   const musicPlayUrl = music.play_url || music.playUrl || {};
   const audioUrlList = musicPlayUrl.url_list || musicPlayUrl.urlList || [];
-  const musicUrl = musicPickUrl(Array.isArray(audioUrlList) ? audioUrlList : [])
-    || (typeof musicPlayUrl === "string" ? musicPlayUrl : "")
-    || musicPlayUrl.uri || "";
+  const cleanAudioList = Array.isArray(audioUrlList) ? audioUrlList : [];
+  const fallbackAudio  = (typeof musicPlayUrl === "string" ? musicPlayUrl : "") || musicPlayUrl.uri || "";
+
+  // Slideshow: musicPickUrl (unchanged — goes through Render proxy).
+  // Video:     videoMusicPickUrl — skips ies-music-ttp-dup-us, prefers time-signed CDN URL.
+  const musicUrl = isPhoto
+    ? (musicPickUrl(cleanAudioList) || fallbackAudio)
+    : (videoMusicPickUrl(cleanAudioList) || fallbackAudio);
 
   // Audio URL — pass TikTok's URL exactly as received; Render /proxy handles
   // shard resolution (sf1–sf20) and streaming with the correct headers.
