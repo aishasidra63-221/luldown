@@ -473,18 +473,22 @@ export async function downloadPhoto(
   });
 
   // SW path: browser's own IP → no 403, native download bar preserved.
-  // window.location.href triggers a navigate-mode fetch which the SW intercepts
-  // correctly. When the response carries Content-Disposition: attachment, Chrome
-  // cancels the navigation and downloads the file instead — the page URL never
-  // actually changes and the JS queue keeps running normally.
+  // fetch() to /sw-download lets the SW intercept with browser's IP.
+  // The blob is turned into an ObjectURL and clicked via <a download> —
+  // no navigation is started so every click works independently.
   if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
     const swUrl = `/sw-download?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
-    _downloadQueue = _downloadQueue.then(
-      () => new Promise<void>(resolve => {
-        window.location.href = swUrl;
-        setTimeout(resolve, 50);
-      }),
-    );
+    const resp = await fetch(swUrl);
+    if (!resp.ok) throw new Error(`Image unavailable (${resp.status})`);
+    const blob = await resp.blob();
+    const objUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(objUrl), 10_000);
     return;
   }
 
