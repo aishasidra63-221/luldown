@@ -3,6 +3,14 @@ import App from "./App";
 import "./index.css";
 import "nprogress/nprogress.css";
 
+// Disable browser scroll restoration — Chrome otherwise restores the last
+// scroll position when the user closes and reopens the tab, landing them
+// mid-page even though there is nothing there. We always start at the top.
+if (typeof window !== "undefined") {
+  history.scrollRestoration = "manual";
+  window.scrollTo(0, 0);
+}
+
 // Register the image-download service worker.
 // It intercepts /sw-download requests so individual photo saves use the
 // browser's own IP (no Render proxy needed) while still triggering the
