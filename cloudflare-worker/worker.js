@@ -1236,11 +1236,14 @@ function musicPickUrl(urlList) {
 // Used ONLY for video result card MP3; slideshow uses musicPickUrl.
 function videoMusicPickUrl(urlList) {
   if (!urlList || !Array.isArray(urlList)) return "";
-  // 1st choice: ies-music CDN, time-signed (has bt= param), NOT an /obj/ path
-  return urlList.find(u => u && u.includes("ies-music") && u.includes("bt=") && !u.includes("/obj/"))
-    // 2nd choice: any ies-music URL that is NOT under /obj/
+  // 1st choice: any URL with bt= (time-signed by TikTok — works from any IP,
+  // regardless of path). bt= is the only thing that matters; /obj/ check was
+  // too strict and was incorrectly rejecting valid signed URLs like
+  // ies-music.tiktokcdn-us.com/obj/musically-maliva-obj/MUSICID.mp3?bt=63.
+  return urlList.find(u => u && u.includes("bt="))
+    // 2nd choice: ies-music CDN without /obj/ (no bt= but still direct-friendly)
     || urlList.find(u => u && u.includes("ies-music") && !u.includes("/obj/"))
-    // 3rd choice: musically-maliva-obj (shard-specific but widely supported)
+    // 3rd choice: musically-maliva-obj (shard-specific — goes via Render proxy)
     || urlList.find(u => u && u.includes("musically-maliva-obj"))
     // fallback: any non-signaturev3 URL
     || urlList.find(u => u && !u.includes("signaturev3"))
@@ -1864,7 +1867,7 @@ async function handleRequest(request, env, ctx) {
             ? (p.audioUrl      || (p.musicId ? `https://v16-ies-music.tiktokcdn.com/obj/musically-maliva-obj/${p.musicId}.mp3` : ""))
             : (p.videoAudioUrl || (p.musicId ? `https://v16-ies-music.tiktokcdn.com/obj/musically-maliva-obj/${p.musicId}.mp3` : "")),
         },
-        mp3_direct: !p.is_photo,
+        mp3_direct: !p.is_photo && !!(p.videoAudioUrl && p.videoAudioUrl.includes("bt=")),
       }, 200, cors);
     }
 
