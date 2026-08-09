@@ -472,12 +472,19 @@ export async function downloadPhoto(
     downloaded_at: Math.floor(Date.now() / 1000),
   });
 
-  // SW path: browser's own IP → no 403, native download bar preserved
+  // SW path: browser's own IP → no 403, native download bar preserved.
+  // Uses <a download> instead of window.location.href so the page URL never
+  // changes — Wouter stays stable and subsequent Save clicks all work.
   if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
     const swUrl = `/sw-download?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
     _downloadQueue = _downloadQueue.then(
       () => new Promise<void>(resolve => {
-        window.location.href = swUrl;
+        const a = document.createElement("a");
+        a.href = swUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
         setTimeout(resolve, 1500);
       }),
     );
