@@ -463,6 +463,8 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
                           color:"#fff", fontSize:11, fontWeight:700,
                           cursor: "pointer",
                           display:"flex", alignItems:"center", justifyContent:"center", gap:4,
+                          WebkitTapHighlightColor: "transparent",
+                          outline: "none",
                         }}
                       >
                         <Download size={11} color="#fff" strokeWidth={2.5} />

@@ -472,23 +472,16 @@ export async function downloadPhoto(
     downloaded_at: Math.floor(Date.now() / 1000),
   });
 
-  // SW path: browser's own IP → no 403, native download bar preserved.
-  // fetch() to /sw-download lets the SW intercept with browser's IP.
-  // The blob is turned into an ObjectURL and clicked via <a download> —
-  // no navigation is started so every click works independently.
+  // SW path: hidden iframe navigation → SW intercepts → Content-Disposition: attachment
+  // → browser shows native download bar. Each download gets its own iframe so
+  // multiple saves never cancel each other. Browser's own IP is used (SW fetch).
   if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
     const swUrl = `/sw-download?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
-    const resp = await fetch(swUrl);
-    if (!resp.ok) throw new Error(`Image unavailable (${resp.status})`);
-    const blob = await resp.blob();
-    const objUrl = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = objUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(objUrl), 10_000);
+    const iframe = document.createElement("iframe");
+    iframe.style.cssText = "display:none;position:fixed;width:0;height:0;";
+    iframe.src = swUrl;
+    document.body.appendChild(iframe);
+    setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 60_000);
     return;
   }
 
