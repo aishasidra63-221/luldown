@@ -1228,15 +1228,21 @@ function musicPickUrl(urlList) {
     || firstUrl(urlList);
 }
 
-// Video-specific picker: same as musicPickUrl but skips ies-music-ttp-dup-us
-// shard paths (sf16-ies-music-va.tiktokcdn.com/obj/ies-music-ttp-dup-us/...)
-// which are unreliable and return 403/broken responses.
-// Prefers time-signed ies-music CDN URLs (v16-ies-music.tiktokcdn-us.com with bt=/ft=)
-// which work directly from the browser. Used ONLY for video result card MP3.
+// Video-specific picker: prefers time-signed ies-music CDN URLs
+// (v16-ies-music.tiktokcdn-us.com/video/tos/...?bt=63&ft=...) which work
+// directly from any browser IP.  Skips /obj/ path URLs — both
+// musically-maliva-obj and ies-music-ttp-dup-us live under /obj/ and are
+// either shard-specific or unreliable from datacenter IPs.
+// Used ONLY for video result card MP3; slideshow uses musicPickUrl.
 function videoMusicPickUrl(urlList) {
   if (!urlList || !Array.isArray(urlList)) return "";
-  return urlList.find(u => u && u.includes("ies-music") && !u.includes("ies-music-ttp-dup-us"))
+  // 1st choice: ies-music CDN, time-signed (has bt= param), NOT an /obj/ path
+  return urlList.find(u => u && u.includes("ies-music") && u.includes("bt=") && !u.includes("/obj/"))
+    // 2nd choice: any ies-music URL that is NOT under /obj/
+    || urlList.find(u => u && u.includes("ies-music") && !u.includes("/obj/"))
+    // 3rd choice: musically-maliva-obj (shard-specific but widely supported)
     || urlList.find(u => u && u.includes("musically-maliva-obj"))
+    // fallback: any non-signaturev3 URL
     || urlList.find(u => u && !u.includes("signaturev3"))
     || firstUrl(urlList);
 }
