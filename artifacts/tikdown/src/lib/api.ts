@@ -33,6 +33,7 @@ export interface VideoInfo {
   is_photo?: boolean;
   images?: string[];
   download_urls?: DownloadUrls;
+  mp3_direct?: boolean;
 }
 
 export interface ProfileVideo {
@@ -218,9 +219,10 @@ function _extractVideoId(url: string): string {
 
 let _downloadQueue: Promise<void> = Promise.resolve();
 
-async function _cdnDownload(cdnUrl: string, filename: string): Promise<void> {
+async function _cdnDownload(cdnUrl: string, filename: string, direct = false): Promise<void> {
   const proxyUrl =
-    `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
+    `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}` +
+    (direct ? "&direct=1" : "");
 
   // window.location.href triggers the browser's native loading bar.
   // Downloads are queued 1.5s apart so the browser doesn't block the second
@@ -356,7 +358,7 @@ export async function fetchVideoInfo(url: string): Promise<VideoInfo> {
 export async function downloadVideo(
   url: string,
   format: DownloadFormat,
-  videoMeta?: { title?: string; author?: string; thumbnail?: string; download_urls?: DownloadUrls },
+  videoMeta?: { title?: string; author?: string; thumbnail?: string; download_urls?: DownloadUrls; mp3_direct?: boolean },
 ): Promise<void> {
   const videoId = _extractVideoId(url);
 
@@ -447,9 +449,11 @@ export async function downloadVideo(
     downloaded_at: Math.floor(Date.now() / 1000),
   });
 
-  // All formats (mp4 and mp3) go through _cdnDownload → Worker /api/proxy.
-  // Worker tries direct music CDN first for mp3; falls back to Render stream.
-  await _cdnDownload(cdnUrl, filename);
+  // Video MP3 (mp3_direct=true): Worker redirects browser straight to TikTok CDN
+  //   (2-day CDN URL stored in vaudio: KV — no Render proxy needed).
+  // All other formats + slideshow MP3: Worker proxies through Render (Content-Disposition).
+  const useDirect = format === "mp3" && videoMeta?.mp3_direct === true;
+  await _cdnDownload(cdnUrl, filename, useDirect);
 }
 
 // Photo download — uses Service Worker when available so the browser fetches

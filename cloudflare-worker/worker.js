@@ -54,8 +54,9 @@ function corsHeaders(request) {
   };
 }
 
-const TTL_META = 30 * 24 * 60 * 60;  // 30 days — title, author, avatar, thumbnail (static)
-const TTL_URL  = 30 * 24 * 60 * 60;  // 30 days — resolver link (aweme/v1/play/?...signaturev3=...)
+const TTL_META   = 30 * 24 * 60 * 60;  // 30 days — title, author, avatar, thumbnail (static)
+const TTL_URL    = 30 * 24 * 60 * 60;  // 30 days — resolver link (aweme/v1/play/?...signaturev3=...)
+const TTL_VAUDIO =  2 * 24 * 60 * 60;  // 2 days  — video music CDN URL (bt=63 → ~63h expiry)
                                        // signs on video_id/file_id/item_id, not on time, so it
                                        // resolves fresh live on every hit and doesn't time-expire.
                                        // Matches TTL_META; same staleness risk as meta (deleted/
@@ -118,6 +119,25 @@ async function kvSetUrl(env, videoId, value) {
   } catch (e) {
     // Non-fatal — worst case, url gets re-scraped next time.
   }
+}
+
+// Video music CDN URL — separate 2-day KV key (vaudio:) so it refreshes in
+// sync with TikTok's bt=~63h expiry.  Photo/slideshow audio stays in url: at
+// 30 days because it uses the stable musically-maliva-obj/ies-music resolver.
+async function kvGetVideoAudio(env, videoId) {
+  if (!env.META_KV) return null;
+  try {
+    const raw = await env.META_KV.get(`vaudio:${videoId}`, { cacheTtl: 1800 });
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+async function kvSetVideoAudio(env, videoId, videoAudioUrl) {
+  if (!env.META_KV) return;
+  try {
+    await env.META_KV.put(`vaudio:${videoId}`, JSON.stringify({ videoAudioUrl }), {
+      expirationTtl: TTL_VAUDIO,
+    });
+  } catch { /* Non-fatal */ }
 }
 
 
@@ -1346,16 +1366,20 @@ async function fetchTikTokVideo(tiktokUrl, env, ctx) {
   console.log(`[timing] fetch: resolve+pool done in ${Date.now()-t0}ms`);
 
   const t1 = Date.now();
-  const [metaCached, urlCached] = await Promise.all([
+  const [metaCached, urlCached, videoAudioCached] = await Promise.all([
     kvGetMeta(env, videoId),
     kvGetUrl(env, videoId),
+    kvGetVideoAudio(env, videoId),
   ]);
   console.log(`[timing] fetch: kv-lookup in ${Date.now()-t1}ms`);
 
-  // Both fresh — return immediately, zero API calls
-  if (metaCached && urlCached) {
+  // Cache hit logic:
+  //  Photo  — meta + url (audioUrl lives in url: KV, 30 days)
+  //  Video  — meta + url + vaudio (videoAudioUrl in vaudio: KV, 2 days)
+  const isPhotoFromCache = metaCached?.is_photo === true;
+  if (metaCached && urlCached && (isPhotoFromCache || videoAudioCached)) {
     console.log(`[timing] fetch: kv-cache-hit TOTAL ${Date.now()-t0}ms`);
-    return { ...metaCached, ...urlCached };
+    return { ...metaCached, ...urlCached, ...(videoAudioCached || {}) };
   }
 
   const t2 = Date.now();
@@ -1399,21 +1423,31 @@ async function fetchTikTokVideo(tiktokUrl, env, ctx) {
     musicId:     parsed.musicId,
   };
 
+  // Photo: audioUrl goes into url: KV (30 days, stable resolver).
+  // Video: videoAudioUrl goes into vaudio: KV (2 days, CDN URL expiry).
   const urlPayload = {
     videoUrl:    parsed.videoUrl,
     videoUrl720: parsed.videoUrl720,
-    audioUrl:    parsed.audioUrl,
+    ...(parsed.is_photo ? { audioUrl: parsed.audioUrl } : {}),
   };
 
-  await Promise.all([
+  const storeOps = [
     metaCached ? Promise.resolve() : kvSetMeta(env, videoId, metaPayload),
     kvSetUrl(env, videoId, urlPayload),
     recordPhoneResult(env, pool, phone, "ok"),
-  ]);
+  ];
+  if (!parsed.is_photo) {
+    storeOps.push(kvSetVideoAudio(env, videoId, parsed.audioUrl));
+  }
+  await Promise.all(storeOps);
   (ctx ? ctx.waitUntil.bind(ctx) : (p) => p)(trackFailureWindow(env, false));
 
   console.log(`[timing] fetch: TOTAL ${Date.now()-t0}ms`);
-  return { ...metaPayload, ...urlPayload };
+  return {
+    ...metaPayload,
+    ...urlPayload,
+    ...(parsed.is_photo ? {} : { videoAudioUrl: parsed.audioUrl }),
+  };
 }
 
 // ── Response helpers ──────────────────────────────────────────────────────────
@@ -1801,8 +1835,11 @@ async function handleRequest(request, env, ctx) {
         download_urls: {
           mp4_1080: p.videoUrl,
           mp4_720:  p.videoUrl720,
-          mp3:      p.audioUrl || (p.musicId ? `https://v16-ies-music.tiktokcdn.com/obj/musically-maliva-obj/${p.musicId}.mp3` : ""),
+          mp3: p.is_photo
+            ? (p.audioUrl      || (p.musicId ? `https://v16-ies-music.tiktokcdn.com/obj/musically-maliva-obj/${p.musicId}.mp3` : ""))
+            : (p.videoAudioUrl || (p.musicId ? `https://v16-ies-music.tiktokcdn.com/obj/musically-maliva-obj/${p.musicId}.mp3` : "")),
         },
+        mp3_direct: !p.is_photo,
       }, 200, cors);
     }
 
@@ -1990,16 +2027,12 @@ async function handleRequest(request, env, ctx) {
         return err("Only TikTok CDN URLs are supported", 403, cors);
       }
 
-      // Path A-mp3: Two sub-cases based on URL type:
-      // 1. v16-ies-music / ies-music URLs — work on any IP, direct browser redirect.
-      // 2. musically-maliva-obj URLs — shard-specific; wrong shard returns a JSON
-      //    error body (not HTTP 404), so we must shard-resolve via Render first.
       if (filename.endsWith(".mp3")) {
-        // All MP3 URLs stream through Render's /api/proxy so the response
-        // carries Content-Disposition: attachment and the browser downloads
-        // the file instead of playing it inline.
-        // Render handles shard resolution (musically-maliva-obj / ies-music)
-        // internally with the correct TikTok App UA headers.
+        // Video MP3 (direct=1): 2-day CDN URL — redirect browser straight to TikTok CDN.
+        // Slideshow MP3 (no direct): stable resolver → Render streams with Content-Disposition.
+        if (params.get("direct") === "1") {
+          return Response.redirect(cdnUrl, 302);
+        }
         if (env.RENDER_URL) {
           const renderProxyUrl =
             `${env.RENDER_URL.replace(/\/$/, "")}/proxy` +
@@ -2023,7 +2056,6 @@ async function handleRequest(request, env, ctx) {
           if (cl) respHeaders.set("Content-Length", cl);
           return new Response(renderResp.body, { status: 200, headers: respHeaders });
         }
-        // No RENDER_URL — fall back to direct redirect.
         return Response.redirect(cdnUrl, 302);
       }
 
