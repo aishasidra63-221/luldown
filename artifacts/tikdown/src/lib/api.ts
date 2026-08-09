@@ -452,7 +452,10 @@ export async function downloadVideo(
   await _cdnDownload(cdnUrl, filename);
 }
 
-// Photo CDN-direct download — no server call at all, pure CDN
+// Photo download — uses Service Worker when available so the browser fetches
+// the image with its own (residential) IP, bypassing datacenter 403s, while
+// still showing the native browser download bar via window.location.href.
+// Falls back to the Render proxy (_cdnDownload) if the SW is not yet active.
 export async function downloadPhoto(
   cdnUrl: string,
   index: number,
@@ -468,6 +471,20 @@ export async function downloadPhoto(
     format:        "photo",
     downloaded_at: Math.floor(Date.now() / 1000),
   });
+
+  // SW path: browser's own IP → no 403, native download bar preserved
+  if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+    const swUrl = `/sw-download?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
+    _downloadQueue = _downloadQueue.then(
+      () => new Promise<void>(resolve => {
+        window.location.href = swUrl;
+        setTimeout(resolve, 1500);
+      }),
+    );
+    return;
+  }
+
+  // Fallback: old Render proxy path (same behaviour as before SW)
   await _cdnDownload(cdnUrl, filename);
 }
 
