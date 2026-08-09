@@ -473,18 +473,15 @@ export async function downloadPhoto(
   });
 
   // SW path: browser's own IP → no 403, native download bar preserved.
-  // Uses <a download> instead of window.location.href so the page URL never
-  // changes — Wouter stays stable and subsequent Save clicks all work.
+  // window.location.href triggers a navigate-mode fetch which the SW intercepts
+  // correctly. When the response carries Content-Disposition: attachment, Chrome
+  // cancels the navigation and downloads the file instead — the page URL never
+  // actually changes and the JS queue keeps running normally.
   if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
     const swUrl = `/sw-download?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
     _downloadQueue = _downloadQueue.then(
       () => new Promise<void>(resolve => {
-        const a = document.createElement("a");
-        a.href = swUrl;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        window.location.href = swUrl;
         setTimeout(resolve, 1500);
       }),
     );
