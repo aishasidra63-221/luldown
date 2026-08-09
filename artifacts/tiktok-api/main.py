@@ -407,7 +407,7 @@ async def resolve_cdn_url(request: Request, url: str):
         clean_url = unquote(url.strip())
         parsed = urlparse(clean_url)
         host = parsed.netloc.lower().split(":")[0]
-        _allowed_hosts = ("tiktok.com", ".tiktok.com", ".tiktokcdn.com", ".tiktokcdn-us.com")
+        _allowed_hosts = ("tiktok.com", ".tiktok.com", ".tiktokcdn.com", ".tiktokcdn-us.com", ".tiktokv.com", ".tiktokv.us")
         if parsed.scheme not in ("http", "https") or not any(
             host == h.lstrip(".") or host.endswith(h) for h in _allowed_hosts
         ):

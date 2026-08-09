@@ -509,7 +509,7 @@ async function kvSetShortId(env, shortCode, videoId) {
 const BROWSER_UA    = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 const FB_CRAWLER_UA = "facebookexternalhit/1.1";
 
-const TIKTOK_ALLOWED_HOSTS = ["tiktok.com", "douyin.com", "musical.ly"];
+const TIKTOK_ALLOWED_HOSTS = ["tiktok.com", "douyin.com", "musical.ly", "tiktokv.com", "tiktokv.us"];
 
 const MAX_MANUAL_REDIRECTS = 5;
 
@@ -1236,17 +1236,16 @@ function musicPickUrl(urlList) {
 // Used ONLY for video result card MP3; slideshow uses musicPickUrl.
 function videoMusicPickUrl(urlList) {
   if (!urlList || !Array.isArray(urlList)) return "";
-  // 1st choice: any URL with bt= (time-signed by TikTok — works from any IP,
-  // regardless of path). bt= is the only thing that matters; /obj/ check was
-  // too strict and was incorrectly rejecting valid signed URLs like
-  // ies-music.tiktokcdn-us.com/obj/musically-maliva-obj/MUSICID.mp3?bt=63.
-  return urlList.find(u => u && u.includes("bt="))
-    // 2nd choice: ies-music CDN without /obj/ (no bt= but still direct-friendly)
+  // 1st choice: signaturev3 resolver — permanent, never expires, works on any IP.
+  // ssstik.io uses exactly this URL for music. Render /resolve follows the redirect
+  // chain and returns the final CDN URL, same pattern as video MP4 downloads.
+  return urlList.find(u => u && u.includes("signaturev3"))
+    // 2nd choice: bt= time-signed CDN URL (valid ~63h, direct-friendly)
+    || urlList.find(u => u && u.includes("bt="))
+    // 3rd choice: ies-music CDN without /obj/
     || urlList.find(u => u && u.includes("ies-music") && !u.includes("/obj/"))
-    // 3rd choice: musically-maliva-obj (shard-specific — goes via Render proxy)
+    // 4th choice: musically-maliva-obj (shard-specific — goes via Render proxy)
     || urlList.find(u => u && u.includes("musically-maliva-obj"))
-    // fallback: any non-signaturev3 URL
-    || urlList.find(u => u && !u.includes("signaturev3"))
     || firstUrl(urlList);
 }
 
@@ -2056,11 +2055,32 @@ async function handleRequest(request, env, ctx) {
       }
 
       if (filename.endsWith(".mp3")) {
-        // Video MP3 (direct=1): 2-day CDN URL — redirect browser straight to TikTok CDN.
-        // Slideshow MP3 (no direct): stable resolver → Render streams with Content-Disposition.
+        // Video MP3 (direct=1): bt= CDN URL — redirect browser straight to TikTok CDN.
         if (params.get("direct") === "1") {
           return Response.redirect(cdnUrl, 302);
         }
+        // Video MP3 (signaturev3): permanent resolver → Render /resolve → redirect browser
+        // to final CDN URL. Identical pattern to video MP4 — zero audio bytes through Render.
+        if (cdnUrl.includes("signaturev3") && env.RENDER_URL) {
+          const resolveUrl =
+            `${env.RENDER_URL.replace(/\/$/, "")}/resolve` +
+            `?url=${encodeURIComponent(cdnUrl)}`;
+          let resolveResp;
+          try {
+            resolveResp = await fetch(resolveUrl, {
+              headers: { "x-proxy-secret": env.PROXY_SECRET || "" },
+            });
+          } catch {
+            return err("Proxy server unreachable. Please try again shortly.", 502, cors);
+          }
+          if (!resolveResp.ok) return err("Audio unavailable.", resolveResp.status, cors);
+          let finalUrl;
+          try { ({ url: finalUrl } = await resolveResp.json()); } catch { finalUrl = null; }
+          if (!finalUrl) return err("Audio unavailable.", 502, cors);
+          return Response.redirect(finalUrl, 302);
+        }
+        // Slideshow MP3 (no direct, no signaturev3): stable resolver → Render streams
+        // with Content-Disposition so browser saves the file.
         if (env.RENDER_URL) {
           const renderProxyUrl =
             `${env.RENDER_URL.replace(/\/$/, "")}/proxy` +
