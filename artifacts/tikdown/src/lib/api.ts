@@ -492,8 +492,21 @@ export async function downloadPhoto(
     return;
   }
 
-  // Fallback: old Render proxy path (same behaviour as before SW)
-  await _cdnDownload(cdnUrl, filename);
+  // Fallback: fetch through Worker proxy (same IP-bypass as before, but
+  // using fetch+blob instead of window.location.href so multiple downloads
+  // can run independently without cancelling each other.
+  const proxyUrl = `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
+  const proxyResp = await fetch(proxyUrl);
+  if (!proxyResp.ok) throw new Error(`Image unavailable (${proxyResp.status})`);
+  const proxyBlob = await proxyResp.blob();
+  const proxyObjUrl = URL.createObjectURL(proxyBlob);
+  const proxyA = document.createElement("a");
+  proxyA.href = proxyObjUrl;
+  proxyA.download = filename;
+  document.body.appendChild(proxyA);
+  proxyA.click();
+  document.body.removeChild(proxyA);
+  setTimeout(() => URL.revokeObjectURL(proxyObjUrl), 10_000);
 }
 
 // ─── Download All as ZIP (browser-side, JSZip) ───────────────────────────────
