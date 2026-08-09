@@ -69,6 +69,7 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
         title: info?.title, author: info?.author,
         thumbnail: info?.thumbnail || info?.images?.[0] || "",
         download_urls: info?.download_urls,
+        mp3_direct:    info?.mp3_direct,
       });
     } catch (e: any) {
       onError?.(e.message || "Download failed");
