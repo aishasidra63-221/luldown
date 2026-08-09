@@ -471,28 +471,22 @@ export async function downloadPhoto(
     downloaded_at: Math.floor(Date.now() / 1000),
   });
 
-  // SW path: hidden iframe navigation → SW intercepts → Content-Disposition: attachment
-  // → browser shows native download bar. Each download gets its own iframe so
-  // multiple saves never cancel each other. Browser's own IP is used (SW fetch).
-  if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
-    const swUrl = `/sw-download?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
-    const iframe = document.createElement("iframe");
-    iframe.style.cssText = "display:none;position:fixed;width:0;height:0;";
-    iframe.src = swUrl;
-    document.body.appendChild(iframe);
-    setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 60_000);
-    return;
-  }
+  // <a download>.click() — Chrome treats this as a direct user download action
+  // (not an "automatic" popup download like hidden iframes), so multiple saves
+  // work independently with no queue and no delay.
+  // SW path: same-origin /sw-download URL → SW intercepts → fetches with browser IP
+  // → Content-Disposition: attachment → native download bar ✅
+  // Fallback (SW not yet active): Worker /api/proxy URL → same result via Render.
+  const dlUrl = ("serviceWorker" in navigator && navigator.serviceWorker.controller)
+    ? `/sw-download?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`
+    : `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
 
-  // Fallback (SW not yet active): hidden iframe → Worker /api/proxy.
-  // Worker returns Content-Disposition: attachment → browser shows native download bar.
-  // Same multi-download-safe iframe pattern as the SW path above.
-  const proxyUrl = `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
-  const iframe = document.createElement("iframe");
-  iframe.style.cssText = "display:none;position:fixed;width:0;height:0;";
-  iframe.src = proxyUrl;
-  document.body.appendChild(iframe);
-  setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 60_000);
+  const a = document.createElement("a");
+  a.href = dlUrl;
+  a.setAttribute("download", filename);
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
 // ─── Download All as ZIP (browser-side, JSZip) ───────────────────────────────
