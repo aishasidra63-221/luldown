@@ -459,9 +459,7 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
                         style={{
                           width:100, padding:"6px 0",
                           borderRadius:8, border:"none",
-                          background: photoDownloading.has(i)
-                            ? "rgba(124,58,237,0.5)"
-                            : "linear-gradient(135deg,#7c3aed,#6d28d9)",
+                          background: "linear-gradient(135deg,#7c3aed,#6d28d9)",
                           color:"#fff", fontSize:11, fontWeight:700,
                           cursor: "pointer",
                           display:"flex", alignItems:"center", justifyContent:"center", gap:4,
