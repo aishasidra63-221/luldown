@@ -476,22 +476,22 @@ export async function downloadPhoto(
     downloaded_at: Math.floor(Date.now() / 1000),
   });
 
-  // <a download>.click() — Chrome treats this as a direct user download action
-  // (not an "automatic" popup download like hidden iframes), so multiple saves
-  // work independently with no queue and no delay.
-  // SW path: same-origin /sw-download URL → SW intercepts → fetches with browser IP
-  // → Content-Disposition: attachment → native download bar ✅
-  // Fallback (SW not yet active): Worker /api/proxy URL → same result via Render.
+  // window.location.href triggers native download bar when server sends
+  // Content-Disposition: attachment — same pattern as _cdnDownload for video/mp3.
+  // SW path: /sw-download → SW fetches with browser IP → Content-Disposition ✅
+  // Fallback: Worker /api/proxy → Render streams with Content-Disposition ✅
+  // Downloads are queued 1.5s apart so sequential saves don't fight each other.
   const dlUrl = ("serviceWorker" in navigator && navigator.serviceWorker.controller)
     ? `/sw-download?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`
     : `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
 
-  const a = document.createElement("a");
-  a.href = dlUrl;
-  a.setAttribute("download", filename);
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  _downloadQueue = _downloadQueue.then(
+    () =>
+      new Promise<void>(resolve => {
+        window.location.href = dlUrl;
+        setTimeout(resolve, 1500);
+      }),
+  );
 }
 
 // ─── Download All as ZIP (browser-side, JSZip) ───────────────────────────────
