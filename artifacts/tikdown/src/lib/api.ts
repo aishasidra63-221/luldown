@@ -377,8 +377,9 @@ export async function downloadVideo(
   }
 
   // Fast path — use the CDN URL already returned by /api/info (no second API call).
-  // download_urls.mp3 is a time-signed CDN URL stored in KV for 2 days.
-  // Worker /api/proxy returns 302 directly to TikTok music CDN — no Render proxy needed.
+  // download_urls.mp3 is a permanent resolver URL (same structure as mp4 signaturev3).
+  // Worker sends it to Render /resolve → Render follows redirect → returns CDN URL → 302.
+  // Zero audio bytes flow through Render, same as video.
   const cachedCdnUrl = videoMeta?.download_urls?.[format as Exclude<DownloadFormat, "thumbnail">];
 
   let cdnUrl: string;

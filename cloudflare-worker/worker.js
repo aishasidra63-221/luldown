@@ -54,14 +54,12 @@ function corsHeaders(request) {
   };
 }
 
-const TTL_META  = 30 * 24 * 60 * 60;  // 30 days — title, author, avatar, thumbnail (static)
-const TTL_URL   = 30 * 24 * 60 * 60;  // 30 days — video resolver link (aweme/v1/play/?...signaturev3=...)
-                                        // signs on video_id/file_id/item_id, not on time, so it
-                                        // resolves fresh live on every hit and doesn't time-expire.
-                                        // Matches TTL_META; same staleness risk as meta (deleted/
-                                        // private video), nothing new introduced by the longer TTL.
-const TTL_AUDIO = 2  * 24 * 60 * 60;  // 2 days — music CDN URL (~63 h expiry on bt= param).
-                                        // Stored separately so it refreshes independently of video URL.
+const TTL_META = 30 * 24 * 60 * 60;  // 30 days — title, author, avatar, thumbnail (static)
+const TTL_URL  = 30 * 24 * 60 * 60;  // 30 days — resolver link (aweme/v1/play/?...signaturev3=...)
+                                       // signs on video_id/file_id/item_id, not on time, so it
+                                       // resolves fresh live on every hit and doesn't time-expire.
+                                       // Matches TTL_META; same staleness risk as meta (deleted/
+                                       // private video), nothing new introduced by the longer TTL.
 
 // ── Cloudflare KV — globally-replicated metadata cache ────────────────────────
 // The Cache API above is per-datacenter: a user hitting the Mumbai PoP and a
@@ -122,25 +120,6 @@ async function kvSetUrl(env, videoId, value) {
   }
 }
 
-// Music CDN URL — separate KV key with 2-day TTL to match the ~63 h expiry
-// of time-signed ies-music CDN URLs.  When this key expires, the next request
-// forces a fresh TikTok API call to get a new CDN URL.
-async function kvGetAudio(env, videoId) {
-  if (!env.META_KV) return null;
-  try {
-    const raw = await env.META_KV.get(`audio:${videoId}`, { cacheTtl: 1800 });
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
-
-async function kvSetAudio(env, videoId, audioUrl) {
-  if (!env.META_KV) return;
-  try {
-    await env.META_KV.put(`audio:${videoId}`, JSON.stringify({ audioUrl }), {
-      expirationTtl: TTL_AUDIO,
-    });
-  } catch { /* Non-fatal */ }
-}
 
 // ── Phone Pool ────────────────────────────────────────────────────────────────
 // 500 persistent phones stored in KV — each lives exactly 1 year.
@@ -1367,17 +1346,16 @@ async function fetchTikTokVideo(tiktokUrl, env, ctx) {
   console.log(`[timing] fetch: resolve+pool done in ${Date.now()-t0}ms`);
 
   const t1 = Date.now();
-  const [metaCached, urlCached, audioCached] = await Promise.all([
+  const [metaCached, urlCached] = await Promise.all([
     kvGetMeta(env, videoId),
     kvGetUrl(env, videoId),
-    kvGetAudio(env, videoId),
   ]);
   console.log(`[timing] fetch: kv-lookup in ${Date.now()-t1}ms`);
 
-  // All three fresh — return immediately, zero API calls
-  if (metaCached && urlCached && audioCached) {
+  // Both fresh — return immediately, zero API calls
+  if (metaCached && urlCached) {
     console.log(`[timing] fetch: kv-cache-hit TOTAL ${Date.now()-t0}ms`);
-    return { ...metaCached, ...urlCached, ...audioCached };
+    return { ...metaCached, ...urlCached };
   }
 
   const t2 = Date.now();
@@ -1424,18 +1402,18 @@ async function fetchTikTokVideo(tiktokUrl, env, ctx) {
   const urlPayload = {
     videoUrl:    parsed.videoUrl,
     videoUrl720: parsed.videoUrl720,
+    audioUrl:    parsed.audioUrl,
   };
 
   await Promise.all([
     metaCached ? Promise.resolve() : kvSetMeta(env, videoId, metaPayload),
     kvSetUrl(env, videoId, urlPayload),
-    kvSetAudio(env, videoId, parsed.audioUrl),
     recordPhoneResult(env, pool, phone, "ok"),
   ]);
   (ctx ? ctx.waitUntil.bind(ctx) : (p) => p)(trackFailureWindow(env, false));
 
   console.log(`[timing] fetch: TOTAL ${Date.now()-t0}ms`);
-  return { ...metaPayload, ...urlPayload, audioUrl: parsed.audioUrl };
+  return { ...metaPayload, ...urlPayload };
 }
 
 // ── Response helpers ──────────────────────────────────────────────────────────
@@ -2012,10 +1990,40 @@ async function handleRequest(request, env, ctx) {
         return err("Only TikTok CDN URLs are supported", 403, cors);
       }
 
-      // Path A-mp3: Redirect browser directly to TikTok music CDN.
-      // The CDN URL is a time-signed ies-music link stored in KV for 2 days.
-      // Browser follows the redirect and downloads natively — no Render proxy needed.
+      // Path A-mp3: Two sub-cases based on URL type:
+      // 1. v16-ies-music / ies-music URLs — work on any IP, direct browser redirect.
+      // 2. musically-maliva-obj URLs — shard-specific; wrong shard returns a JSON
+      //    error body (not HTTP 404), so we must shard-resolve via Render first.
       if (filename.endsWith(".mp3")) {
+        // All MP3 URLs stream through Render's /api/proxy so the response
+        // carries Content-Disposition: attachment and the browser downloads
+        // the file instead of playing it inline.
+        // Render handles shard resolution (musically-maliva-obj / ies-music)
+        // internally with the correct TikTok App UA headers.
+        if (env.RENDER_URL) {
+          const renderProxyUrl =
+            `${env.RENDER_URL.replace(/\/$/, "")}/proxy` +
+            `?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
+          let renderResp;
+          try {
+            renderResp = await fetch(renderProxyUrl, {
+              headers: { "x-proxy-secret": env.PROXY_SECRET || "" },
+            });
+          } catch {
+            return err("Proxy server unreachable. Please try again shortly.", 502, cors);
+          }
+          if (!renderResp.ok) return err("Audio unavailable.", renderResp.status, cors);
+          const respHeaders = new Headers({
+            ...cors,
+            "Content-Disposition": renderResp.headers.get("Content-Disposition") || `attachment; filename="${filename}"`,
+            "Content-Type":        renderResp.headers.get("Content-Type") || "audio/mpeg",
+            "Cache-Control":       "no-store",
+          });
+          const cl = renderResp.headers.get("Content-Length");
+          if (cl) respHeaders.set("Content-Length", cl);
+          return new Response(renderResp.body, { status: 200, headers: respHeaders });
+        }
+        // No RENDER_URL — fall back to direct redirect.
         return Response.redirect(cdnUrl, 302);
       }
 
