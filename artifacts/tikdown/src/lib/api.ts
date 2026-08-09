@@ -476,34 +476,22 @@ export async function downloadPhoto(
     downloaded_at: Math.floor(Date.now() / 1000),
   });
 
-  const swActive = "serviceWorker" in navigator && !!navigator.serviceWorker.controller;
+  // window.location.href triggers native download bar when server sends
+  // Content-Disposition: attachment — same pattern as _cdnDownload for video/mp3.
+  // SW path: /sw-download → SW fetches with browser IP → Content-Disposition ✅
+  // Fallback: Worker /api/proxy → Render streams with Content-Disposition ✅
+  // Downloads are queued 1.5s apart so sequential saves don't fight each other.
+  const dlUrl = ("serviceWorker" in navigator && navigator.serviceWorker.controller)
+    ? `/sw-download?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`
+    : `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
 
-  if (swActive) {
-    // SW path — same-origin /sw-download URL.
-    // <a download>.click() sends a fetch (NOT a navigation) — SW intercepts,
-    // fetches with browser IP, returns Content-Disposition: attachment.
-    // Chrome shows native download bar reliably for same-origin fetch downloads.
-    // window.location.href navigation to SW URL is NOT reliable for native bar.
-    const dlUrl = `/sw-download?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
-    const a = document.createElement("a");
-    a.href     = dlUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  } else {
-    // Fallback — Worker /api/proxy (cross-origin).
-    // window.location.href + Render streaming returns Content-Disposition: attachment
-    // → native bar ✅.  Queue 1.5s apart so sequential saves don't conflict.
-    const dlUrl = `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
-    _downloadQueue = _downloadQueue.then(
-      () =>
-        new Promise<void>(resolve => {
-          window.location.href = dlUrl;
-          setTimeout(resolve, 1500);
-        }),
-    );
-  }
+  _downloadQueue = _downloadQueue.then(
+    () =>
+      new Promise<void>(resolve => {
+        window.location.href = dlUrl;
+        setTimeout(resolve, 1500);
+      }),
+  );
 }
 
 // ─── Download All as ZIP (browser-side, JSZip) ───────────────────────────────
