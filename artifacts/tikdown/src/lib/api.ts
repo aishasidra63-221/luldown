@@ -484,21 +484,15 @@ export async function downloadPhoto(
     return;
   }
 
-  // Fallback: fetch through Worker proxy (same IP-bypass as before, but
-  // using fetch+blob instead of window.location.href so multiple downloads
-  // can run independently without cancelling each other.
+  // Fallback (SW not yet active): hidden iframe → Worker /api/proxy.
+  // Worker returns Content-Disposition: attachment → browser shows native download bar.
+  // Same multi-download-safe iframe pattern as the SW path above.
   const proxyUrl = `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
-  const proxyResp = await fetch(proxyUrl);
-  if (!proxyResp.ok) throw new Error(`Image unavailable (${proxyResp.status})`);
-  const proxyBlob = await proxyResp.blob();
-  const proxyObjUrl = URL.createObjectURL(proxyBlob);
-  const proxyA = document.createElement("a");
-  proxyA.href = proxyObjUrl;
-  proxyA.download = filename;
-  document.body.appendChild(proxyA);
-  proxyA.click();
-  document.body.removeChild(proxyA);
-  setTimeout(() => URL.revokeObjectURL(proxyObjUrl), 10_000);
+  const iframe = document.createElement("iframe");
+  iframe.style.cssText = "display:none;position:fixed;width:0;height:0;";
+  iframe.src = proxyUrl;
+  document.body.appendChild(iframe);
+  setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 60_000);
 }
 
 // ─── Download All as ZIP (browser-side, JSZip) ───────────────────────────────
