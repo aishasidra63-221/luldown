@@ -482,7 +482,7 @@ export async function downloadPhoto(
     _downloadQueue = _downloadQueue.then(
       () => new Promise<void>(resolve => {
         window.location.href = swUrl;
-        setTimeout(resolve, 1500);
+        setTimeout(resolve, 50);
       }),
     );
     return;
