@@ -456,10 +456,47 @@ export async function downloadVideo(
   await _cdnDownload(cdnUrl, filename, useDirect);
 }
 
-// Photo download — uses Service Worker when available so the browser fetches
-// the image with its own (residential) IP, bypassing datacenter 403s, while
-// still showing the native browser download bar via window.location.href.
-// Falls back to the Render proxy (_cdnDownload) if the SW is not yet active.
+// Resolves true if a Service Worker is (or becomes) in control of this page,
+// so photo saves can use the browser's own residential IP. On the very first
+// visit the SW registers but does not control the page yet (controller is null
+// until it claims the page); we briefly wait for that claim before giving up
+// and using the Render proxy. This is why a fresh phone previously fell into
+// the weak fallback path.
+function _ensureSwController(timeoutMs = 2500): Promise<boolean> {
+  if (!("serviceWorker" in navigator)) return Promise.resolve(false);
+  if (navigator.serviceWorker.controller) return Promise.resolve(true);
+  return (async () => {
+    try {
+      await navigator.serviceWorker.ready;
+    } catch {
+      return false;
+    }
+    if (navigator.serviceWorker.controller) return true;
+    return await new Promise<boolean>(resolve => {
+      let settled = false;
+      const finish = (v: boolean) => {
+        if (settled) return;
+        settled = true;
+        navigator.serviceWorker.removeEventListener("controllerchange", onChange);
+        resolve(v);
+      };
+      const onChange = () => {
+        if (navigator.serviceWorker.controller) finish(true);
+      };
+      navigator.serviceWorker.addEventListener("controllerchange", onChange);
+      setTimeout(() => finish(!!navigator.serviceWorker.controller), timeoutMs);
+    });
+  })();
+}
+
+// Photo download — prefers the Service Worker path so the browser fetches the
+// image with its own (residential) IP, bypassing datacenter 403s. BOTH the SW
+// path and the Render-proxy fallback now use a hidden iframe: the response
+// carries Content-Disposition: attachment, so the iframe navigation triggers
+// the native download bar WITHOUT navigating the main page. Each save gets its
+// own iframe, so multiple images download independently — no queue and no
+// single-navigation limit (the old window.location.href fallback could only
+// ever fire once, which is why some phones saved just the first image).
 export async function downloadPhoto(
   cdnUrl: string,
   index: number,
@@ -476,34 +513,20 @@ export async function downloadPhoto(
     downloaded_at: Math.floor(Date.now() / 1000),
   });
 
-  if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
-    // SW path — hidden iframe trick (MDN-recommended pattern for Content-Disposition downloads).
-    // Iframe is created IMMEDIATELY inside the user gesture → Chrome keeps gesture context.
-    // SW intercepts the iframe navigation, fetches with the browser's own (residential) IP,
-    // and returns Content-Disposition: attachment → native download bar appears ✅
-    // Multiple iframes = multiple simultaneous downloads, no queue needed ✅
-    // If CDN returns 403: SW returns JSON without Content-Disposition → iframe stays blank,
-    // no garbage file is saved (better than <a download> which would save the JSON as .jpg).
-    const dlUrl = `/sw-download?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
-    const iframe = document.createElement("iframe");
-    iframe.style.display = "none";
-    iframe.src = dlUrl;
-    document.body.appendChild(iframe);
-    // Remove iframe after 30s (well after download starts; keeps DOM clean).
-    setTimeout(() => iframe.remove(), 30_000);
-  } else {
-    // Fallback — no SW active. Worker /api/proxy → Render streams image with
-    // Content-Disposition: attachment → native bar ✅
-    // Queue 1.5s apart: window.location.href is a navigation so only one at a time.
-    const dlUrl = `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
-    _downloadQueue = _downloadQueue.then(
-      () =>
-        new Promise<void>(resolve => {
-          window.location.href = dlUrl;
-          setTimeout(resolve, 1500);
-        }),
-    );
-  }
+  // Prefer the SW (residential IP) path; wait briefly for it to take control on
+  // first visit. Whichever path we use, download via a hidden iframe so multiple
+  // images each get their own independent download.
+  const useSW = await _ensureSwController();
+  const dlUrl = useSW
+    ? `/sw-download?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`
+    : `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
+
+  const iframe = document.createElement("iframe");
+  iframe.style.display = "none";
+  iframe.src = dlUrl;
+  document.body.appendChild(iframe);
+  // Remove iframe after 30s (well after download starts; keeps DOM clean).
+  setTimeout(() => iframe.remove(), 30_000);
 }
 
 // ─── Download All as ZIP (browser-side, JSZip) ───────────────────────────────
@@ -520,7 +543,7 @@ export async function downloadAllAsZip(
   // Use SW (browser IP) if active — same as individual Save buttons so TikTok
   // CDN never sees a datacenter address.  Fall back to Render proxy if SW is
   // not controlling this page yet (e.g. first load before SW activates).
-  const useSW = "serviceWorker" in navigator && !!navigator.serviceWorker.controller;
+  const useSW = await _ensureSwController();
 
   await Promise.all(
     images.map(async (imgUrl, i) => {
