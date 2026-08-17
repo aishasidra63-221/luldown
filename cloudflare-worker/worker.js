@@ -1228,24 +1228,25 @@ function musicPickUrl(urlList) {
     || firstUrl(urlList);
 }
 
-// Video-specific picker: prefers time-signed ies-music CDN URLs
-// (v16-ies-music.tiktokcdn-us.com/video/tos/...?bt=63&ft=...) which work
-// directly from any browser IP.  Skips /obj/ path URLs — both
-// musically-maliva-obj and ies-music-ttp-dup-us live under /obj/ and are
-// either shard-specific or unreliable from datacenter IPs.
+// Video-specific picker for MP3 audio on video result cards.
+// Priority: signaturev3 URL that signs video_id;file_id;item_id (same as video) →
+// Render /resolve follows the 302 redirect exactly like a video download.
+// signaturev3 URLs that sign music_id instead return JSON {"success":-1,"code":4008}
+// and must be avoided — they are identified by having music_id= in the URL params.
 // Used ONLY for video result card MP3; slideshow uses musicPickUrl.
 function videoMusicPickUrl(urlList) {
   if (!urlList || !Array.isArray(urlList)) return "";
-  // 1st choice: signaturev3 resolver — permanent, never expires, works on any IP.
-  // ssstik.io uses exactly this URL for music. Render /resolve follows the redirect
-  // chain and returns the final CDN URL, same pattern as video MP4 downloads.
-  return urlList.find(u => u && u.includes("signaturev3"))
+  // 1st choice: signaturev3 with video_id= param — signs video_id;file_id;item_id,
+  // resolves EXACTLY like video (TikTok returns 302 → CDN). Permanent, never expires.
+  return urlList.find(u => u && u.includes("signaturev3") && u.includes("video_id="))
     // 2nd choice: bt= time-signed CDN URL (valid ~63h, direct-friendly)
     || urlList.find(u => u && u.includes("bt="))
     // 3rd choice: ies-music CDN without /obj/
     || urlList.find(u => u && u.includes("ies-music") && !u.includes("/obj/"))
     // 4th choice: musically-maliva-obj (shard-specific — goes via Render proxy)
     || urlList.find(u => u && u.includes("musically-maliva-obj"))
+    // Last resort: any other signaturev3 (music_id type — may fail with 4008)
+    || urlList.find(u => u && u.includes("signaturev3"))
     || firstUrl(urlList);
 }
 
