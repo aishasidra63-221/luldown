@@ -407,7 +407,7 @@ async def resolve_cdn_url(request: Request, url: str):
         clean_url = unquote(url.strip())
         parsed = urlparse(clean_url)
         host = parsed.netloc.lower().split(":")[0]
-        _allowed_hosts = ("tiktok.com", ".tiktok.com", ".tiktokcdn.com", ".tiktokcdn-us.com", ".tiktokv.com", ".tiktokv.us")
+        _allowed_hosts = ("tiktok.com", ".tiktok.com", ".tiktokcdn.com", ".tiktokcdn-us.com", ".tiktokcdn-eu.com", ".tiktokv.com", ".tiktokv.us", ".tiktokv.eu")
         if parsed.scheme not in ("http", "https") or not any(
             host == h.lstrip(".") or host.endswith(h) for h in _allowed_hosts
         ):
@@ -426,7 +426,8 @@ async def resolve_cdn_url(request: Request, url: str):
     # Accept any TikTok CDN domain in redirect Location headers.
     # tiktokcdn-us.com is distinct from tiktokcdn.com and is used for music shards.
     _resolve_cdn_domains = [
-        "tiktokcdn.com", "tiktokcdn-us.com", "tiktokv.com",
+        "tiktokcdn.com", "tiktokcdn-us.com", "tiktokcdn-eu.com",
+        "tiktokv.com", "tiktokv.eu",
         "bytecdn.cn", "snssdk.com", "tiktok.com/obj", "musical.ly",
     ]
 

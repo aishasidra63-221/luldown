@@ -509,7 +509,7 @@ async function kvSetShortId(env, shortCode, videoId) {
 const BROWSER_UA    = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 const FB_CRAWLER_UA = "facebookexternalhit/1.1";
 
-const TIKTOK_ALLOWED_HOSTS = ["tiktok.com", "douyin.com", "musical.ly", "tiktokv.com", "tiktokv.us"];
+const TIKTOK_ALLOWED_HOSTS = ["tiktok.com", "douyin.com", "musical.ly", "tiktokv.com", "tiktokv.us", "tiktokv.eu"];
 
 const MAX_MANUAL_REDIRECTS = 5;
 
@@ -2048,7 +2048,7 @@ async function handleRequest(request, env, ctx) {
       let cdnUrl;
       try { cdnUrl = decodeURIComponent(rawUrl); } catch { return err("Invalid URL encoding", 400, cors); }
 
-      const allowed = ["tiktok.com", "tiktokcdn.com", "tiktokcdn-us.com", "tiktokv.com", "musical.ly", "douyin.com", "bytecdn.cn", "snssdk.com"];
+      const allowed = ["tiktok.com", "tiktokcdn.com", "tiktokcdn-us.com", "tiktokcdn-eu.com", "tiktokv.com", "tiktokv.eu", "musical.ly", "douyin.com", "bytecdn.cn", "snssdk.com"];
       let cdnHostname;
       try { cdnHostname = new URL(cdnUrl).hostname; } catch { return err("Invalid CDN URL", 400, cors); }
       if (!allowed.some(d => cdnHostname === d || cdnHostname.endsWith("." + d))) {
