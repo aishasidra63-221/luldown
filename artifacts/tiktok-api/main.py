@@ -8,7 +8,7 @@ from typing import Literal, Optional
 import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -272,6 +272,9 @@ async def video_info(request: Request, body: InfoRequest):
     cached = await cache_get(cache_key)
     if cached:
         cached["from_cache"] = True
+        cached["mp3_direct"] = bool(
+            cached.get("download_urls", {}).get("mp3", "").startswith("https://tikcdn.io/ssstik/m/")
+        )
         return cached
 
     try:
@@ -279,6 +282,9 @@ async def video_info(request: Request, body: InfoRequest):
     except DownloadError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
+    info["mp3_direct"] = bool(
+        info.get("download_urls", {}).get("mp3", "").startswith("https://tikcdn.io/ssstik/m/")
+    )
     await cache_set(cache_key, info)
     return info
 
@@ -336,6 +342,10 @@ async def download(request: Request, body: DownloadRequest):
         "title": cdn_data.get("title", ""),
         "author": cdn_data.get("author", ""),
         "format": body.format,
+        "mp3_direct": bool(
+            body.format == "mp3"
+            and cdn_data.get("cdn_url", "").startswith("https://tikcdn.io/ssstik/m/")
+        ),
     })
 
 
@@ -532,6 +542,11 @@ async def proxy_cdn(request: Request, url: str, filename: str = "luldown.mp4"):
             raise ValueError("disallowed host")
     except ValueError as exc:
         raise HTTPException(status_code=403, detail="Only TikTok CDN URLs are supported") from exc
+
+    # Resolver links that already return an attachment should be followed by
+    # the browser directly instead of streaming their bytes through this API.
+    if request.query_params.get("direct") == "1":
+        return RedirectResponse(cdn_url, status_code=302)
 
     # Fallback media type guessed from the filename extension — only used if
     # the CDN response doesn't send a usable Content-Type header of its own.

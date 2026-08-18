@@ -386,6 +386,7 @@ export async function downloadVideo(
   let filename: string;
   let title:    string;
   let author:   string;
+  let directFromDownloadResponse = false;
 
   if (cachedCdnUrl) {
     cdnUrl   = cachedCdnUrl;
@@ -420,6 +421,7 @@ export async function downloadVideo(
       cdnUrl   = retryData.cdn_url;
       title    = retryData.title    || videoMeta?.title  || "TikTok Video";
       author   = retryData.author   || videoMeta?.author || "Unknown";
+      directFromDownloadResponse = retryData.mp3_direct === true;
       const retryExt = format === "mp3" ? "mp3" : "mp4";
       filename = `luldown_${videoId}.${retryExt}`;
       if (!cdnUrl) throw new Error("No download URL received");
@@ -432,6 +434,7 @@ export async function downloadVideo(
     cdnUrl   = data.cdn_url;
     title    = data.title    || videoMeta?.title  || "TikTok Video";
     author   = data.author   || videoMeta?.author || "Unknown";
+    directFromDownloadResponse = data.mp3_direct === true;
     const fallbackExt = format === "mp3" ? "mp3" : "mp4";
     filename = `luldown_${videoId}.${fallbackExt}`;
 
@@ -450,7 +453,9 @@ export async function downloadVideo(
   // Video MP3 (mp3_direct=true): Worker redirects browser straight to TikTok CDN
   //   (2-day CDN URL stored in vaudio: KV — no Render proxy needed).
   // All other formats + slideshow MP3: Worker proxies through Render (Content-Disposition).
-  const useDirect = format === "mp3" && videoMeta?.mp3_direct === true;
+  const useDirect =
+    format === "mp3" &&
+    (videoMeta?.mp3_direct === true || directFromDownloadResponse);
   await _cdnDownload(cdnUrl, filename, useDirect);
 }
 

@@ -1935,7 +1935,12 @@ async function handleRequest(request, env, ctx) {
           mp4_720:  p.videoUrl720,
            mp3: p.is_photo ? (p.audioUrl || "") : (p.videoAudioUrl || ""),
         },
-        mp3_direct: !p.is_photo && !!(p.videoAudioUrl && p.videoAudioUrl.includes("bt=")),
+        // The SSSTik wrapper already returns an MP3 attachment. Redirect the
+        // browser to it directly, just like the existing TikTok CDN path.
+        mp3_direct: !p.is_photo && !!(
+          p.videoAudioUrl &&
+          (p.videoAudioUrl.includes("bt=") || p.videoAudioUrl.includes("tikcdn.io/ssstik/m/"))
+        ),
       }, 200, cors);
     }
 
@@ -2333,7 +2338,21 @@ async function handleRequest(request, env, ctx) {
         422, cors
       );
 
-      return json({ success: true, cdn_url: cdnUrl, filename: `${filename}.${ext}`, media_type: mediaType, title: p.title, author: p.username, format }, 200, cors);
+      return json({
+        success: true,
+        cdn_url: cdnUrl,
+        filename: `${filename}.${ext}`,
+        media_type: mediaType,
+        title: p.title,
+        author: p.username,
+        format,
+        mp3_direct: format === "mp3" && !!(
+          cdnUrl && (
+            cdnUrl.includes("bt=") ||
+            cdnUrl.includes("tikcdn.io/ssstik/m/")
+          )
+        ),
+      }, 200, cors);
     }
 
     // POST /api/cache/purge — delete all cached url:* entries from KV
