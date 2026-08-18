@@ -9,7 +9,6 @@ function ScrollToTop() {
 }
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import DownloadBar from "@/components/DownloadBar";
 import HomePage from "@/pages/HomePage";
 
 const HistoryPage    = lazy(() => import("@/pages/HistoryPage"));
@@ -195,7 +194,6 @@ function App({ ssrHook }: { ssrHook?: () => [string, (to: string) => void] } = {
             </Suspense>
           </main>
           <Footer />
-          <DownloadBar />
         </div>
       </WouterRouter>
     </QueryClientProvider>
