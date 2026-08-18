@@ -230,24 +230,6 @@ function _proxyDownload(cdnUrl: string, filename: string, direct = false): void 
   window.location.assign(proxyUrl);
 }
 
-// Individual slideshow images use the browser download manager instead of
-// navigating the current tab. This mirrors the mobile-friendly flow used by
-// other downloaders: every click creates an independent download job, while
-// the Render proxy still supplies the attachment response.
-function _anchorProxyDownload(cdnUrl: string, filename: string): void {
-  const proxyUrl =
-    `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
-  const link = document.createElement("a");
-  link.href = proxyUrl;
-  link.download = "";
-  link.target = "_blank";
-  link.rel = "noopener noreferrer";
-  link.style.display = "none";
-  document.body.appendChild(link);
-  link.click();
-  window.setTimeout(() => link.remove(), 500);
-}
-
 async function _cdnDownload(cdnUrl: string, filename: string, direct = false): Promise<void> {
   _proxyDownload(cdnUrl, filename, direct);
 }
@@ -491,7 +473,7 @@ export async function downloadPhoto(
     downloaded_at: Math.floor(Date.now() / 1000),
   });
 
-  _anchorProxyDownload(cdnUrl, filename);
+  _proxyDownload(cdnUrl, filename);
 }
 
 // ─── Download All as ZIP (browser-side, JSZip) ───────────────────────────────
