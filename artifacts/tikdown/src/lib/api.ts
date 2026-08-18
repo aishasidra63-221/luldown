@@ -217,23 +217,14 @@ function _extractVideoId(url: string): string {
   return Date.now().toString();
 }
 
-let _downloadQueue: Promise<void> = Promise.resolve();
-
 async function _cdnDownload(cdnUrl: string, filename: string, direct = false): Promise<void> {
   const proxyUrl =
     `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}` +
     (direct ? "&direct=1" : "");
 
-  // window.location.href triggers the browser's native loading bar.
-  // Downloads are queued 1.5s apart so the browser doesn't block the second
-  // navigation while the first is still "in-flight".
-  _downloadQueue = _downloadQueue.then(
-    () =>
-      new Promise<void>(resolve => {
-        window.location.href = proxyUrl;
-        setTimeout(resolve, 1500);
-      }),
-  );
+  // Start immediately inside the user's click gesture so the browser does not
+  // treat a later MP3/video download as an unsolicited navigation.
+  window.location.href = proxyUrl;
 }
 
 // ─── Profile URL detection ────────────────────────────────────────────────────
@@ -475,9 +466,9 @@ export async function downloadPhoto(
     downloaded_at: Math.floor(Date.now() / 1000),
   });
 
-  // No client-side queue here: each click goes straight to the proxy and the
-  // browser handles the native download prompt. Download All ZIP intentionally
-  // keeps its separate Service Worker/fetch behavior below.
+  // Each click goes straight to the proxy and the browser handles the native
+  // download prompt. Download All ZIP intentionally keeps its separate
+  // Service Worker/fetch behavior below.
   const dlUrl = `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
   window.location.href = dlUrl;
 }
