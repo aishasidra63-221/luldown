@@ -14,6 +14,7 @@ import json as _json
 import logging
 import random
 import re
+from html import unescape
 from typing import Optional
 
 import httpx
@@ -302,6 +303,72 @@ def _music_url(url_list) -> str:
     return ""
 
 
+async def _resolve_audio_via_ssstik(tiktok_url: str) -> str:
+    """Resolve audio when TikTok detail metadata has no music.play_url.
+
+    SSSTik's public result page exposes a tikcdn.io music wrapper containing
+    TikTok's separate audio-asset resolver. This is only an audio fallback;
+    video URLs continue to come directly from TikTok.
+    """
+    browser_headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/126.0 Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml",
+    }
+    try:
+        timeout = httpx.Timeout(20.0, connect=8.0)
+        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+            landing = await client.get("https://ssstik.io/", headers=browser_headers)
+            if landing.status_code >= 400:
+                return ""
+            token_match = re.search(r"\bs_tt\s*=\s*['\"]([^'\"]+)['\"]", landing.text)
+            form_match = re.search(r"\bs_furl\s*=\s*['\"]([^'\"]+)['\"]", landing.text)
+            token = token_match.group(1) if token_match else ""
+            form_path = form_match.group(1) if form_match else "abc"
+            if not token:
+                return ""
+
+            result = await client.post(
+                f"https://ssstik.io/{form_path}?url=dl",
+                data={"id": tiktok_url, "locale": "en", "tt": token},
+                headers={
+                    **browser_headers,
+                    "Accept": "text/html, */*; q=0.01",
+                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                    "HX-Request": "true",
+                    "HX-Current-URL": "https://ssstik.io/",
+                    "HX-Target": "target",
+                    "HX-Trigger": "main_page_text",
+                    "Origin": "https://ssstik.io",
+                    "Referer": "https://ssstik.io/",
+                },
+            )
+            if result.status_code >= 400:
+                return ""
+
+            for match in re.finditer(r"<a\b([^>]*)>(.*?)</a>", result.text, re.I | re.S):
+                attrs, label = match.group(1), match.group(2)
+                if not re.search(r"\b(?:music|mp3)\b", f"{attrs} {label}", re.I):
+                    continue
+                href_match = re.search(r"\bhref\s*=\s*['\"]([^'\"]+)['\"]", attrs, re.I)
+                if not href_match:
+                    continue
+                href = unescape(href_match.group(1))
+                parsed = httpx.URL(href)
+                if (
+                    parsed.scheme == "https"
+                    and parsed.host == "tikcdn.io"
+                    and parsed.path.startswith("/ssstik/m/")
+                ):
+                    return str(parsed)
+    except Exception as exc:
+        logger.debug("SSSTik audio fallback failed: %s", exc)
+    return ""
+
+
 def _parse_item_struct(item: dict) -> dict:
     video  = item.get("video") or {}
     music  = item.get("music") or {}
@@ -450,7 +517,13 @@ async def _get_video_data(url: str) -> dict:
     if not parsed:
         raise DownloadError("TikTok page structure changed — could not find embedded JSON. Please try again.")
 
-    return _parse_page_data(parsed, video_id)
+    result = _parse_page_data(parsed, video_id)
+    if not result.get("_audio_url", "").startswith(("http://", "https://")):
+        fallback_audio = await _resolve_audio_via_ssstik(url)
+        if fallback_audio:
+            result["_audio_url"] = fallback_audio
+            logger.info("Obtained SSSTik audio resolver fallback")
+    return result
 
 
 # ── Public interface ──────────────────────────────────────────────────────────

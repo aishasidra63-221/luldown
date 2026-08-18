@@ -1228,6 +1228,68 @@ function musicPickUrl(urlList) {
     || firstUrl(urlList);
 }
 
+// Some normal videos expose music metadata but no playable URL:
+// music.play_url.url_list === []. In that case the public detail response is
+// incomplete for audio. SSSTik's result page exposes the additional TikTok
+// audio-asset resolver (audio video_id + file_id + music item_id) inside its
+// tikcdn wrapper. Use that only as an audio fallback; video URLs never use it.
+async function resolveAudioViaSsstik(tiktokUrl) {
+  try {
+    const browserHeaders = {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml",
+    };
+    const landing = await fetch("https://ssstik.io/", { headers: browserHeaders });
+    if (!landing.ok) return "";
+    const landingHtml = await landing.text();
+    const token = landingHtml.match(/\bs_tt\s*=\s*['"]([^'"]+)['"]/)?.[1] || "";
+    const formPath = landingHtml.match(/\bs_furl\s*=\s*['"]([^'"]+)['"]/)?.[1] || "abc";
+    if (!token) return "";
+
+    const form = new URLSearchParams({
+      id: tiktokUrl,
+      locale: "en",
+      tt: token,
+    });
+    const result = await fetch(`https://ssstik.io/${formPath}?url=dl`, {
+      method: "POST",
+      headers: {
+        ...browserHeaders,
+        "Accept": "text/html, */*; q=0.01",
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "HX-Request": "true",
+        "HX-Current-URL": "https://ssstik.io/",
+        "HX-Target": "target",
+        "HX-Trigger": "main_page_text",
+        "Origin": "https://ssstik.io",
+        "Referer": "https://ssstik.io/",
+      },
+      body: form,
+    });
+    if (!result.ok) return "";
+    const html = await result.text();
+
+    for (const match of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)) {
+      const attrs = match[1] || "";
+      const label = match[2] || "";
+      if (!/\b(?:music|mp3)\b/i.test(`${attrs} ${label}`)) continue;
+      const href = attrs.match(/\bhref\s*=\s*["']([^"']+)["']/i)?.[1]
+        ?.replace(/&amp;/g, "&");
+      if (!href) continue;
+      try {
+        const parsed = new URL(href);
+        if (parsed.protocol === "https:" && parsed.hostname === "tikcdn.io" &&
+            parsed.pathname.startsWith("/ssstik/m/")) {
+          return parsed.toString();
+        }
+      } catch { /* ignore malformed result links */ }
+    }
+  } catch (e) {
+    console.log(`[audio-fallback] SSSTik lookup failed: ${e.message}`);
+  }
+  return "";
+}
+
 // Video-specific picker for MP3 audio on video result cards.
 // Priority: signaturev3 URL that signs video_id;file_id;item_id (same as video) →
 // Render /resolve follows the 302 redirect exactly like a video download.
@@ -1352,8 +1414,9 @@ function parseAweme(aweme) {
   );
 
   // Music ID — stable identifier for the background track.
-  // Used to build: https://sf19.tiktokcdn-us.com/obj/musically-maliva-obj/{musicId}.mp3
-  // The ID never expires so we cache it in meta (not url) KV.
+  // This is metadata only. It is not itself a downloadable MP3 URL; when
+  // TikTok omits music.play_url, the audio fallback resolves a separate
+  // audio-asset video_id/file_id pair.
   // IMPORTANT: use music.mid (string) over music.id (number) to avoid JS
   // integer precision loss — TikTok music IDs are 19-digit numbers that exceed
   // Number.MAX_SAFE_INTEGER, so JSON.parse() silently rounds music.id to *000.
@@ -1438,6 +1501,13 @@ async function fetchTikTokVideo(tiktokUrl, env, ctx) {
   }
 
   const parsed = parseAweme(details[0]);
+  if (!parsed.audioUrl) {
+    const fallbackAudioUrl = await resolveAudioViaSsstik(tiktokUrl);
+    if (fallbackAudioUrl) {
+      parsed.audioUrl = fallbackAudioUrl;
+      console.log("[audio-fallback] obtained SSSTik music resolver");
+    }
+  }
 
   const metaPayload = metaCached || {
     title:       parsed.title,
@@ -1863,9 +1933,7 @@ async function handleRequest(request, env, ctx) {
         download_urls: {
           mp4_1080: p.videoUrl,
           mp4_720:  p.videoUrl720,
-          mp3: p.is_photo
-            ? (p.audioUrl      || (p.musicId ? `https://v16-ies-music.tiktokcdn.com/obj/musically-maliva-obj/${p.musicId}.mp3` : ""))
-            : (p.videoAudioUrl || (p.musicId ? `https://v16-ies-music.tiktokcdn.com/obj/musically-maliva-obj/${p.musicId}.mp3` : "")),
+           mp3: p.is_photo ? (p.audioUrl || "") : (p.videoAudioUrl || ""),
         },
         mp3_direct: !p.is_photo && !!(p.videoAudioUrl && p.videoAudioUrl.includes("bt=")),
       }, 200, cors);
@@ -1927,7 +1995,7 @@ async function handleRequest(request, env, ctx) {
           download_urls: {
             mp4_1080: p.videoUrl,
             mp4_720:  p.videoUrl720,
-            mp3:      p.audioUrl || (p.musicId ? `https://v16-ies-music.tiktokcdn.com/obj/musically-maliva-obj/${p.musicId}.mp3` : ""),
+            mp3:      p.audioUrl || "",
           },
         };
       });
@@ -2010,7 +2078,7 @@ async function handleRequest(request, env, ctx) {
           download_urls: {
             mp4_1080: p.videoUrl,
             mp4_720:  p.videoUrl720,
-            mp3:      p.audioUrl || (p.musicId ? `https://v16-ies-music.tiktokcdn.com/obj/musically-maliva-obj/${p.musicId}.mp3` : ""),
+            mp3:      p.audioUrl || "",
           },
         };
       });
@@ -2048,7 +2116,7 @@ async function handleRequest(request, env, ctx) {
       let cdnUrl;
       try { cdnUrl = decodeURIComponent(rawUrl); } catch { return err("Invalid URL encoding", 400, cors); }
 
-      const allowed = ["tiktok.com", "tiktokcdn.com", "tiktokcdn-us.com", "tiktokcdn-eu.com", "tiktokv.com", "tiktokv.eu", "musical.ly", "douyin.com", "bytecdn.cn", "snssdk.com"];
+      const allowed = ["tiktok.com", "tiktokcdn.com", "tiktokcdn-us.com", "tiktokcdn-eu.com", "tiktokv.com", "tiktokv.eu", "musical.ly", "douyin.com", "bytecdn.cn", "snssdk.com", "tikcdn.io"];
       let cdnHostname;
       try { cdnHostname = new URL(cdnUrl).hostname; } catch { return err("Invalid CDN URL", 400, cors); }
       if (!allowed.some(d => cdnHostname === d || cdnHostname.endsWith("." + d))) {
