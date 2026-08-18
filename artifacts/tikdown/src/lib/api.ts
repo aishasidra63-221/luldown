@@ -217,14 +217,23 @@ function _extractVideoId(url: string): string {
   return Date.now().toString();
 }
 
-async function _cdnDownload(cdnUrl: string, filename: string, direct = false): Promise<void> {
+function _proxyDownload(cdnUrl: string, filename: string, direct = false): void {
   const proxyUrl =
     `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}` +
     (direct ? "&direct=1" : "");
 
-  // Start immediately inside the user's click gesture so the browser does not
-  // treat a later MP3/video download as an unsolicited navigation.
-  window.location.href = proxyUrl;
+  // Use a separate direct-proxy navigation for every file. This keeps the
+  // app page alive and lets image/MP3/video downloads happen independently.
+  // This is intentionally not the Service Worker path used by ZIP downloads.
+  const frame = document.createElement("iframe");
+  frame.style.display = "none";
+  frame.src = proxyUrl;
+  document.body.appendChild(frame);
+  setTimeout(() => frame.remove(), 60_000);
+}
+
+async function _cdnDownload(cdnUrl: string, filename: string, direct = false): Promise<void> {
+  _proxyDownload(cdnUrl, filename, direct);
 }
 
 // ─── Profile URL detection ────────────────────────────────────────────────────
@@ -466,11 +475,7 @@ export async function downloadPhoto(
     downloaded_at: Math.floor(Date.now() / 1000),
   });
 
-  // Each click goes straight to the proxy and the browser handles the native
-  // download prompt. Download All ZIP intentionally keeps its separate
-  // Service Worker/fetch behavior below.
-  const dlUrl = `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
-  window.location.href = dlUrl;
+  _proxyDownload(cdnUrl, filename);
 }
 
 // ─── Download All as ZIP (browser-side, JSZip) ───────────────────────────────
