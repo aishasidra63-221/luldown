@@ -1,49 +1,36 @@
-# TikDown — TikTok Video Downloader
+# TikDown
 
-A full-stack TikTok video downloader with a React frontend and Python FastAPI backend.
+A TikTok video downloader with no watermark. Consists of two services:
 
-## Project structure
+## Architecture
 
-```
-artifacts/
-  tikdown/        # React + Vite frontend (port 5000)
-  tiktok-api/     # Python FastAPI backend (port 8000)
-```
+- **Frontend** (`artifacts/tikdown/`) — React + Vite + Tailwind, multilingual (10 languages), runs on port 5000
+- **Backend** (`artifacts/tiktok-api/`) — Python FastAPI, handles TikTok video fetching/downloading, runs on port 8000
 
-## How to run
+The Vite dev server proxies `/tikapi` → `http://localhost:8000`, so the frontend and backend communicate automatically in development.
 
-Two workflows must be running simultaneously:
+## How to Run
 
-1. **TikDown Frontend** — `cd artifacts/tikdown && pnpm dev`
-   - Serves the UI on port 5000
-   - Proxies `/tikapi/*` requests to the backend at port 8000
+Both workflows start automatically:
+- **TikDown Frontend** — `cd artifacts/tikdown && pnpm dev` (port 5000)
+- **TikTok API** — `cd artifacts/tiktok-api && pip install --user -r requirements.txt -q && PORT=8000 WORKERS=1 python3 main.py` (port 8000)
 
-2. **TikTok API** — `cd artifacts/tiktok-api && pip install --user -r requirements.txt -q && PORT=8000 WORKERS=1 python3 main.py`
-   - FastAPI server on port 8000
-   - Handles video info fetching, downloading, and streaming
+Or run both together with the **Project** workflow.
 
-## Frontend stack
+## Environment Variables / Secrets
 
-- React 19 + Vite 7
-- Tailwind CSS v4
-- Wouter (routing)
-- TanStack Query
-- 10-language i18n with static prerendering (174 routes)
-- PWA support
+| Variable | Used by | Purpose | Required? |
+|---|---|---|---|
+| `SESSION_SECRET` | Backend | Signs session tokens and admin auth | Yes (set in Replit Secrets) |
+| `REDIS_URL` | Backend | Cache (falls back to in-memory if absent) | No |
+| `RECAPTCHA_SECRET` | Backend | reCAPTCHA v3 validation | No |
+| `WORKER_URL` | Frontend build | Cloudflare Worker URL (production only) | No |
 
-## Backend stack
+## Package Management
 
-- Python FastAPI + Uvicorn
-- yt-dlp for video downloading
-- In-memory cache (Redis optional)
-- Rate limiting via slowapi
-- reCAPTCHA v3 support
+- Frontend: `pnpm` (workspace root, run `pnpm install` from `/`)
+- Backend: `pip install -r requirements.txt` (inside `artifacts/tiktok-api/`)
 
-## Environment secrets
+## User Preferences
 
-- `SESSION_SECRET` — used for session token signing
-- `CLOUDFLARE_API_TOKEN` — Cloudflare integration (e.g. cache purge or Workers)
-
-## User preferences
-
-<!-- Add user preferences here as they are confirmed -->
+- Keep existing project structure and stack
