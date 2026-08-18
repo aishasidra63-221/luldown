@@ -12,14 +12,12 @@ if (typeof window !== "undefined") {
 }
 
 // Register the image-download service worker.
-// It intercepts /sw-download requests so individual photo saves use the
-// browser's own IP (no Render proxy needed) while still triggering the
-// native browser download bar via window.location.href.
-// Falls back to the Render proxy automatically if SW is not yet active.
+// Download All ZIP can use /sw-download when the worker controls the page.
+// Individual photo saves intentionally use the Render proxy path in api.ts.
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw-image.js", { scope: "/" }).catch(() => {
     // SW unavailable (non-HTTPS dev context, browser policy, etc.) —
-    // downloadPhoto falls back to Render proxy silently.
+    // Download All ZIP falls back to the Worker/Render proxy in api.ts.
   });
 }
 

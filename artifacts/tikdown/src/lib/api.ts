@@ -456,10 +456,9 @@ export async function downloadVideo(
   await _cdnDownload(cdnUrl, filename, useDirect);
 }
 
-// Photo download — uses Service Worker when available so the browser fetches
-// the image with its own (residential) IP, bypassing datacenter 403s, while
-// still showing the native browser download bar via window.location.href.
-// Falls back to the Render proxy (_cdnDownload) if the SW is not yet active.
+// Individual photo download — always use the Worker proxy so production routes
+// images through Render. This avoids mobile-browser differences in the
+// Service Worker/hidden-iframe path while preserving the native download bar.
 export async function downloadPhoto(
   cdnUrl: string,
   index: number,
@@ -476,34 +475,11 @@ export async function downloadPhoto(
     downloaded_at: Math.floor(Date.now() / 1000),
   });
 
-  if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
-    // SW path — hidden iframe trick (MDN-recommended pattern for Content-Disposition downloads).
-    // Iframe is created IMMEDIATELY inside the user gesture → Chrome keeps gesture context.
-    // SW intercepts the iframe navigation, fetches with the browser's own (residential) IP,
-    // and returns Content-Disposition: attachment → native download bar appears ✅
-    // Multiple iframes = multiple simultaneous downloads, no queue needed ✅
-    // If CDN returns 403: SW returns JSON without Content-Disposition → iframe stays blank,
-    // no garbage file is saved (better than <a download> which would save the JSON as .jpg).
-    const dlUrl = `/sw-download?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
-    const iframe = document.createElement("iframe");
-    iframe.style.display = "none";
-    iframe.src = dlUrl;
-    document.body.appendChild(iframe);
-    // Remove iframe after 30s (well after download starts; keeps DOM clean).
-    setTimeout(() => iframe.remove(), 30_000);
-  } else {
-    // Fallback — no SW active. Worker /api/proxy → Render streams image with
-    // Content-Disposition: attachment → native bar ✅
-    // Queue 1.5s apart: window.location.href is a navigation so only one at a time.
-    const dlUrl = `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
-    _downloadQueue = _downloadQueue.then(
-      () =>
-        new Promise<void>(resolve => {
-          window.location.href = dlUrl;
-          setTimeout(resolve, 1500);
-        }),
-    );
-  }
+  // No client-side queue here: each click goes straight to the proxy and the
+  // browser handles the native download prompt. Download All ZIP intentionally
+  // keeps its separate Service Worker/fetch behavior below.
+  const dlUrl = `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}`;
+  window.location.href = dlUrl;
 }
 
 // ─── Download All as ZIP (browser-side, JSZip) ───────────────────────────────

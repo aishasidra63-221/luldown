@@ -1,9 +1,9 @@
 /* ─── TikTok Image Download Service Worker ───────────────────────────────────
- * Intercepts  /sw-download?url=...&filename=...  navigation requests.
+ * Intercepts  /sw-download?url=...&filename=...  requests used by ZIP downloads.
  * Fetches the image using the browser's own IP (residential / mobile) so
  * TikTok CDN never sees a datacenter address → no more intermittent 403s.
  * Returns the bytes with Content-Disposition: attachment so the browser
- * shows its native download bar — identical UX to the old Render-proxy path.
+ * The individual photo Save path uses the Render proxy instead.
  * ─────────────────────────────────────────────────────────────────────────── */
 
 self.addEventListener("install", () => self.skipWaiting());
