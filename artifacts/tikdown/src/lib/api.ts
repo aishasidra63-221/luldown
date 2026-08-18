@@ -217,10 +217,22 @@ function _extractVideoId(url: string): string {
   return Date.now().toString();
 }
 
+let activeProxyDownloads = 0;
+
+function emitDownloadProgress(progress: number | null): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("luldown:progress", {
+    detail: { progress },
+  }));
+}
+
 function _proxyDownload(cdnUrl: string, filename: string, direct = false): void {
   const proxyUrl =
     `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}` +
     (direct ? "&direct=1" : "");
+
+  activeProxyDownloads += 1;
+  emitDownloadProgress(-1);
 
   // Use a separate direct-proxy navigation for every file. This keeps the
   // app page alive while preserving the browser's native loading/download
@@ -229,7 +241,24 @@ function _proxyDownload(cdnUrl: string, filename: string, direct = false): void 
   frame.style.display = "none";
   frame.src = proxyUrl;
   document.body.appendChild(frame);
-  setTimeout(() => frame.remove(), 60_000);
+
+  let finished = false;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    activeProxyDownloads = Math.max(0, activeProxyDownloads - 1);
+    if (activeProxyDownloads === 0) {
+      emitDownloadProgress(100);
+      window.setTimeout(() => emitDownloadProgress(null), 250);
+    }
+    frame.remove();
+  };
+
+  frame.addEventListener("load", finish, { once: true });
+  frame.addEventListener("error", finish, { once: true });
+  // A download response may not fire iframe load consistently on every
+  // browser, so never leave the visual progress bar stuck forever.
+  window.setTimeout(finish, 60_000);
 }
 
 async function _cdnDownload(cdnUrl: string, filename: string, direct = false): Promise<void> {
