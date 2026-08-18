@@ -245,7 +245,7 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
                 {/* Individual Save button */}
                 <button
                   onClick={() => handlePhotoDownload(imgUrl, i)}
-                  disabled={photoDownloading !== null}
+                  disabled={photoDownloading === i}
                   style={{
                     width: 100, padding: "6px 0",
                     borderRadius: 8, border: "none",

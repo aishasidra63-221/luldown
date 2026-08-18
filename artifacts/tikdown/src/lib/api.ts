@@ -222,14 +222,17 @@ function _proxyDownload(cdnUrl: string, filename: string, direct = false): void 
     `${API_BASE}/api/proxy?url=${encodeURIComponent(cdnUrl)}&filename=${encodeURIComponent(filename)}` +
     (direct ? "&direct=1" : "");
 
-  // Use a separate direct-proxy navigation for every file. This keeps the
-  // app page alive and lets image/MP3/video downloads happen independently.
-  // This is intentionally not the Service Worker path used by ZIP downloads.
-  const frame = document.createElement("iframe");
-  frame.style.display = "none";
-  frame.src = proxyUrl;
-  document.body.appendChild(frame);
-  setTimeout(() => frame.remove(), 60_000);
+  // Use a hidden <a download> instead of an iframe so the browser shows its
+  // native loading bar and download indicator. Unlike iframes, anchor-triggered
+  // downloads are handled independently by the browser download manager, which
+  // means multiple simultaneous Save-button clicks all work without throttling.
+  const a = document.createElement("a");
+  a.style.display = "none";
+  a.href = proxyUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => a.remove(), 500);
 }
 
 async function _cdnDownload(cdnUrl: string, filename: string, direct = false): Promise<void> {
