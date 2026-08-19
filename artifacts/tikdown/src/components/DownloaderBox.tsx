@@ -205,9 +205,10 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
   };
 
   const reset = () => {
-    setUrl(""); setStep("idle"); setInfo(null); setProfileInfo(null); setError("");
+    // Clear only the input. Keep the current result available so users can
+    // paste another URL without losing the video they already fetched.
+    setUrl(""); setError("");
     localStorage.removeItem(URL_PERSIST_KEY);
-    onResult?.(null);
   };
 
   // Persist URL to localStorage on every change
