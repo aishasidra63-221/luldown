@@ -252,32 +252,6 @@
     <lastmod>2026-07-02</lastmod>
   </url>
 
-  <!-- Russian -->
-  <url>
-    <loc>https://luldown.com/ru</loc>
-    <priority>0.64</priority>
-    <changefreq>weekly</changefreq>
-    <lastmod>2026-07-02</lastmod>
-  </url>
-  <url>
-    <loc>https://luldown.com/ru/mp3</loc>
-    <priority>0.64</priority>
-    <changefreq>weekly</changefreq>
-    <lastmod>2026-07-02</lastmod>
-  </url>
-  <url>
-    <loc>https://luldown.com/ru/thumbnail</loc>
-    <priority>0.64</priority>
-    <changefreq>weekly</changefreq>
-    <lastmod>2026-07-02</lastmod>
-  </url>
-  <url>
-    <loc>https://luldown.com/ru/story</loc>
-    <priority>0.64</priority>
-    <changefreq>weekly</changefreq>
-    <lastmod>2026-07-02</lastmod>
-  </url>
-
   <!-- Vietnamese -->
   <url>
     <loc>https://luldown.com/vi</loc>
@@ -485,5 +459,118 @@
     <changefreq>weekly</changefreq>
     <lastmod>2026-07-02</lastmod>
   </url>
+
+  <!-- Additional localized languages and core pages -->
+  <url><loc>https://luldown.com/tl</loc></url>
+  <url><loc>https://luldown.com/tl/mp3</loc></url>
+  <url><loc>https://luldown.com/tl/thumbnail</loc></url>
+  <url><loc>https://luldown.com/tl/story</loc></url>
+  <url><loc>https://luldown.com/ms</loc></url>
+  <url><loc>https://luldown.com/ms/mp3</loc></url>
+  <url><loc>https://luldown.com/ms/thumbnail</loc></url>
+  <url><loc>https://luldown.com/ms/story</loc></url>
+  <url><loc>https://luldown.com/uk</loc></url>
+  <url><loc>https://luldown.com/uk/mp3</loc></url>
+  <url><loc>https://luldown.com/uk/thumbnail</loc></url>
+  <url><loc>https://luldown.com/uk/story</loc></url>
+
+  <!-- Localized viewer, APK and how-to pages -->
+  <url><loc>https://luldown.com/ur/viewer</loc></url>
+  <url><loc>https://luldown.com/ur/apk</loc></url>
+  <url><loc>https://luldown.com/ur/how-to-download-tiktok-video</loc></url>
+  <url><loc>https://luldown.com/hi/viewer</loc></url>
+  <url><loc>https://luldown.com/hi/apk</loc></url>
+  <url><loc>https://luldown.com/hi/how-to-download-tiktok-video</loc></url>
+  <url><loc>https://luldown.com/bn/viewer</loc></url>
+  <url><loc>https://luldown.com/bn/apk</loc></url>
+  <url><loc>https://luldown.com/bn/how-to-download-tiktok-video</loc></url>
+  <url><loc>https://luldown.com/id/viewer</loc></url>
+  <url><loc>https://luldown.com/id/apk</loc></url>
+  <url><loc>https://luldown.com/id/how-to-download-tiktok-video</loc></url>
+  <url><loc>https://luldown.com/ar/viewer</loc></url>
+  <url><loc>https://luldown.com/ar/apk</loc></url>
+  <url><loc>https://luldown.com/ar/how-to-download-tiktok-video</loc></url>
+  <url><loc>https://luldown.com/tr/viewer</loc></url>
+  <url><loc>https://luldown.com/tr/apk</loc></url>
+  <url><loc>https://luldown.com/tr/how-to-download-tiktok-video</loc></url>
+  <url><loc>https://luldown.com/es/viewer</loc></url>
+  <url><loc>https://luldown.com/es/apk</loc></url>
+  <url><loc>https://luldown.com/es/how-to-download-tiktok-video</loc></url>
+  <url><loc>https://luldown.com/pt/viewer</loc></url>
+  <url><loc>https://luldown.com/pt/apk</loc></url>
+  <url><loc>https://luldown.com/pt/how-to-download-tiktok-video</loc></url>
+  <url><loc>https://luldown.com/vi/viewer</loc></url>
+  <url><loc>https://luldown.com/vi/apk</loc></url>
+  <url><loc>https://luldown.com/vi/how-to-download-tiktok-video</loc></url>
+  <url><loc>https://luldown.com/fr/viewer</loc></url>
+  <url><loc>https://luldown.com/fr/apk</loc></url>
+  <url><loc>https://luldown.com/fr/how-to-download-tiktok-video</loc></url>
+  <url><loc>https://luldown.com/de/viewer</loc></url>
+  <url><loc>https://luldown.com/de/apk</loc></url>
+  <url><loc>https://luldown.com/de/how-to-download-tiktok-video</loc></url>
+  <url><loc>https://luldown.com/ja/viewer</loc></url>
+  <url><loc>https://luldown.com/ja/apk</loc></url>
+  <url><loc>https://luldown.com/ja/how-to-download-tiktok-video</loc></url>
+  <url><loc>https://luldown.com/ko/viewer</loc></url>
+  <url><loc>https://luldown.com/ko/apk</loc></url>
+  <url><loc>https://luldown.com/ko/how-to-download-tiktok-video</loc></url>
+  <url><loc>https://luldown.com/th/viewer</loc></url>
+  <url><loc>https://luldown.com/th/apk</loc></url>
+  <url><loc>https://luldown.com/th/how-to-download-tiktok-video</loc></url>
+  <url><loc>https://luldown.com/it/viewer</loc></url>
+  <url><loc>https://luldown.com/it/apk</loc></url>
+  <url><loc>https://luldown.com/it/how-to-download-tiktok-video</loc></url>
+  <url><loc>https://luldown.com/pl/viewer</loc></url>
+  <url><loc>https://luldown.com/pl/apk</loc></url>
+  <url><loc>https://luldown.com/pl/how-to-download-tiktok-video</loc></url>
+  <url><loc>https://luldown.com/tl/viewer</loc></url>
+  <url><loc>https://luldown.com/tl/apk</loc></url>
+  <url><loc>https://luldown.com/tl/how-to-download-tiktok-video</loc></url>
+  <url><loc>https://luldown.com/ms/viewer</loc></url>
+  <url><loc>https://luldown.com/ms/apk</loc></url>
+  <url><loc>https://luldown.com/ms/how-to-download-tiktok-video</loc></url>
+  <url><loc>https://luldown.com/uk/viewer</loc></url>
+  <url><loc>https://luldown.com/uk/apk</loc></url>
+  <url><loc>https://luldown.com/uk/how-to-download-tiktok-video</loc></url>
+
+  <!-- English core and comparison pages -->
+  <url><loc>https://luldown.com/viewer</loc></url>
+  <url><loc>https://luldown.com/apk</loc></url>
+  <url><loc>https://luldown.com/how-to-download-tiktok-video</loc></url>
+  <url><loc>https://luldown.com/ssstik-alternative</loc></url>
+  <url><loc>https://luldown.com/snaptik-alternative</loc></url>
+  <url><loc>https://luldown.com/musicaldown-alternative</loc></url>
+  <url><loc>https://luldown.com/savetik-alternative</loc></url>
+  <url><loc>https://luldown.com/tikmate-alternative</loc></url>
+  <url><loc>https://luldown.com/ssstik-not-working</loc></url>
+  <url><loc>https://luldown.com/snaptik-not-working</loc></url>
+  <url><loc>https://luldown.com/tikmate-not-working</loc></url>
+  <url><loc>https://luldown.com/musicaldown-not-working</loc></url>
+  <url><loc>https://luldown.com/savett-not-working</loc></url>
+  <url><loc>https://luldown.com/ssstik-vs-luldown</loc></url>
+  <url><loc>https://luldown.com/snaptik-vs-luldown</loc></url>
+  <url><loc>https://luldown.com/tikmate-vs-luldown</loc></url>
+  <url><loc>https://luldown.com/musicaldown-vs-luldown</loc></url>
+  <url><loc>https://luldown.com/savett-vs-luldown</loc></url>
+
+  <!-- Public utility and blog pages -->
+  <url><loc>https://luldown.com/privacy</loc></url>
+  <url><loc>https://luldown.com/faq</loc></url>
+  <url><loc>https://luldown.com/terms</loc></url>
+  <url><loc>https://luldown.com/disclaimer</loc></url>
+  <url><loc>https://luldown.com/blog</loc></url>
+  <url><loc>https://luldown.com/blog/how-to-download-tiktok-without-watermark</loc></url>
+  <url><loc>https://luldown.com/blog/tiktok-video-downloader-online-free</loc></url>
+  <url><loc>https://luldown.com/blog/download-tiktok-as-mp3</loc></url>
+  <url><loc>https://luldown.com/blog/download-tiktok-on-iphone</loc></url>
+  <url><loc>https://luldown.com/blog/tiktok-photo-slideshow-downloader</loc></url>
+  <url><loc>https://luldown.com/blog/download-tiktok-on-pc</loc></url>
+  <url><loc>https://luldown.com/blog/tiktok-1080p-hd-download</loc></url>
+  <url><loc>https://luldown.com/blog/tiktok-downloader-android</loc></url>
+  <url><loc>https://luldown.com/blog/save-tiktok-videos-online</loc></url>
+  <url><loc>https://luldown.com/blog/tiktok-no-watermark-2025</loc></url>
+  <url><loc>https://luldown.com/blog/tiktok-video-for-whatsapp-status</loc></url>
+  <url><loc>https://luldown.com/blog/tiktok-video-download-free-no-app</loc></url>
+  <url><loc>https://luldown.com/blog/tiktok-iphone-download-guide-2026</loc></url>
 
 </urlset>
