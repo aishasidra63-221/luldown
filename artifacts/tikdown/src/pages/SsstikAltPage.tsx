@@ -85,9 +85,9 @@ export default function SsstikAltPage() {
           </div>
           <h1 style={{ fontSize: "clamp(2rem,6vw,3rem)", fontWeight: 700, lineHeight: 1.05, color: "#ffffff", marginBottom: 6, letterSpacing: "-0.01em" }}>
             LulDown vs ssstik
-          </h1>
-          <h1 style={{ fontSize: "clamp(1.5rem,4vw,2.2rem)", fontWeight: 700, lineHeight: 1.2, background: "linear-gradient(90deg, #7c3aed 0%, #4f6ef7 50%, #06b6d4 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", marginBottom: 14, letterSpacing: "-0.01em" }}>
-            The Better Free TikTok Downloader
+            <span style={{ display: "block", fontSize: "clamp(1.5rem,4vw,2.2rem)", lineHeight: 1.2, background: "linear-gradient(90deg, #7c3aed 0%, #4f6ef7 50%, #06b6d4 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", marginBottom: 14, letterSpacing: "-0.01em" }}>
+              The Better Free TikTok Downloader
+            </span>
           </h1>
           <p style={{ fontSize: 15, color: "rgba(255,255,255,0.55)", marginBottom: 40, lineHeight: 1.6, maxWidth: 520, margin: "0 auto 40px" }}>
             LulDown gives you everything ssstik offers — plus 1080p HD, thumbnail downloads, multilingual support, no ads, and a PWA you can install on your phone.
