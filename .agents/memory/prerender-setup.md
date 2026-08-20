@@ -29,3 +29,10 @@ Route-level titles, descriptions, canonicals, hreflang tags, language direction,
 **Why:** React `useEffect` SEO hooks do not run during server rendering, so rendering only the app body would leave every generated HTML file with the homepage `<head>`.
 
 **How to apply:** When adding a sitemap/prerendered route, include it in the route SEO resolver and verify its generated `dist/public/<route>/index.html` has its own canonical and metadata.
+
+## Suspense and browser-only state
+The SSR entry uses `renderToPipeableStream` and waits for `onAllReady`; route pages are lazy-loaded and `renderToString` leaves only a Suspense abort marker instead of page content. Components rendered during SSR must guard `window`, `localStorage`, and `sessionStorage` access.
+
+**Why:** Static SEO requires the complete page body, including H1s, not just the route head. Browser-only storage access can abort an otherwise valid stream.
+
+**How to apply:** Re-run the full prerender after changing route components and audit both H1 presence and Suspense abort markers.

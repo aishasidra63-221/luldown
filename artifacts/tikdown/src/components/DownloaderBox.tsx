@@ -93,10 +93,14 @@ export default function DownloaderBox({ highlightFormat, lang = "en", onResult }
     localStorage.removeItem(URL_PERSIST_KEY);
   }
 
-  const prefill = typeof window !== "undefined" && !isReload
-    ? (sessionStorage.getItem("prefill_url") || localStorage.getItem(URL_PERSIST_KEY) || "")
-    : (sessionStorage.getItem("prefill_url") || "");
-  if (typeof window !== "undefined" && sessionStorage.getItem("prefill_url")) sessionStorage.removeItem("prefill_url");
+  const prefill = typeof window !== "undefined"
+    ? (!isReload
+        ? (sessionStorage.getItem("prefill_url") || localStorage.getItem(URL_PERSIST_KEY) || "")
+        : (sessionStorage.getItem("prefill_url") || ""))
+    : "";
+  if (typeof window !== "undefined" && sessionStorage.getItem("prefill_url")) {
+    sessionStorage.removeItem("prefill_url");
+  }
 
   const [url, setUrl] = useState(prefill);
   const [step, setStep] = useState<Step>(isDemo ? "info-ready" : "idle");
