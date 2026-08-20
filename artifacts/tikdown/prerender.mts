@@ -113,6 +113,32 @@ function injectRouteHead(
   return html;
 }
 
+// This release changed the generated HTML for every public route (route-level
+// SEO heads, SSR content, and heading structure). Keep this date tied to that
+// real content revision; do not bump it for a build that only changes assets.
+const SITEMAP_CONTENT_REVISION = "2026-08-20";
+
+function syncSitemapLastmod(): void {
+  const sitemapPaths = [
+    path.join(__dirname, "public/sitemap.xml"),
+    path.join(__dirname, "dist/public/sitemap.xml"),
+  ];
+
+  for (const sitemapPath of sitemapPaths) {
+    if (!fs.existsSync(sitemapPath)) continue;
+
+    const source = fs.readFileSync(sitemapPath, "utf-8");
+    const updated = source.replace(/<url>([\s\S]*?)<\/url>/gi, (full, contents: string) => {
+      const withLastmod = contents.match(/<lastmod>[\s\S]*?<\/lastmod>/i)
+        ? contents.replace(/<lastmod>[\s\S]*?<\/lastmod>/i, `\n    <lastmod>${SITEMAP_CONTENT_REVISION}</lastmod>`)
+        : `${contents}\n    <lastmod>${SITEMAP_CONTENT_REVISION}</lastmod>\n  `;
+      return `<url>${withLastmod}</url>`;
+    });
+
+    fs.writeFileSync(sitemapPath, updated);
+  }
+}
+
 // ── Main ────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -171,6 +197,11 @@ async function main() {
       failures.push(route);
       process.stdout.write(`  ✗ ${route}: ${(e as Error).message}\n`);
     }
+  }
+
+  if (fail === 0) {
+    syncSitemapLastmod();
+    console.log(`🗺️ Sitemap lastmod synced to ${SITEMAP_CONTENT_REVISION} for ${ok} updated routes.`);
   }
 
   await vite.close();
