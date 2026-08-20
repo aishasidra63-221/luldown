@@ -22,3 +22,10 @@ Wouter 3.10's `memoryLocation` hook calls `useSyncExternalStore(subscribe, getSn
 
 ## Route count
 174 routes: 28 English pages + 13 blog posts + 19 lang homepages + 19×6 lang tool pages. All rendered successfully (0 failures).
+
+## Static route head metadata
+Route-level titles, descriptions, canonicals, hreflang tags, language direction, Open Graph values, and JSON-LD are injected by the prerender script using `src/lib/route-seo.ts`.
+
+**Why:** React `useEffect` SEO hooks do not run during server rendering, so rendering only the app body would leave every generated HTML file with the homepage `<head>`.
+
+**How to apply:** When adding a sitemap/prerendered route, include it in the route SEO resolver and verify its generated `dist/public/<route>/index.html` has its own canonical and metadata.

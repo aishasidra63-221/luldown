@@ -66,6 +66,53 @@ const ROUTES: string[] = [
   ...NON_EN_LANGS.flatMap(l => LANG_TOOLS.map(t => `/${l}${t}`)),
 ];
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function injectRouteHead(
+  template: string,
+  seo: {
+    title: string;
+    description: string;
+    canonical: string;
+    language: string;
+    direction: "ltr" | "rtl";
+    hreflang: Array<{ hreflang: string; href: string }>;
+    schema: Record<string, unknown>;
+  },
+): string {
+  const escapedTitle = escapeHtml(seo.title);
+  const escapedDescription = escapeHtml(seo.description);
+  const escapedCanonical = escapeHtml(seo.canonical);
+  const hreflang = seo.hreflang.map(({ hreflang, href }) =>
+    `<link rel="alternate" href="${escapeHtml(href)}" hreflang="${escapeHtml(hreflang)}" />`
+  ).join("\n    ");
+  const schema = JSON.stringify(seo.schema).replace(/</g, "\\u003c");
+
+  let html = template
+    .replace(/<html\b[^>]*>/i, `<html lang="${escapeHtml(seo.language)}" dir="${seo.direction}">`)
+    .replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapedTitle}</title>`)
+    .replace(/<meta name="description"[^>]*>/i, `<meta name="description" content="${escapedDescription}" />`)
+    .replace(/<meta property="og:title"[^>]*>/i, `<meta property="og:title" content="${escapedTitle}" />`)
+    .replace(/<meta property="og:description"[^>]*>/i, `<meta property="og:description" content="${escapedDescription}" />`)
+    .replace(/<meta property="og:url"[^>]*>/i, `<meta property="og:url" content="${escapedCanonical}" />`)
+    .replace(/<meta name="twitter:title"[^>]*>/i, `<meta name="twitter:title" content="${escapedTitle}" />`)
+    .replace(/<meta name="twitter:description"[^>]*>/i, `<meta name="twitter:description" content="${escapedDescription}" />`)
+    .replace(/<link rel="canonical"[^>]*>/i, `<link rel="canonical" href="${escapedCanonical}" />`);
+
+  html = html.replace(
+    /<!-- Hreflang[\s\S]*?<!-- JSON-LD Schema[\s\S]*?<!-- PWA -->/i,
+    `<!-- Route hreflang -->\n    ${hreflang}\n\n    <!-- Route JSON-LD -->\n    <script id="route-jsonld" type="application/ld+json">${schema}</script>\n\n    <!-- PWA -->`,
+  );
+
+  return html;
+}
+
 // ── Main ────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -91,6 +138,9 @@ async function main() {
   const { render } = (await vite.ssrLoadModule("/src/entry-server.tsx")) as {
     render: (url: string) => string;
   };
+  const { getRouteSeo } = (await vite.ssrLoadModule("/src/lib/route-seo.ts")) as {
+    getRouteSeo: (url: string) => Parameters<typeof injectRouteHead>[1];
+  };
 
   console.log(`📄 Prerendering ${ROUTES.length} routes…\n`);
 
@@ -101,10 +151,11 @@ async function main() {
   for (const route of ROUTES) {
     try {
       const appHtml = render(route);
-      const html = template.replace(
+        const htmlWithBody = template.replace(
         '<div id="root"></div>',
         `<div id="root">${appHtml}</div>`
       );
+        const html = injectRouteHead(htmlWithBody, getRouteSeo(route));
 
       const outPath =
         route === "/"
