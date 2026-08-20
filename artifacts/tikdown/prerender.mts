@@ -136,7 +136,7 @@ async function main() {
   });
 
   const { render } = (await vite.ssrLoadModule("/src/entry-server.tsx")) as {
-    render: (url: string) => string;
+    render: (url: string) => Promise<string>;
   };
   const { getRouteSeo } = (await vite.ssrLoadModule("/src/lib/route-seo.ts")) as {
     getRouteSeo: (url: string) => Parameters<typeof injectRouteHead>[1];
@@ -150,7 +150,7 @@ async function main() {
 
   for (const route of ROUTES) {
     try {
-      const appHtml = render(route);
+        const appHtml = await render(route);
         const htmlWithBody = template.replace(
         '<div id="root"></div>',
         `<div id="root">${appHtml}</div>`

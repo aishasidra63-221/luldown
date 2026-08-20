@@ -2,7 +2,8 @@
  * SSR entry point — used by prerender.mts to generate static HTML snapshots.
  * Loaded via Vite's ssrLoadModule() at prerender time, never in the client bundle.
  */
-import { renderToString } from "react-dom/server";
+import { renderToPipeableStream } from "react-dom/server";
+import { PassThrough } from "node:stream";
 import { useSyncExternalStore } from "react";
 import App from "./App";
 
@@ -28,7 +29,36 @@ function createSSRLocationHook(path: string) {
   return hook;
 }
 
-export function render(url: string): string {
+export function render(url: string): Promise<string> {
   const ssrHook = createSSRLocationHook(url) as () => [string, (to: string) => void];
-  return renderToString(<App ssrHook={ssrHook} />);
+  return new Promise((resolve, reject) => {
+    let didError = false;
+    const passThrough = new PassThrough();
+    let html = "";
+
+    passThrough.on("data", (chunk: Buffer | string) => {
+      html += chunk.toString();
+    });
+    passThrough.on("end", () => {
+      if (didError) {
+        reject(new Error(`SSR failed for ${url}`));
+      } else {
+        resolve(html);
+      }
+    });
+    passThrough.on("error", reject);
+
+    const stream = renderToPipeableStream(<App ssrHook={ssrHook} />, {
+      onAllReady() {
+        stream.pipe(passThrough);
+      },
+      onShellError(error) {
+        reject(error);
+      },
+      onError(error) {
+        didError = true;
+        console.error(`[ssr] ${url}:`, error);
+      },
+    });
+  });
 }
