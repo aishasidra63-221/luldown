@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { downloadVideo, downloadPhoto, downloadAllAsZip, addHistoryEntry, VideoInfo, DownloadFormat, API_BASE } from "@/lib/api";
+import { downloadVideo, downloadPhoto, downloadAllAsZip, addHistoryEntry, VideoInfo, DownloadFormat, API_BASE, getAudioRoute } from "@/lib/api";
 import { Music, Download, Image, Video } from "lucide-react";
 
 interface FmtCfg {
@@ -97,6 +97,14 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
   const tags = (info.title || "").match(/#[\w\u0900-\u097F]+/g) ?? [];
   const cleanTitle = (info.title || "").replace(/#[\w\u0900-\u097F]+/g, "").trim();
   const avatarLetter = (info.author || "T").replace("@", "").charAt(0).toUpperCase();
+  const audioRoute = getAudioRoute(info.download_urls?.mp3);
+  const audioRouteLabel = {
+    resolver: "Resolver → CDN",
+    direct_cdn: "Direct CDN",
+    music_cdn_proxy: "Music CDN proxy",
+    fallback: "Fallback route",
+    unavailable: "Unavailable",
+  }[audioRoute];
 
   return (
     <div style={{
@@ -380,6 +388,11 @@ export default function VideoResultCard({ info, url, highlightFormat, onError }:
                 <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: "#fff", lineHeight: 1.3 }}>
                   {cfg.label}
                 </p>
+                 {cfg.format === "mp3" && (
+                   <p style={{ margin: "3px 0 0", fontSize: 10.5, fontWeight: 600, color: "rgba(255,255,255,0.72)", lineHeight: 1.2 }}>
+                     {audioRouteLabel}
+                   </p>
+                 )}
               </div>
               <div style={{ paddingRight: 14, flexShrink: 0 }}>
                 <div style={{

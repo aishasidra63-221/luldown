@@ -78,6 +78,19 @@ export interface StoryInfo {
 
 export type DownloadFormat = "mp4_720" | "mp4_1080" | "mp3" | "thumbnail";
 
+// Safe diagnostic only: never expose or log the signed URL itself.
+// This mirrors the Worker /api/proxy routing decisions for normal video MP3s.
+export type AudioRoute = "resolver" | "direct_cdn" | "music_cdn_proxy" | "fallback" | "unavailable";
+
+export function getAudioRoute(url?: string): AudioRoute {
+  if (!url) return "unavailable";
+  if (url.includes("signaturev3") && url.includes("video_id=")) return "resolver";
+  if (url.includes("bt=")) return "direct_cdn";
+  if (url.includes("musically-maliva-obj") || url.includes("ies-music")) return "music_cdn_proxy";
+  if (url.includes("tikcdn.io/ssstik/m/")) return "fallback";
+  return "fallback";
+}
+
 // ─── HMAC Token cache ─────────────────────────────────────────────────────────
 // Server now rotates the token 4x/day (every 6 hours — see cloudflare-worker/
 // worker.js) and every visitor gets the identical token during that window.
@@ -393,6 +406,9 @@ export async function downloadVideo(
     author   = videoMeta?.author || "Unknown";
     const ext = format === "mp3" ? "mp3" : "mp4";
     filename = `luldown_${videoId}.${ext}`;
+    if (format === "mp3") {
+      console.info(`[audio-route] ${getAudioRoute(cdnUrl)}`);
+    }
   } else {
     // Fallback — call /api/download (e.g. if info was fetched by older code)
     const token = await getToken();
