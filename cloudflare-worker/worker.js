@@ -1280,7 +1280,39 @@ async function resolveAudioViaSsstik(tiktokUrl) {
         const parsed = new URL(href);
         if (parsed.protocol === "https:" && parsed.hostname === "tikcdn.io" &&
             parsed.pathname.startsWith("/ssstik/m/")) {
-          return parsed.toString();
+          // SSSTik wraps the real TikTok music resolver in a URL-safe Base64
+          // path. Decode it so our API returns the actual TikTok
+          // /aweme/v1/play/ resolver instead of the SSSTik wrapper.
+          const encodedResolver = parsed.pathname.slice("/ssstik/m/".length);
+          const padded = encodedResolver
+            .replace(/-/g, "+")
+            .replace(/_/g, "/")
+            .padEnd(Math.ceil(encodedResolver.length / 4) * 4, "=");
+          let resolverText = "";
+          try {
+            resolverText = atob(padded);
+          } catch {
+            resolverText = "";
+          }
+          if (!resolverText) continue;
+
+          try {
+            const resolver = new URL(resolverText);
+            const isTikTokPlayResolver =
+              resolver.protocol === "https:" &&
+              (resolver.hostname.endsWith(".tiktokv.com") ||
+               resolver.hostname.endsWith(".tiktokv.us") ||
+               resolver.hostname.endsWith(".tiktokv.eu")) &&
+              resolver.pathname === "/aweme/v1/play/" &&
+              resolver.searchParams.has("video_id") &&
+              resolver.searchParams.has("file_id") &&
+              resolver.searchParams.has("item_id") &&
+              resolver.searchParams.has("signaturev3");
+            if (isTikTokPlayResolver) {
+              console.log("[audio-fallback] decoded TikTok signaturev3 music resolver");
+              return resolver.toString();
+            }
+          } catch { /* ignore invalid wrapped resolver */ }
         }
       } catch { /* ignore malformed result links */ }
     }
@@ -1395,6 +1427,22 @@ function parseAweme(aweme) {
     ? (url1080 || musicUrl)
     : musicUrl;
 
+  // Some Android detail responses put the playable original audio object in
+  // music.extra as an escaped JSON string while leaving play_url.url_list
+  // empty. Keep it separate: normal video audio first tries the TikTok
+  // signaturev3 resolver from SSSTik; this direct CDN URL is the final
+  // fallback when that resolver cannot be obtained.
+  let originalSongUrl = "";
+  try {
+    const extra = typeof music.extra === "string"
+      ? JSON.parse(music.extra)
+      : (music.extra || {});
+    if (typeof extra?.original_song_url === "string" &&
+        /^https:\/\/[^/]+\.tiktokcdn\.com\//.test(extra.original_song_url)) {
+      originalSongUrl = extra.original_song_url;
+    }
+  } catch { /* malformed optional music metadata */ }
+
   // Thumbnail — pick highest resolution available.
   // Use .length check before || so an empty url_list [] (truthy but useless)
   // doesn't block the fallback chain. bestCoverUrl prefers the URL with the
@@ -1432,6 +1480,7 @@ function parseAweme(aweme) {
     videoUrl:      isPhoto ? photoVideoUrl : url1080,
     videoUrl720:   isPhoto ? ""            : url720,
     audioUrl,
+    originalSongUrl,
     musicId,
     thumbUrl:      thumbnail,
     duration:      video.duration || 0,
@@ -1506,6 +1555,9 @@ async function fetchTikTokVideo(tiktokUrl, env, ctx) {
     if (fallbackAudioUrl) {
       parsed.audioUrl = fallbackAudioUrl;
       console.log("[audio-fallback] obtained SSSTik music resolver");
+    } else if (parsed.originalSongUrl) {
+      parsed.audioUrl = parsed.originalSongUrl;
+      console.log("[audio-fallback] using TikTok music.extra original_song_url");
     }
   }
 
