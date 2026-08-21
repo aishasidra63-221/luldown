@@ -128,7 +128,15 @@ async function kvGetVideoAudio(env, videoId) {
   if (!env.META_KV) return null;
   try {
     const raw = await env.META_KV.get(`vaudio:${videoId}`, { cacheTtl: 1800 });
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const value = JSON.parse(raw);
+    // Do not let an old failed lookup or the former SSSTik wrapper hide a
+    // fresh TikTok music.extra URL. Those entries must be re-resolved.
+    if (!value?.videoAudioUrl ||
+        value.videoAudioUrl.includes("tikcdn.io/ssstik/m/")) {
+      return null;
+    }
+    return value;
   } catch { return null; }
 }
 async function kvSetVideoAudio(env, videoId, videoAudioUrl) {
@@ -1551,13 +1559,19 @@ async function fetchTikTokVideo(tiktokUrl, env, ctx) {
 
   const parsed = parseAweme(details[0]);
   if (!parsed.audioUrl) {
-    const fallbackAudioUrl = await resolveAudioViaSsstik(tiktokUrl);
-    if (fallbackAudioUrl) {
-      parsed.audioUrl = fallbackAudioUrl;
-      console.log("[audio-fallback] obtained SSSTik music resolver");
-    } else if (parsed.originalSongUrl) {
+    // TikTok's App API may provide a working audio CDN in music.extra even
+    // when music.play_url.url_list is empty. Use that URL first for normal
+    // video MP3 downloads; SSSTik is only a fallback when TikTok omitted both
+    // the play list and the original song URL.
+    if (parsed.originalSongUrl) {
       parsed.audioUrl = parsed.originalSongUrl;
       console.log("[audio-fallback] using TikTok music.extra original_song_url");
+    } else {
+      const fallbackAudioUrl = await resolveAudioViaSsstik(tiktokUrl);
+      if (fallbackAudioUrl) {
+        parsed.audioUrl = fallbackAudioUrl;
+        console.log("[audio-fallback] obtained SSSTik music resolver");
+      }
     }
   }
 
