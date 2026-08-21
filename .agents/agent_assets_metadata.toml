@@ -14,3 +14,17 @@ mtime_ms = 1787284048459
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:3c9b0720-1a1a-444e-8bc0-054da50ac47d/f4a10256-9828-4835-9003-7eea48ecdc6a/a46bfb7f-9c03-4afd-90db-35129e7f7eae"
 storage_version_token = "1787284050338918"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "JWwDkKOi6UKNphD-rzWW8"
+uri = "file://artifacts/tiktok-api/android-raw-aweme-7667189094073683222.json"
+type = "unspecified"
+title = "Raw TikTok Android API JSON — 7667189094073683222"
+description = "Unmodified raw aweme detail response fetched directly from TikTok Android App API. Signed URLs are preserved in the file but not reproduced in chat."
+logical_id = "b69ed83a-47bb-486e-ad7d-af9a22b5ebcc"
+content_hash = "sha256:8fc8e22dc700be7e5898d4ff55e19dec30459640f292e53a4d5ab7d4d3d78e1d"
+size = 85481
+mtime_ms = 1787308325656
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:3c9b0720-1a1a-444e-8bc0-054da50ac47d/b69ed83a-47bb-486e-ad7d-af9a22b5ebcc/795f2dd5-3cc2-49e8-a681-9a2aef1e0f39"
+storage_version_token = "1787308334845512"
+content_type = "application/octet-stream"
