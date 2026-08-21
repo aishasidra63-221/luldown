@@ -2,3 +2,4 @@
 - [Static prerendering setup](prerender-setup.md) — 174 routes prerendered via entry-server.tsx + prerender.mts; wouter SSR fix required.
 - [Mobile download contexts](mobile-download-contexts.md) — long streamed attachments need independent download contexts; main-tab navigation can block the next mobile image save.
 - [TikTok music URL availability](tiktok-music-url-availability.md) — Android detail responses can include music metadata while leaving music.play_url.url_list empty; never assume the music ID is a downloadable URL.
+- [TikTok music resolver mapping](tiktok-music-resolver-mapping.md) — SSSTik maps music_vid→video_id and music.mid→item_id in a signed /aweme/v1/play resolver.
