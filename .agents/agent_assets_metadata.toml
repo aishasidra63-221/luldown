@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "qEbE2Dar1SaYoBFEdOREs"
+uri = "file://artifacts/tikdown/raw-new-tiktok-response-redacted.json"
+type = "unspecified"
+title = "Complete TikTok App API JSON (redacted)"
+description = "Complete raw response structure for the supplied TikTok URL. Signed URL query values and sensitive identifiers are redacted; all fields and nested objects are preserved."
+logical_id = "f4a10256-9828-4835-9003-7eea48ecdc6a"
+content_hash = "sha256:ed22392cd90e798869400a367b216dbe2f72346f534acc3be329e91e03b77d1b"
+size = 103327
+mtime_ms = 1787284048459
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:3c9b0720-1a1a-444e-8bc0-054da50ac47d/f4a10256-9828-4835-9003-7eea48ecdc6a/a46bfb7f-9c03-4afd-90db-35129e7f7eae"
+storage_version_token = "1787284050338918"
+content_type = "application/octet-stream"
