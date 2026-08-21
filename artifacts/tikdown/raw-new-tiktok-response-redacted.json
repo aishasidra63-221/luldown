@@ -79,7 +79,7 @@ kya pata vah Kisi Aur Naam Se{
           "video_duration_precision": 17.528126
         },
         "external_song_info": [],
-        "extra": "{\"aed_music_dur\":17.527,\"amplitude_peak\":0,\"beats\":{},\"can_read\":true,\"can_reuse\":true,\"erase_type\":0,\"erase_uid\":0,\"extract_item_id\":7653201454739623182,\"filter_reason\":\"not_commerce\",\"from_user_id\":-1,\"full_song_beat_info\":{},\"full_song_beats\":{},\"has_edited\":0,\"is_batch_take_down_music\":false,\"is_ugc_mapping\":true,\"is_used\":1,\"loudness_lufs\":0,\"music_vid\":\"v12942gd0000d8qq4m7og65h4rfm6290\",\"original_song_url\":\"https://sf16-ies-music-va.tiktokcdn.com/obj/ies-music-ttp-dup-us/7654260850626267917.mp3\",\"owner_id\":7406086212846634030,\"resource_status\":0,\"review_unshelve_reason\":0,\"reviewed\":1,\"schedule_search_time\":0}",
+        "extra": "{\"aed_music_dur\":17.527,\"amplitude_peak\":0,\"beats\":{},\"can_read\":true,\"can_reuse\":true,\"erase_type\":0,\"erase_uid\":0,\"extract_item_id\":7653201454739623182,\"filter_reason\":\"not_commerce\",\"from_user_id\":-1,\"full_song_beat_info\":{},\"full_song_beats\":{},\"has_edited\":0,\"is_batch_take_down_music\":false,\"is_ugc_mappiwng\":true,\"is_used\":1,\"loudness_lufs\":0,\"music_vid\":\"v12942gd0000d8qq4m7og65h4rfm6290\",\"original_song_url\":\"https://sf16-ies-music-va.tiktokcdn.com/obj/ies-music-ttp-dup-us/7654260850626267917.mp3\",\"owner_id\":7406086212846634030,\"resource_status\":0,\"review_unshelve_reason\":0,\"reviewed\":1,\"schedule_search_time\":0}",
         "has_commerce_right": false,
         "has_commerce_right_strict": false,
         "has_human_voice": false,
