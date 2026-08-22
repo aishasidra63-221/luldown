@@ -15,7 +15,13 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from cache import init_redis, cache_get, cache_set, make_cache_key, cache_stats, cache_flush, _mem_cache
-from downloader import DownloadError, get_video_info, get_cdn_url, stream_download, get_raw_item
+from downloader import (
+    DownloadError,
+    get_video_info,
+    get_cdn_url,
+    stream_download,
+    get_raw_item,
+)
 from history import add_to_history, get_history, clear_history, history_stats
 from recaptcha import verify_token as verify_recaptcha, is_enabled as recaptcha_enabled
 from session import generate_token, verify_token as verify_session_token
@@ -255,6 +261,31 @@ async def debug_raw(request: Request, body: InfoRequest):
         return await get_raw_item(url)
     except DownloadError as e:
         raise HTTPException(status_code=422, detail=str(e))
+
+
+@app.post("/api/debug/audio")
+@limiter.limit("10/minute")
+async def debug_audio(request: Request, body: InfoRequest):
+    """Return bounded audio identifier/resolver evidence for one TikTok URL.
+
+    This is deliberately fail-closed and is never part of the public download
+    flow. It helps compare future raw responses without exposing full payloads.
+    """
+    if os.environ.get("ENABLE_DEBUG_ENDPOINTS") != "1":
+        raise HTTPException(status_code=404, detail="Not found")
+    url = validate_tiktok_url(body.url)
+    try:
+        raw = await get_raw_item(url)
+    except DownloadError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    return {
+        "success": True,
+        "video_id": raw.get("video_id"),
+        "source": raw.get("source"),
+        "music_top_keys": raw.get("music_top_keys", []),
+        "music_play_url": raw.get("music_play_url"),
+        "audio_debug": raw.get("audio_debug", {}),
+    }
 
 
 @app.post("/api/info")

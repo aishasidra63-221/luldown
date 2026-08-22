@@ -507,6 +507,126 @@ def _parse_page_data(parsed: dict, video_id: str) -> dict:
     return _parse_item_struct(item)
 
 
+def _audio_debug_summary(item: dict) -> dict:
+    """Return bounded, JSON-safe evidence for investigating hidden audio data.
+
+    This intentionally reports identifiers and URL locations rather than the
+    whole item payload. It is only exposed through the protected debug route.
+    """
+    music_objects = {
+        "music": item.get("music") or {},
+        "added_sound_music_info": item.get("added_sound_music_info")
+        or item.get("addedSoundMusicInfo")
+        or {},
+    }
+    result: dict = {
+        "music_object_keys": {
+            name: list(value.keys()) if isinstance(value, dict) else type(value).__name__
+            for name, value in music_objects.items()
+        },
+        "identifiers": {},
+        "extra": {},
+        "audio_url_candidates": [],
+        "resolver_urls": [],
+        "candidate_32hex": [],
+        "relevant_fields": [],
+    }
+
+    def add_identifier(source: str, key: str, value) -> None:
+        if value not in (None, "") and isinstance(value, (str, int, float, bool)):
+            result["identifiers"].setdefault(source, {})[key] = str(value)
+
+    for source, music in music_objects.items():
+        if not isinstance(music, dict):
+            continue
+        for key in ("mid", "id_str", "id", "music_ugid", "music_vid", "video_id", "file_id"):
+            if key in music:
+                add_identifier(source, key, music[key])
+
+        extra = music.get("extra")
+        if isinstance(extra, str):
+            try:
+                extra = _json.loads(extra)
+            except Exception:
+                extra = {"_parse_error": True, "raw_prefix": extra[:500]}
+        if isinstance(extra, dict):
+            result["extra"][source] = {
+                key: str(extra[key])
+                for key in (
+                    "music_vid",
+                    "extract_item_id",
+                    "original_song_url",
+                    "owner_id",
+                    "resource_status",
+                )
+                if key in extra
+            }
+
+        play = music.get("play_url") or music.get("playUrl")
+        if isinstance(play, dict):
+            for key in ("uri", "url_list", "urlList"):
+                value = play.get(key)
+                if isinstance(value, list):
+                    result["audio_url_candidates"].extend(
+                        {"source": f"{source}.play_url.{key}", "url": str(url)}
+                        for url in value
+                        if isinstance(url, str) and url.startswith(("http://", "https://"))
+                    )
+                elif isinstance(value, str) and value.startswith(("http://", "https://")):
+                    result["audio_url_candidates"].append(
+                        {"source": f"{source}.play_url.{key}", "url": value}
+                    )
+
+    def walk(value, path="item"):
+        if isinstance(value, dict):
+            for key, child in value.items():
+                child_path = f"{path}.{key}"
+                key_lower = str(key).lower()
+                if isinstance(child, (str, int, float, bool)) or child is None:
+                    text = "" if child is None else str(child)
+                    relevant = any(
+                        term in key_lower
+                        for term in ("music", "audio", "play", "file", "sign", "url", "uri")
+                    )
+                    if relevant and len(result["relevant_fields"]) < 300:
+                        result["relevant_fields"].append(
+                            {"path": child_path, "value": text[:2000]}
+                        )
+                    if re.fullmatch(r"(?i)[a-f0-9]{32}", text):
+                        if len(result["candidate_32hex"]) < 300:
+                            result["candidate_32hex"].append(
+                                {"path": child_path, "value": text}
+                            )
+                    if text.startswith(("http://", "https://")):
+                        if "/aweme/v1/play/" in text and "signaturev3" in text:
+                            if len(result["resolver_urls"]) < 100:
+                                result["resolver_urls"].append(
+                                    {"path": child_path, "url": text}
+                                )
+                        if any(term in key_lower for term in ("music", "audio", "play")):
+                            if len(result["audio_url_candidates"]) < 300:
+                                result["audio_url_candidates"].append(
+                                    {"source": child_path, "url": text}
+                                )
+                else:
+                    walk(child, child_path)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                walk(child, f"{path}[{index}]")
+
+    walk(item)
+    # De-duplicate URLs while preserving their first source path.
+    for key in ("audio_url_candidates", "resolver_urls"):
+        seen = set()
+        unique = []
+        for entry in result[key]:
+            if entry["url"] not in seen:
+                seen.add(entry["url"])
+                unique.append(entry)
+        result[key] = unique
+    return result
+
+
 # ── Step 4: full pipeline — one path, direct page fetch ──────────────────────
 
 async def _get_video_data(url: str) -> dict:
@@ -593,6 +713,7 @@ async def get_raw_item(url: str) -> dict:
         ],
         "music_play_url":  summarise_url_obj(music.get("play_url") or music.get("playUrl")),
         "music_play_url_raw_type": type(music.get("play_url") or music.get("playUrl")).__name__,
+        "audio_debug": _audio_debug_summary(item),
     }
 
 
