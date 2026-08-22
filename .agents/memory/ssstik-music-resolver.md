@@ -14,3 +14,9 @@ TikTok's signed Android `/aweme/v1/music/detail/` accepts `music_id` and returns
 **Why:** The endpoint is a real, successful music metadata lookup, but not the missing playback resolver for the inspected assets.
 
 **How to apply:** Use `music.mid`/`id_str` (not the rounded numeric ID) for metadata lookup; continue searching for the playback-generation step separately.
+
+SSSTik's public JavaScript has a separate MP3 flow: Base64(JSON `{id, video}`) is POSTed to `r.ssstik.top/b/tiktok_mp3.sh`, which responds with `hx-redirect: https://r6.ssstik.top/ssstikm/{aweme_id}`. The latter directly serves an MP3 with ~30-day immutable cache headers.
+
+**Why:** This explains how SSSTik can cache one audio result and serve many users without exposing or recomputing a music `file_id` in the browser.
+
+**How to apply:** The key server-side behavior to reproduce/analyze is the Aweme-ID MP3 route, not necessarily a client-visible TikTok music resolver; treat it as a provider endpoint and avoid claiming its internal upstream algorithm is known.
