@@ -1941,6 +1941,50 @@ async function handleRequest(request, env, ctx) {
       const vid = aweme.video || {};
       const mus = aweme.music || {};
       const musicPlayUrl = mus.play_url || mus.playUrl || {};
+      let musicExtra = mus.extra || {};
+      if (typeof musicExtra === "string") {
+        try { musicExtra = JSON.parse(musicExtra); } catch { musicExtra = {}; }
+      }
+      const addedMus = aweme.added_sound_music_info || aweme.addedSoundMusicInfo || {};
+      const audioSources = { music: mus, added_sound_music_info: addedMus };
+      const audioIdentifiers = {};
+      const audioCandidates = [];
+      const audioResolvers = [];
+      const candidate32Hex = [];
+      for (const [source, audio] of Object.entries(audioSources)) {
+        if (!audio || typeof audio !== "object") continue;
+        const ids = {};
+        for (const key of ["mid", "id_str", "id", "music_ugid", "music_vid", "video_id", "file_id"]) {
+          if (audio[key] !== undefined && audio[key] !== null && audio[key] !== "") {
+            ids[key] = String(audio[key]);
+          }
+        }
+        if (Object.keys(ids).length) audioIdentifiers[source] = ids;
+        const play = audio.play_url || audio.playUrl || {};
+        for (const key of ["uri", "url_list", "urlList"]) {
+          const values = Array.isArray(play[key]) ? play[key] : [play[key]];
+          for (const value of values) {
+            if (typeof value === "string" && /^https?:\/\//.test(value)) {
+              audioCandidates.push({ source: `${source}.play_url.${key}`, url: value });
+            }
+          }
+        }
+      }
+      const scanAudioValue = (value, path = "aweme") => {
+        if (typeof value === "string") {
+          if (/^[a-f0-9]{32}$/i.test(value)) candidate32Hex.push({ path, value });
+          if (value.includes("/aweme/v1/play/") && value.includes("signaturev3")) {
+            audioResolvers.push({ path, url: value });
+          }
+          return;
+        }
+        if (Array.isArray(value)) {
+          value.forEach((child, index) => scanAudioValue(child, `${path}[${index}]`));
+        } else if (value && typeof value === "object") {
+          Object.entries(value).forEach(([key, child]) => scanAudioValue(child, `${path}.${key}`));
+        }
+      };
+      scanAudioValue(aweme);
       return json({
         video_keys:       Object.keys(vid),
         bit_rate_gears:   (vid.bit_rate || vid.bitRate || []).map(g => ({
@@ -1955,6 +1999,17 @@ async function handleRequest(request, env, ctx) {
         music_play_url_keys: typeof musicPlayUrl === "object" ? Object.keys(musicPlayUrl) : [],
         music_url_list:    musicPlayUrl.url_list || musicPlayUrl.urlList || [],
         music_uri:         musicPlayUrl.uri || "",
+        audio_debug: {
+          identifiers: audioIdentifiers,
+          extra: {
+            music_vid: musicExtra?.music_vid || "",
+            extract_item_id: musicExtra?.extract_item_id ? String(musicExtra.extract_item_id) : "",
+            original_song_url: musicExtra?.original_song_url || "",
+          },
+          audio_url_candidates: [...new Map(audioCandidates.map(x => [x.url, x])).values()],
+          resolver_urls: [...new Map(audioResolvers.map(x => [x.url, x])).values()],
+          candidate_32hex: [...new Map(candidate32Hex.map(x => [`${x.path}:${x.value}`, x])).values()],
+        },
       }, 200, cors);
     }
 
