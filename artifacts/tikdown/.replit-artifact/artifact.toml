@@ -22,10 +22,6 @@ build = [ "pnpm", "--filter", "@workspace/tikdown", "run", "build" ]
 publicDir = "artifacts/tikdown/dist/public"
 serve = "static"
 
-[[services.production.rewrites]]
-from = "/*"
-to = "/index.html"
-
 [services.env]
 PORT = "25828"
 BASE_PATH = "/"

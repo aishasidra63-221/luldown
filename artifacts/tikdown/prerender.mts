@@ -130,12 +130,15 @@ function syncSitemapLastmod(): void {
     const source = fs.readFileSync(sitemapPath, "utf-8");
     const updated = source.replace(/<url>([\s\S]*?)<\/url>/gi, (full, contents: string) => {
       const withLastmod = contents.match(/<lastmod>[\s\S]*?<\/lastmod>/i)
-        ? contents.replace(/<lastmod>[\s\S]*?<\/lastmod>/i, `\n    <lastmod>${SITEMAP_CONTENT_REVISION}</lastmod>`)
-        : `${contents}\n    <lastmod>${SITEMAP_CONTENT_REVISION}</lastmod>\n  `;
+        ? contents.replace(
+            /\s*<lastmod>[\s\S]*?<\/lastmod>/i,
+            `\n    \n    <lastmod>${SITEMAP_CONTENT_REVISION}</lastmod>`,
+          )
+        : `${contents.replace(/\s*$/, "")}\n    \n    <lastmod>${SITEMAP_CONTENT_REVISION}</lastmod>\n  `;
       return `<url>${withLastmod}</url>`;
     });
 
-    fs.writeFileSync(sitemapPath, updated);
+    if (updated !== source) fs.writeFileSync(sitemapPath, updated);
   }
 }
 
