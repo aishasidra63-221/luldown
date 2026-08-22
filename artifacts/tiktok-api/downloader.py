@@ -526,6 +526,7 @@ def _audio_debug_summary(item: dict) -> dict:
         },
         "identifiers": {},
         "extra": {},
+        "original_song_asset_ids": [],
         "audio_url_candidates": [],
         "resolver_urls": [],
         "candidate_32hex": [],
@@ -561,6 +562,17 @@ def _audio_debug_summary(item: dict) -> dict:
                 )
                 if key in extra
             }
+            original_url = extra.get("original_song_url")
+            if isinstance(original_url, str):
+                match = re.search(r"/([0-9]{10,25})\.mp3(?:[?#]|$)", original_url)
+                if match:
+                    result["original_song_asset_ids"].append(
+                        {
+                            "source": f"{source}.extra.original_song_url",
+                            "asset_id": match.group(1),
+                            "url": original_url,
+                        }
+                    )
 
         play = music.get("play_url") or music.get("playUrl")
         if isinstance(play, dict):

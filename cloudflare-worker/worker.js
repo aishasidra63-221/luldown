@@ -1951,6 +1951,7 @@ async function handleRequest(request, env, ctx) {
       const audioCandidates = [];
       const audioResolvers = [];
       const candidate32Hex = [];
+      const originalSongAssetIds = [];
       for (const [source, audio] of Object.entries(audioSources)) {
         if (!audio || typeof audio !== "object") continue;
         const ids = {};
@@ -1960,6 +1961,21 @@ async function handleRequest(request, env, ctx) {
           }
         }
         if (Object.keys(ids).length) audioIdentifiers[source] = ids;
+        let sourceExtra = audio.extra || {};
+        if (typeof sourceExtra === "string") {
+          try { sourceExtra = JSON.parse(sourceExtra); } catch { sourceExtra = {}; }
+        }
+        const originalSongUrl = sourceExtra?.original_song_url || sourceExtra?.originalSongUrl || "";
+        const assetMatch = typeof originalSongUrl === "string"
+          ? originalSongUrl.match(/\/([0-9]{10,25})\.mp3(?:[?#]|$)/)
+          : null;
+        if (assetMatch) {
+          originalSongAssetIds.push({
+            source: `${source}.extra.original_song_url`,
+            asset_id: assetMatch[1],
+            url: originalSongUrl,
+          });
+        }
         const play = audio.play_url || audio.playUrl || {};
         for (const key of ["uri", "url_list", "urlList"]) {
           const values = Array.isArray(play[key]) ? play[key] : [play[key]];
@@ -2006,6 +2022,7 @@ async function handleRequest(request, env, ctx) {
             extract_item_id: musicExtra?.extract_item_id ? String(musicExtra.extract_item_id) : "",
             original_song_url: musicExtra?.original_song_url || "",
           },
+          original_song_asset_ids: [...new Map(originalSongAssetIds.map(x => [x.asset_id, x])).values()],
           audio_url_candidates: [...new Map(audioCandidates.map(x => [x.url, x])).values()],
           resolver_urls: [...new Map(audioResolvers.map(x => [x.url, x])).values()],
           candidate_32hex: [...new Map(candidate32Hex.map(x => [`${x.path}:${x.value}`, x])).values()],
