@@ -20,3 +20,9 @@ SSSTik's public JavaScript has a separate MP3 flow: Base64(JSON `{id, video}`) i
 **Why:** This explains how SSSTik can cache one audio result and serve many users without exposing or recomputing a music `file_id` in the browser.
 
 **How to apply:** The key server-side behavior to reproduce/analyze is the Aweme-ID MP3 route, not necessarily a client-visible TikTok music resolver; treat it as a provider endpoint and avoid claiming its internal upstream algorithm is known.
+
+The public MP3 backend accepts the same Aweme ID with either an SSSTik CDN video URL or the original TikTok URL and redirects to the same `/ssstikm/{aweme_id}` object; passing `music.mid` as `id` does not produce a redirect.
+
+**Why:** This isolates the public cache key as the Aweme ID and shows `music.mid` is not the input to SSSTik's final cached MP3 route.
+
+**How to apply:** Keep Aweme ID and music ID separate in any resolver/cache model; the hidden upstream step occurs before the Aweme-keyed MP3 object is served.
