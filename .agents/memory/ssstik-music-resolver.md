@@ -21,6 +21,12 @@ SSSTik's public JavaScript has a separate MP3 flow: Base64(JSON `{id, video}`) i
 
 **How to apply:** The key server-side behavior to reproduce/analyze is the Aweme-ID MP3 route, not necessarily a client-visible TikTok music resolver; treat it as a provider endpoint and avoid claiming its internal upstream algorithm is known.
 
+When the SSSTik result HTML exposes a `Download MP3` button, its `tikcdn.io/ssstik/m/<base64>` href can contain a music-specific TikTok `/aweme/v1/play/` resolver. In the observed mapping, `video_id` equals `music.extra.music_vid`, `item_id` equals `music.mid`, and the resolver has a separate 32-character audio `file_id` plus `signaturev3`; these fields are absent from the Android detail JSON.
+
+**Why:** Decoding the live MP3 button href produced a resolver whose `video_id` and `item_id` matched the App API music metadata while its `file_id` and signature were new values.
+
+**How to apply:** Parse the MP3 button href before the client-side click handler redirects to the Aweme-keyed cache. Treat its `item_id` as a music ID for this resolver, not as the post's Aweme ID; keep the final `/ssstikm/{aweme_id}` cache key separate.
+
 The public MP3 backend accepts the same Aweme ID with either an SSSTik CDN video URL or the original TikTok URL and redirects to the same `/ssstikm/{aweme_id}` object; passing `music.mid` as `id` does not produce a redirect.
 
 **Why:** This isolates the public cache key as the Aweme ID and shows `music.mid` is not the input to SSSTik's final cached MP3 route.
